@@ -1,0 +1,3216 @@
+# =============================================================================
+# ENHANCED ADAPTIVE LIGHTING CONTROLS v4.5
+# Comprehensive fix and enhancement with proper timers, fixed increments,
+# streamlined dashboard integration, and enhanced Sonos coordination
+# =============================================================================
+
+# =============================================================================
+# FOUNDATION LAYER: Light Groups & Input Controls
+# =============================================================================
+
+# Light Groups - ALIGNED WITH ADAPTIVE LIGHTING CONFIGURATIONS
+light:
+  # Main Living Zone - matches switch.adaptive_lighting_main_living
+  - platform: group
+    name: "main_living_lights"
+    unique_id: "al_main_living_lights_group"
+    entities:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+  
+  # Kitchen Island Zone - matches switch.adaptive_lighting_kitchen_island
+  - platform: group
+    name: "kitchen_island_lights"
+    unique_id: "al_kitchen_island_lights_group"
+    entities:
+      - light.kitchen_island_pendants
+  
+  # Bedroom Primary Zone - matches switch.adaptive_lighting_bedroom_primary
+  - platform: group
+    name: "bedroom_primary_lights"
+    unique_id: "al_bedroom_primary_lights_group"
+    entities:
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+  
+  # Accent Spots Zone - matches switch.adaptive_lighting_accent_spots
+  - platform: group
+    name: "accent_spots_lights"
+    unique_id: "al_accent_spots_lights_group"
+    entities:
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+  
+  # Recessed Ceiling Zone - matches switch.adaptive_lighting_recessed_ceiling
+  - platform: group
+    name: "recessed_ceiling_lights"
+    unique_id: "al_recessed_ceiling_lights_group"
+    entities:
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+  
+  # Convenience group for physical control - contains ALL actual lights
+  - platform: group
+    name: "all_adaptive_lights"
+    unique_id: "al_all_adaptive_lights_group"
+    entities:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+      - light.kitchen_island_pendants
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+
+# Boolean Control Flags (STREAMLINED - Essential flags only)
+input_boolean:
+  # Core system controls
+  al_globally_paused:
+    name: Adaptive Lighting Globally Paused
+    icon: mdi:pause-circle
+    initial: false
+
+  # Manual adjustment active states (for UI feedback)
+  al_script_brighter_active:
+    name: AL Brighter Active
+    icon: mdi:brightness-7
+    initial: false
+  al_script_dimmer_active:
+    name: AL Dimmer Active
+    icon: mdi:brightness-4
+    initial: false
+  al_script_warmer_active:
+    name: AL Warmer Active
+    icon: mdi:thermometer-chevron-down
+    initial: false
+  al_script_cooler_active:
+    name: AL Cooler Active
+    icon: mdi:thermometer-chevron-up
+    initial: false
+
+  # Mode flags (for backward compatibility and external integrations)
+  movie_mode:
+    name: Movie Mode
+    icon: mdi:movie-roll
+    initial: false
+  late_night_mode:
+    name: Late Night Mode
+    icon: mdi:sleep
+    initial: false
+  bright_work_mode:
+    name: Bright Work Mode
+    icon: mdi:laptop
+    initial: false
+  
+  # Environmental controls
+  al_environmental_boost_active:
+    name: Environmental Brightness Boost Active
+    icon: mdi:weather-partly-cloudy
+    initial: false
+  
+  # Sonos integration
+  al_disable_next_sonos_wakeup:
+    name: Disable Next Sonos Wake-up
+    icon: mdi:alarm-snooze
+    initial: false
+
+# ENHANCED - Control parameters with fixed increments
+input_number:
+  # FIXED INCREMENT CONTROLS (No more percentage calculations)
+  adaptive_lighting_brightness_increment:
+    name: AL Brightness Increment
+    min: 5
+    max: 50
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:brightness-percent
+    initial: 20
+  adaptive_lighting_color_temp_increment:
+    name: AL Color Temperature Increment
+    min: 100
+    max: 1000
+    step: 50
+    unit_of_measurement: "K"
+    icon: mdi:thermometer-lines
+    initial: 500
+  
+  # Global tracking (simplified)
+  adaptive_lighting_total_brightness_adjustment:
+    name: Total Brightness Adjustment
+    min: -100
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:brightness-percent
+    initial: 0
+  adaptive_lighting_total_warmth_adjustment:
+    name: Total Warmth Adjustment
+    min: -2500
+    max: 2500
+    step: 50
+    unit_of_measurement: "K"
+    icon: mdi:thermometer-lines
+    initial: 0
+  
+  # System parameters
+  adaptive_lighting_manual_control_timeout_hours:
+    name: AL Manual Control Timeout
+    min: 0
+    max: 24
+    step: 1
+    unit_of_measurement: "hours"
+    icon: mdi:clock-outline
+    initial: 2
+  adaptive_lighting_general_transition_speed:
+    name: AL General Transition Speed
+    min: 0
+    max: 10
+    step: 1
+    unit_of_measurement: "seconds"
+    icon: mdi:transition
+    initial: 1
+  
+  # Environmental adaptation controls
+  adaptive_lighting_environmental_brightness_offset:
+    name: Environmental Brightness Offset
+    min: 0
+    max: 50
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:brightness-auto
+    initial: 0
+  
+  # Phase 2 Environmental System Helpers
+  al_sunset_fade_brightness_offset:
+    name: "Sunset Fade Brightness Offset"
+    min: -50
+    max: 0
+    step: 1
+    initial: 0
+    icon: mdi:weather-sunset-down
+    unit_of_measurement: "%"
+  
+  al_scene_brightness_offset:
+    name: "Scene Brightness Offset"
+    min: -80
+    max: 20
+    step: 5
+    initial: 0
+    icon: mdi:palette-outline
+    unit_of_measurement: "%"
+  
+  al_scene_warmth_offset:
+    name: "Scene Warmth Offset"
+    min: -1000
+    max: 500
+    step: 100
+    initial: 0
+    icon: mdi:palette-swatch-outline
+    unit_of_measurement: "K"
+  
+  al_wake_sequence_offset:
+    name: "Wake Sequence Brightness Offset"
+    min: -50
+    max: 50
+    step: 5
+    initial: 0
+    icon: mdi:alarm-light
+    unit_of_measurement: "%"
+
+# ENHANCED - Centralized mode selection
+input_select:
+  current_home_mode:
+    name: Current Home Mode
+    options:
+      - Default
+      - Work
+      - Late Night  
+      - Movie
+      - Bright Focus
+      - Dim Relax
+      - Warm Evening
+      - Cool Energy
+    icon: mdi:palette-outline
+    initial: Default
+  
+  # Zen32 Scene Controller
+  zen32_lighting_scene:
+    name: "Current Lighting Scene"
+    options:
+      - "Scene 1: All Lights"
+      - "Scene 2: No Spotlights"
+      - "Scene 3: Evening Comfort"
+      - "Scene 4: Ultra Dim"
+    initial: "Scene 1: All Lights"
+    icon: mdi:lightbulb-group
+
+# PROPER TIMER IMPLEMENTATION (Fixed)
+timer:
+  # PER-ZONE MANUAL CONTROL TIMERS
+  adaptive_lighting_manual_timer_main_living:
+    name: "AL Manual Timer - Main Living"
+    icon: mdi:timer
+    
+  adaptive_lighting_manual_timer_kitchen_island:
+    name: "AL Manual Timer - Kitchen Island"
+    icon: mdi:timer
+    
+  adaptive_lighting_manual_timer_bedroom_primary:
+    name: "AL Manual Timer - Bedroom Primary"
+    icon: mdi:timer
+    
+  adaptive_lighting_manual_timer_accent_spots:
+    name: "AL Manual Timer - Accent Spots"
+    icon: mdi:timer
+    
+  adaptive_lighting_manual_timer_recessed_ceiling:
+    name: "AL Manual Timer - Recessed Ceiling"
+    icon: mdi:timer
+
+# Time controls
+input_datetime:
+  late_night_start:
+    name: Late Night Start Time
+    has_date: false
+    has_time: true
+    initial: "22:00:00"
+  
+  # Zen32 debouncing helper
+  zen32_last_button_press:
+    name: "Zen32 Last Button Press"
+    has_date: true
+    has_time: true
+    icon: mdi:clock-outline
+
+# ENHANCED - Group management
+group:
+  adaptive_lighting_switches:
+    name: "All Adaptive Lighting Control Switches"
+    entities:
+      - switch.adaptive_lighting_main_living
+      - switch.adaptive_lighting_kitchen_island
+      - switch.adaptive_lighting_bedroom_primary
+      - switch.adaptive_lighting_accent_spots
+      - switch.adaptive_lighting_recessed_ceiling
+
+# =============================================================================
+# ADAPTIVE LIGHTING CORE CONFIGURATIONS (OPTIMIZED)
+# =============================================================================
+
+adaptive_lighting:
+  - name: "recessed_ceiling"
+    lights:
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+    min_brightness: 2
+    max_brightness: 23
+    sleep_brightness: 1
+    initial_transition: 0
+    transition: 0
+    interval: 20
+    sleep_transition: 3
+    adapt_delay: 0  # CHANGED: Added 5s delay to allow manual changes
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
+  - name: "kitchen_island"
+    lights:
+      - light.kitchen_island_pendants
+    min_brightness: 30
+    max_brightness: 100
+    sleep_brightness: 1
+    min_color_temp: 2000
+    max_color_temp: 4000
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 3
+    interval: 20  # CHANGED: Increased from 20s to reduce race conditions
+    adapt_delay: 0  # ADDED: 5s grace period for manual overrides
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
+  - name: "bedroom_primary"
+    lights:
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+    min_brightness: 20
+    max_brightness: 40
+    sleep_brightness: 5
+    min_color_temp: 1800
+    max_color_temp: 2250
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 5
+    interval: 20  # CHANGED: Increased from 1s to prevent bouncing
+    adapt_delay: 0  # CHANGED: Added 5s delay to allow manual changes
+    autoreset_control_seconds: 0
+    take_over_control: true
+    skip_redundant_commands: true
+    detect_non_ha_changes: true
+    include_config_in_attributes: true
+
+  - name: "accent_spots"
+    lights:
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+    min_brightness: 20
+    max_brightness: 50
+    sleep_brightness: 1
+    min_color_temp: 2000
+    max_color_temp: 6500
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 5
+    interval: 20  # CHANGED: Increased from 1s to prevent bouncing
+    adapt_delay: 0  # ADDED: 5s grace period for manual overrides
+    autoreset_control_seconds: 0
+    take_over_control: true
+    send_split_delay: 0
+    skip_redundant_commands: true
+    detect_non_ha_changes: true
+    include_config_in_attributes: true
+
+  - name: "main_living"
+    lights:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+      - light.entryway_lamp
+    min_brightness: 45
+    max_brightness: 100
+    sleep_brightness: 25
+    min_color_temp: 2250
+    max_color_temp: 2950
+    sleep_color_temp: 1800
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 0
+    interval: 20  # CHANGED: Increased from 1s to prevent bouncing
+    adapt_delay: 5  # ADDED: 5s grace period for manual overrides
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    separate_turn_on_commands: false
+    send_split_delay: 0
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
+
+# =============================================================================
+# ENHANCED STATUS SENSORS (All Missing Sensors Implemented)
+# =============================================================================
+
+template:
+  # Event-driven monitoring sensor - updates only when calculations complete
+  - trigger:
+      - platform: event
+        event_type: adaptive_lighting_calculation_complete
+    sensor:
+      - name: "Adaptive Lighting Real-Time Monitor"
+        unique_id: adaptive_lighting_realtime_monitor
+        state: >
+          {% set b_total = trigger.event.data.final_brightness_adjustment | int(0) %}
+          {% set w_total = trigger.event.data.final_warmth_adjustment | int(0) %}
+          {% if b_total > 0 %}
+            Brightened +{{ b_total }}%
+          {% elif b_total < 0 %}
+            Dimmed {{ b_total }}%
+          {% elif w_total != 0 %}
+            Warmth {{ w_total }}K
+          {% else %}
+            Baseline
+          {% endif %}
+        attributes:
+          last_calculation: "{{ trigger.event.data.timestamp | default('Never') }}"
+          trigger_source: "{{ trigger.event.data.trigger_source | default('Unknown') }}"
+          final_adjustments: >
+            brightness: {{ trigger.event.data.final_brightness_adjustment | default(0) }}%
+            warmth: {{ trigger.event.data.final_warmth_adjustment | default(0) }}K
+          component_breakdown: >
+            brightness_manual: {{ trigger.event.data.components.brightness_manual | default(0) }}%
+            brightness_environmental: {{ trigger.event.data.components.brightness_environmental | default(0) }}%
+            brightness_sunset_fade: {{ trigger.event.data.components.brightness_sunset_fade | default(0) }}%
+            brightness_scene: {{ trigger.event.data.components.brightness_scene | default(0) }}%
+            brightness_wake: {{ trigger.event.data.components.brightness_wake | default(0) }}%
+            warmth_manual: {{ trigger.event.data.components.warmth_manual | default(0) }}K
+            warmth_scene: {{ trigger.event.data.components.warmth_scene | default(0) }}K
+          sun_elevation: "{{ trigger.event.data.sun_elevation | default('N/A') }}°"
+          environmental_active: "{{ trigger.event.data.environmental_active | default('false') }}"
+          zones_affected: "{{ trigger.event.data.zones_updated | default([]) | length }}"
+          zone_details: "{{ trigger.event.data.zones_calculated | default('None') }}"
+  
+  # Original template sensors
+  - sensor:
+      # MAIN STATUS SENSOR (Enhanced)
+      - name: "Adaptive Lighting Status"
+        unique_id: adaptive_lighting_status_v4
+        state: >
+          {% set home_mode = states('input_select.current_home_mode') %}
+          {% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+          {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %}
+          {% set env_boost = is_state('input_boolean.al_environmental_boost_active', 'on') %}
+          
+          {% if is_state('input_boolean.al_globally_paused', 'on') %}
+            Globally Paused
+          {% elif home_mode == 'Movie' %}
+            Movie Mode
+          {% elif home_mode == 'Work' %}
+            Work Mode  
+          {% elif home_mode == 'Late Night' %}
+            Late Night Mode
+          {% elif home_mode == 'Bright Focus' %}
+            Bright Focus{% if b_adj != 0 %} (+{{ b_adj }}%){% endif %}
+          {% elif home_mode == 'Dim Relax' %}
+            Dim Relax{% if b_adj != 0 %} ({{ b_adj }}%){% endif %}
+          {% elif home_mode == 'Warm Evening' %}
+            Warm Evening{% if k_adj != 0 %} ({{ k_adj }}K){% endif %}
+          {% elif home_mode == 'Cool Energy' %}
+            Cool Energy{% if k_adj != 0 %} (+{{ k_adj }}K){% endif %}
+          {% elif env_boost %}
+            Environmental Boost (+{{ states('input_number.adaptive_lighting_environmental_brightness_offset') }}%)
+          {% elif b_adj != 0 or k_adj != 0 %}
+            Manual Adjusted ({{ b_adj }}%{% if k_adj != 0 %}, {{ k_adj }}K{% endif %})
+          {% else %}
+            Adaptive Auto
+          {% endif %}
+        icon: >
+          {% set home_mode = states('input_select.current_home_mode') %}
+          {% if is_state('input_boolean.al_globally_paused', 'on') %}
+            mdi:pause-circle-outline
+          {% elif home_mode == 'Movie' %}
+            mdi:movie-roll
+          {% elif home_mode == 'Work' %}
+            mdi:laptop
+          {% elif home_mode == 'Late Night' %}
+            mdi:sleep
+          {% elif home_mode == 'Bright Focus' %}
+            mdi:brightness-plus
+          {% elif home_mode == 'Dim Relax' %}
+            mdi:brightness-minus
+          {% elif home_mode == 'Warm Evening' %}
+            mdi:thermometer-low
+          {% elif home_mode == 'Cool Energy' %}
+            mdi:thermometer-high
+          {% elif is_state('input_boolean.al_environmental_boost_active', 'on') %}
+            mdi:weather-cloudy-arrow-right
+          {% else %}
+            mdi:lightbulb-auto
+          {% endif %}
+        attributes:
+          active_modifiers: >
+            {% set modifiers = [] %}
+            {% if states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) > 0 %}
+              {% set modifiers = modifiers + ['manual_brighter'] %}
+            {% elif states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) < 0 %}
+              {% set modifiers = modifiers + ['manual_dimmer'] %}
+            {% endif %}
+            {% if states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) > 0 %}
+              {% set modifiers = modifiers + ['manual_cooler'] %}
+            {% elif states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) < 0 %}
+              {% set modifiers = modifiers + ['manual_warmer'] %}
+            {% endif %}
+            {% if is_state('input_boolean.al_environmental_boost_active', 'on') %}
+              {% set modifiers = modifiers + ['environmental_boost'] %}
+            {% endif %}
+            {% if states('input_number.al_scene_brightness_offset') | int(0) != 0 or states('input_number.al_scene_warmth_offset') | int(0) != 0 %}
+              {% set modifiers = modifiers + ['scene_offset'] %}
+            {% endif %}
+            {% if states('input_number.al_sunset_fade_brightness_offset') | int(0) != 0 %}
+              {% set modifiers = modifiers + ['sunset_fade'] %}
+            {% endif %}
+            {{ modifiers if modifiers else ['none'] }}
+          last_action: >
+            {% set last_brighter = state_attr('script.adaptive_lighting_brighter', 'last_triggered') %}
+            {% set last_dimmer = state_attr('script.adaptive_lighting_dimmer', 'last_triggered') %}
+            {% set last_warmer = state_attr('script.adaptive_lighting_warmer', 'last_triggered') %}
+            {% set last_cooler = state_attr('script.adaptive_lighting_cooler', 'last_triggered') %}
+            {% set last_reset = state_attr('script.adaptive_lighting_reset_all_adjustments', 'last_triggered') %}
+            {% set last_mode_change = states.input_select.current_home_mode.last_changed %}
+            {% set actions = [] %}
+            {% if last_brighter is not none %} {% set actions = actions + [(last_brighter, 'Brighter')] %} {% endif %}
+            {% if last_dimmer is not none %} {% set actions = actions + [(last_dimmer, 'Dimmer')] %} {% endif %}
+            {% if last_warmer is not none %} {% set actions = actions + [(last_warmer, 'Warmer')] %} {% endif %}
+            {% if last_cooler is not none %} {% set actions = actions + [(last_cooler, 'Cooler')] %} {% endif %}
+            {% if last_reset is not none %} {% set actions = actions + [(last_reset, 'Reset All')] %} {% endif %}
+            {% if last_mode_change is not none %} {% set actions = actions + [(last_mode_change, 'Mode: ' ~ states('input_select.current_home_mode'))] %} {% endif %}
+            {% if actions %}
+              {% set latest = actions | sort(attribute=0, reverse=true) | first %}
+              {{ latest[1] }}
+            {% else %}
+              Unknown
+            {% endif %}
+          last_action_time: >
+            {% set last_brighter = state_attr('script.adaptive_lighting_brighter', 'last_triggered') %}
+            {% set last_dimmer = state_attr('script.adaptive_lighting_dimmer', 'last_triggered') %}
+            {% set last_warmer = state_attr('script.adaptive_lighting_warmer', 'last_triggered') %}
+            {% set last_cooler = state_attr('script.adaptive_lighting_cooler', 'last_triggered') %}
+            {% set last_reset = state_attr('script.adaptive_lighting_reset_all_adjustments', 'last_triggered') %}
+            {% set last_mode_change = states.input_select.current_home_mode.last_changed %}
+            {% set times = [] %}
+            {% if last_brighter is not none %} {% set times = times + [last_brighter | as_timestamp] %} {% endif %}
+            {% if last_dimmer is not none %} {% set times = times + [last_dimmer | as_timestamp] %} {% endif %}
+            {% if last_warmer is not none %} {% set times = times + [last_warmer | as_timestamp] %} {% endif %}
+            {% if last_cooler is not none %} {% set times = times + [last_cooler | as_timestamp] %} {% endif %}
+            {% if last_reset is not none %} {% set times = times + [last_reset | as_timestamp] %} {% endif %}
+            {% if last_mode_change is not none %} {% set times = times + [last_mode_change | as_timestamp] %} {% endif %}
+            {% if times %}
+              {% set latest = times | max %}
+              {{ latest | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
+            {% else %}
+              Never
+            {% endif %}
+          system_health: >
+            {% set switches = states.switch | selectattr('entity_id', 'search', 'adaptive_lighting_') | list %}
+            {% set available = switches | selectattr('state', 'ne', 'unavailable') | list %}
+            {% if available | length == switches | length %}
+              Normal
+            {% elif available | length > 0 %}
+              Degraded ({{ available | length }}/{{ switches | length }} switches)
+            {% else %}
+              Offline
+            {% endif %}
+          current_adjustments: >
+            brightness_manual: {{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}%
+            warmth_manual: {{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}K
+            brightness_environmental: {{ states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) }}%
+            brightness_sunset_fade: {{ states('input_number.al_sunset_fade_brightness_offset') | int(0) }}%
+            brightness_scene: {{ states('input_number.al_scene_brightness_offset') | int(0) }}%
+            warmth_scene: {{ states('input_number.al_scene_warmth_offset') | int(0) }}K
+            brightness_wake: {{ states('input_number.al_wake_sequence_offset') | int(0) }}%
+          active_scene: "{{ states('input_select.zen32_lighting_scene') }}"
+          manual_timer_remaining: >
+            {% set active_timers = [
+              'timer.adaptive_lighting_manual_timer_main_living',
+              'timer.adaptive_lighting_manual_timer_kitchen_island',
+              'timer.adaptive_lighting_manual_timer_bedroom_primary',
+              'timer.adaptive_lighting_manual_timer_accent_spots',
+              'timer.adaptive_lighting_manual_timer_recessed_ceiling'
+            ] | select('is_state', 'active') | list %}
+            {% if active_timers | length > 0 %}
+              {{ active_timers | length }} zone(s) active
+            {% else %}
+              Not Active
+            {% endif %}
+          environmental_boost_active: "{{ is_state('input_boolean.al_environmental_boost_active', 'on') }}"
+          next_timer_expiry: >
+            {% set timers = {
+              'timer.adaptive_lighting_manual_timer_main_living': 'Main Living',
+              'timer.adaptive_lighting_manual_timer_kitchen_island': 'Kitchen',
+              'timer.adaptive_lighting_manual_timer_bedroom_primary': 'Bedroom',
+              'timer.adaptive_lighting_manual_timer_accent_spots': 'Spots',
+              'timer.adaptive_lighting_manual_timer_recessed_ceiling': 'Recessed'
+            } %}
+            {% set active = [] %}
+            {% for timer, name in timers.items() %}
+              {% if is_state(timer, 'active') %}
+                {% set finish = state_attr(timer, 'finishes_at') %}
+                {% if finish %}
+                  {% set active = active + [(as_timestamp(finish), name)] %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {% if active %}
+              {% set next = active | sort | first %}
+              {{ next[1] }} @ {{ next[0] | timestamp_custom('%H:%M', true) }}
+            {% else %}
+              Not set
+            {% endif %}
+          managed_zones: 5
+          active_adjustments: >
+            {% set adjustments = [] %}
+            {% if states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) != 0 %}
+              {% set adjustments = adjustments + ['brightness'] %}
+            {% endif %}
+            {% if states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) != 0 %}
+              {% set adjustments = adjustments + ['warmth'] %}
+            {% endif %}
+            {% if is_state('input_boolean.al_environmental_boost_active', 'on') %}
+              {% set adjustments = adjustments + ['environmental'] %}
+            {% endif %}
+            {{ adjustments | join(', ') if adjustments else 'none' }}
+          final_brightness_adjustment: >
+            {% set b_manual = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+            {% set b_env = states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) %}
+            {% set b_sunset = states('input_number.al_sunset_fade_brightness_offset') | int(0) %}
+            {% set b_scene = states('input_number.al_scene_brightness_offset') | int(0) %}
+            {% set b_wake = states('input_number.al_wake_sequence_offset') | int(0) %}
+            {% set total = b_manual + b_env + b_sunset + b_scene + b_wake %}
+            {{ total }}%
+          final_warmth_adjustment: >
+            {% set w_manual = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %}
+            {% set w_scene = states('input_number.al_scene_warmth_offset') | int(0) %}
+            {% set total = w_manual + w_scene %}
+            {{ total }}K
+          environmental_calculation: >
+            {% set lux = states('sensor.living_room_presence_light_sensor_light_level') | int(9999) %}
+            {% set weather = states('weather.home') %}
+            {% set hour = now().hour %}
+            {% if 22 <= hour or hour <= 6 %}
+              Disabled (Night: {{ hour }}:00)
+            {% else %}
+              Lux: {{ lux }}, Weather: {{ weather }}, Boost: {{ states('input_number.adaptive_lighting_environmental_brightness_offset') }}%
+            {% endif %}
+          sun_position: >
+            {% set elevation = state_attr('sun.sun', 'elevation') | float(0) %}
+            {% if elevation < -4 %}
+              Night ({{ elevation | round(1) }}°)
+            {% elif -4 <= elevation < 0 %}
+              Sunset/Sunrise ({{ elevation | round(1) }}°)
+            {% elif 0 <= elevation < 10 %}
+              Golden Hour ({{ elevation | round(1) }}°)
+            {% else %}
+              Day ({{ elevation | round(1) }}°)
+            {% endif %}
+          active_switches: >
+            {% set switches = states.switch | selectattr('entity_id', 'search', 'adaptive_lighting_') | selectattr('state', 'eq', 'on') | map(attribute='name') | list %}
+            {{ switches | length }} zones: {{ switches | join(', ') | replace('Adaptive Lighting: ', '') if switches else 'None' }}
+          computed_brightness_ranges: >
+            {% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+            {% set env_boost = states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) %}
+            {% set sunset_fade = states('input_number.al_sunset_fade_brightness_offset') | int(0) %}
+            {% set scene_b = states('input_number.al_scene_brightness_offset') | int(0) %}
+            {% set wake = states('input_number.al_wake_sequence_offset') | int(0) %}
+            {% set final_b = b_adj + env_boost + sunset_fade + scene_b + wake %}
+            Main Living: {{ [1, 45 + (final_b if final_b > 0 else 0)] | max }}-{{ [100, 100 + (final_b if final_b < 0 else 0)] | min }}%
+            Kitchen: {{ [1, 15 + (final_b if final_b > 0 else 0)] | max }}-{{ [100, 100 + (final_b if final_b < 0 else 0)] | min }}%
+            Bedroom: {{ [1, 20 + (final_b if final_b > 0 else 0)] | max }}-{{ [40, 40 + (final_b if final_b < 0 else 0)] | min }}%
+          computed_warmth_ranges: >
+            {% set w_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %}
+            {% set scene_w = states('input_number.al_scene_warmth_offset') | int(0) %}
+            {% set final_k = w_adj + scene_w %}
+            Main Living: {{ [1500, 2250 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 2950 + (final_k if final_k < 0 else 0)] | min }}K
+            Kitchen: {{ [1500, 2000 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 4000 + (final_k if final_k < 0 else 0)] | min }}K
+            Bedroom: {{ [1500, 1800 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 2250 + (final_k if final_k < 0 else 0)] | min }}K
+
+      # MANUAL CONTROL TRACKING SENSORS (All Missing Sensors Implemented)
+      - name: "Adaptive Lighting Total Manual Control"
+        unique_id: adaptive_lighting_total_manual_control_v4
+        state: >
+          {% set total = 0 %}
+          {% for switch in states.switch | selectattr('entity_id', 'match', '^switch\.adaptive_lighting_')
+                                       | rejectattr('entity_id', 'search', '_(sleep_mode|adapt_color|adapt_brightness)$') %}
+            {% set manual_control = state_attr(switch.entity_id, 'manual_control') %}
+            {% if manual_control and manual_control is iterable and manual_control is not string %}
+              {% set total = total + (manual_control | length) %}
+            {% endif %}
+          {% endfor %}
+          {{ total }}
+        icon: mdi:hand-wave-outline
+        attributes:
+          has_manual_control: >
+            {% set total = 0 %}
+            {% for switch in states.switch | selectattr('entity_id', 'match', '^switch\.adaptive_lighting_')
+                                         | rejectattr('entity_id', 'search', '_(sleep_mode|adapt_color|adapt_brightness)$') %}
+              {% set manual_control = state_attr(switch.entity_id, 'manual_control') %}
+              {% if manual_control and manual_control is iterable and manual_control is not string %}
+                {% set total = total + (manual_control | length) %}
+              {% endif %}
+            {% endfor %}
+            {{ total > 0 }}
+
+      # ZONE-SPECIFIC MANUAL CONTROL SENSORS
+      - name: "Adaptive Lighting Manual Control Living"
+        unique_id: al_manual_control_living
+        state: >
+          {% set manual = state_attr('switch.adaptive_lighting_main_living', 'manual_control') %}
+          {% if manual and manual is iterable and manual is not string %}
+            {{ manual | length }} lights manually controlled
+          {% else %}
+            No manual control
+          {% endif %}
+        icon: mdi:sofa-outline
+        attributes:
+          controlled_lights: >
+            {% set manual = state_attr('switch.adaptive_lighting_main_living', 'manual_control') %}
+            {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}
+
+      - name: "Adaptive Lighting Manual Control Kitchen"
+        unique_id: al_manual_control_kitchen
+        state: >
+          {% set manual = state_attr('switch.adaptive_lighting_kitchen_island', 'manual_control') %}
+          {% if manual and manual is iterable and manual is not string %}
+            {{ manual | length }} lights manually controlled
+          {% else %}
+            No manual control
+          {% endif %}
+        icon: mdi:countertop-outline
+        attributes:
+          controlled_lights: >
+            {% set manual = state_attr('switch.adaptive_lighting_kitchen_island', 'manual_control') %}
+            {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}
+
+      - name: "Adaptive Lighting Manual Control Bedroom"
+        unique_id: al_manual_control_bedroom
+        state: >
+          {% set manual = state_attr('switch.adaptive_lighting_bedroom_primary', 'manual_control') %}
+          {% if manual and manual is iterable and manual is not string %}
+            {{ manual | length }} lights manually controlled
+          {% else %}
+            No manual control
+          {% endif %}
+        icon: mdi:bed-king-outline
+        attributes:
+          controlled_lights: >
+            {% set manual = state_attr('switch.adaptive_lighting_bedroom_primary', 'manual_control') %}
+            {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}
+
+      - name: "Adaptive Lighting Manual Control Recessed"
+        unique_id: al_manual_control_recessed
+        state: >
+          {% set manual = state_attr('switch.adaptive_lighting_recessed_ceiling', 'manual_control') %}
+          {% if manual and manual is iterable and manual is not string %}
+            {{ manual | length }} lights manually controlled
+          {% else %}
+            No manual control
+          {% endif %}
+        icon: mdi:ceiling-light-outline
+        attributes:
+          controlled_lights: >
+            {% set manual = state_attr('switch.adaptive_lighting_recessed_ceiling', 'manual_control') %}
+            {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}
+
+      - name: "Adaptive Lighting Manual Control Accent"
+        unique_id: al_manual_control_accent
+        state: >
+          {% set manual = state_attr('switch.adaptive_lighting_accent_spots', 'manual_control') %}
+          {% if manual and manual is iterable and manual is not string %}
+            {{ manual | length }} lights manually controlled
+          {% else %}
+            No manual control
+          {% endif %}
+        icon: mdi:spotlight-beam
+        attributes:
+          controlled_lights: >
+            {% set manual = state_attr('switch.adaptive_lighting_accent_spots', 'manual_control') %}
+            {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}
+
+      # ENHANCED SUNRISE TIMES SENSOR (Integrates with existing Sonos package)
+      - name: "Adaptive Lighting Sunrise Times"
+        unique_id: adaptive_lighting_sunrise_times_v4
+        state: >
+          {% set alarm_timestamp = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+          {% set natural_sunrise = state_attr('sun.sun', 'next_rising') | as_timestamp(0) %}
+          {% if alarm_timestamp and natural_sunrise > 0 %}
+            {% set earliest = [natural_sunrise, alarm_timestamp] | min %}
+            {{ earliest | timestamp_custom('%H:%M', true) }}
+          {% elif alarm_timestamp %}
+            {{ alarm_timestamp | timestamp_custom('%H:%M', true) }}
+          {% elif natural_sunrise %}
+            {{ natural_sunrise | timestamp_custom('%H:%M', true) }}
+          {% else %}
+            Unknown
+          {% endif %}
+        icon: mdi:sunrise
+        attributes:
+          natural_sunrise: >
+            {{ state_attr('sun.sun', 'next_rising') | as_timestamp | timestamp_custom('%H:%M', true) }}
+          alarm_time: >
+            {% set alarm_ts = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+            {{ alarm_ts | timestamp_custom('%H:%M', true) if alarm_ts else 'No alarm' }}
+          alarm_rooms: >
+            {% set rooms = state_attr('sensor.sonos_upcoming_alarms', 'rooms') %}
+            {{ rooms | join(', ') if rooms else 'None' }}
+          last_processed_alarm: >
+            {{ state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') | default('') }}
+
+      # DEVIATION TRACKER SENSOR
+      - name: "Adaptive Lighting Deviation Tracker"
+        unique_id: al_deviation_tracker
+        state: >
+          {% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+          {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %}
+          {% set total_dev = (b_adj | abs) + ((k_adj | abs) / 25) %}
+          {% if total_dev == 0 %}
+            No deviation
+          {% elif total_dev < 10 %}
+            Minor deviation
+          {% elif total_dev < 25 %}
+            Moderate deviation
+          {% else %}
+            Significant deviation
+          {% endif %}
+        icon: mdi:chart-line-variant
+        attributes:
+          brightness_deviation: "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') }}%"
+          warmth_deviation: "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') }}K"
+          total_deviation_score: >
+            {% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+            {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %}
+            {{ (b_adj | abs) + ((k_adj | abs) / 25) }}
+
+      # MANUAL ADJUSTMENT STATUS SENSOR
+      - name: "Adaptive Lighting Manual Adjustment Status"
+        unique_id: al_manual_adjustment_status
+        state: >
+          {% set active_zones = states.timer 
+             | selectattr('entity_id', 'match', 'timer.adaptive_lighting_manual_timer_.*')
+             | selectattr('state', 'eq', 'active')
+             | list | length %}
+          {% if active_zones > 0 %}
+            {{ active_zones }} zone(s) manual
+          {% elif states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) != 0 or states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) != 0 %}
+            Adjustments applied
+          {% else %}
+            No adjustments
+          {% endif %}
+        icon: mdi:timer-cog-outline
+
+      # ACTIVE LIGHTS COUNT
+      - name: "Active Lights Count"
+        unique_id: active_lights_count
+        state: >
+          {% set lights_on = states.light | selectattr('state','eq','on') | list %}
+          {{ lights_on | count }}
+        icon: mdi:lightbulb
+        attributes:
+          lights_on: >
+            {{ states.light | selectattr('state','eq','on') | map(attribute='entity_id') | list | join(', ') }}
+
+      # BRIGHTNESS STATUS SENSOR
+      - name: "Adaptive Lighting Brightness Status"
+        unique_id: al_brightness_status
+        state: >
+          {% set adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %}
+          {% if adj > 0 %}
+            +{{ adj }}% brighter
+          {% elif adj < 0 %}
+            {{ adj }}% dimmer
+          {% else %}
+            Default brightness
+          {% endif %}
+        icon: mdi:brightness-percent
+
+      # ZONES WITH MANUAL CONTROL SENSOR
+      - name: "Adaptive Lighting Zones with Manual Control"
+        unique_id: al_zones_manual_control
+        state: >
+          {% set zones = [
+            'switch.adaptive_lighting_main_living',
+            'switch.adaptive_lighting_kitchen_island',
+            'switch.adaptive_lighting_bedroom_primary',
+            'switch.adaptive_lighting_accent_spots',
+            'switch.adaptive_lighting_recessed_ceiling'
+          ] %}
+          {% set manual_zones = [] %}
+          {% for zone in zones %}
+            {% set manual = state_attr(zone, 'manual_control') %}
+            {% if manual and manual is iterable and manual is not string and manual | length > 0 %}
+              {% set manual_zones = manual_zones + [zone.split('.')[-1].replace('adaptive_lighting_', '')] %}
+            {% endif %}
+          {% endfor %}
+          {{ manual_zones | length }} zones with manual control
+        icon: mdi:map-marker-multiple
+        attributes:
+          zones_with_manual_control: >
+            {% set zones = [
+              'switch.adaptive_lighting_main_living',
+              'switch.adaptive_lighting_kitchen_island', 
+              'switch.adaptive_lighting_bedroom_primary',
+              'switch.adaptive_lighting_accent_spots',
+              'switch.adaptive_lighting_recessed_ceiling'
+            ] %}
+            {% set manual_zones = [] %}
+            {% for zone in zones %}
+              {% set manual = state_attr(zone, 'manual_control') %}
+              {% if manual and manual is iterable and manual is not string and manual | length > 0 %}
+                {% set manual_zones = manual_zones + [zone.split('.')[-1].replace('adaptive_lighting_', '')] %}
+              {% endif %}
+            {% endfor %}
+            {{ manual_zones | join(', ') }}
+
+      # ENHANCED LOGGING SENSORS (For Data Tracking)
+      - name: "Adaptive Lighting Performance Metrics"
+        unique_id: al_performance_metrics
+        state: >
+          {% set response_time = state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') %}
+          {{ 'Active' if response_time else 'Idle' }}
+        icon: mdi:speedometer
+        attributes:
+          last_adjustment_applied: >
+            {{ state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') }}
+          total_automations_today: >
+            {% set today = now().date() %}
+            {% set count = 0 %}
+            {% for automation in states.automation | selectattr('entity_id', 'search', 'adaptive_lighting') %}
+              {% set last_triggered = automation.attributes.last_triggered %}
+              {% if last_triggered and (last_triggered | as_datetime).date() == today %}
+                {% set count = count + 1 %}
+              {% endif %}
+            {% endfor %}
+            {{ count }}
+          avg_lights_per_adjustment: >
+            {% set total_lights = states('sensor.active_lights_count') | int(0) %}
+            {% set manual_lights = states('sensor.adaptive_lighting_total_manual_control') | int(0) %}
+            {{ ((total_lights - manual_lights) / 5) | round(1) if total_lights > 0 else 0 }}
+
+      - name: "Adaptive Lighting Usage Statistics"
+        unique_id: al_usage_statistics
+        state: >
+          {% set mode = states('input_select.current_home_mode') %}
+          {% set hours_in_mode = ((now() - states.input_select.current_home_mode.last_changed).seconds / 3600) | round(1) %}
+          {{ hours_in_mode }} hours in {{ mode }}
+        icon: mdi:chart-timeline-variant
+        attributes:
+          current_mode: "{{ states('input_select.current_home_mode') }}"
+          mode_duration_hours: >
+            {{ ((now() - states.input_select.current_home_mode.last_changed).seconds / 3600) | round(1) }}
+          total_brightness_changes_today: >
+            {% set today = now().date() %}
+            {% set last_changed = states.input_number.adaptive_lighting_total_brightness_adjustment.last_changed %}
+            {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}
+          total_warmth_changes_today: >
+            {% set today = now().date() %}
+            {% set last_changed = states.input_number.adaptive_lighting_total_warmth_adjustment.last_changed %}
+            {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}
+          environmental_boosts_today: >
+            {% set today = now().date() %}
+            {% set last_changed = states.input_boolean.al_environmental_boost_active.last_changed %}
+            {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}
+
+
+      - name: "Adaptive Lighting System Health"
+        unique_id: al_system_health
+        state: >
+          {% set errors = 0 %}
+          {% set al_switches = [
+            'switch.adaptive_lighting_main_living',
+            'switch.adaptive_lighting_kitchen_island',
+            'switch.adaptive_lighting_bedroom_primary',
+            'switch.adaptive_lighting_accent_spots',
+            'switch.adaptive_lighting_recessed_ceiling'
+          ] %}
+          {% for switch in al_switches %}
+            {% if states(switch) == 'unknown' or states(switch) == 'unavailable' %}
+              {% set errors = errors + 1 %}
+            {% endif %}
+          {% endfor %}
+          {% if errors == 0 %}
+            Excellent
+          {% elif errors <= 1 %}
+            Good
+          {% elif errors <= 2 %}
+            Fair
+          {% else %}
+            Poor
+          {% endif %}
+        icon: mdi:heart-pulse
+        attributes:
+          switches_online: >
+            {% set online = 0 %}
+            {% set al_switches = [
+              'switch.adaptive_lighting_main_living',
+              'switch.adaptive_lighting_kitchen_island',
+              'switch.adaptive_lighting_bedroom_primary',
+              'switch.adaptive_lighting_accent_spots',
+              'switch.adaptive_lighting_recessed_ceiling'
+            ] %}
+            {% for switch in al_switches %}
+              {% if states(switch) not in ['unknown', 'unavailable'] %}
+                {% set online = online + 1 %}
+              {% endif %}
+            {% endfor %}
+            {{ online }}/{{ al_switches | length }}
+          sensors_responding: >
+            {% set sensors = [
+              'sensor.adaptive_lighting_status',
+              'sensor.adaptive_lighting_total_manual_control',
+              'sensor.active_lights_count'
+            ] %}
+            {% set responding = 0 %}
+            {% for sensor in sensors %}
+              {% if states(sensor) not in ['unknown', 'unavailable'] %}
+                {% set responding = responding + 1 %}
+              {% endif %}
+            {% endfor %}
+            {{ responding }}/{{ sensors | length }}
+          last_successful_adjustment: >
+            {% set recent = state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') %}
+            {% if recent %}
+              {{ recent }}
+            {% else %}
+              Never
+            {% endif %}
+          environmental_sensors_status: >
+            {% set lux_ok = states('sensor.living_room_presence_light_sensor_light_level') not in ['unknown', 'unavailable'] %}
+            {% set weather_ok = states('weather.home') not in ['unknown', 'unavailable'] %}
+            {% if lux_ok and weather_ok %}
+              All Online
+            {% elif lux_ok or weather_ok %}
+              Partial
+            {% else %}
+              Offline
+            {% endif %}
+
+      - name: "Adaptive Lighting Mode History"
+        unique_id: al_mode_history
+        state: >
+          {{ states('input_select.current_home_mode') }}
+        icon: mdi:history
+        attributes:
+          previous_mode: >
+            {% set history = state_attr('sensor.adaptive_lighting_mode_history', 'mode_timeline') %}
+            {% if history and history | length > 1 %}
+              {{ history[-2].mode if history[-2] is defined else 'Unknown' }}
+            {% else %}
+              Unknown
+            {% endif %}
+          mode_changes_today: >
+            {% set today = now().date() %}
+            {% set last_changed = states.input_select.current_home_mode.last_changed %}
+            {{ 1 if last_changed and (last_changed | as_datetime).date() == today else 0 }}
+          time_in_current_mode: >
+            {{ relative_time(states.input_select.current_home_mode.last_changed) }}
+          most_used_mode_today: >
+            {{ states('input_select.current_home_mode') }}
+          mode_timeline: >
+            {% set current_mode = states('input_select.current_home_mode') %}
+            {% set timestamp = now().isoformat() %}
+            [{"mode": "{{ current_mode }}", "timestamp": "{{ timestamp }}"}]
+
+# =============================================================================
+# CORE AUTOMATION LAYER (STREAMLINED & FIXED)
+# =============================================================================
+
+automation:
+  # System startup
+  - id: adaptive_lighting_disable_color_adaptation
+    alias: "Adaptive Lighting - Disable Color for Brightness-Only Lights"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: event
+        event_type: component_loaded
+        event_data:
+          component: adaptive_lighting
+    action:
+      - delay: "00:00:10"
+      - service: switch.turn_off
+        data:
+          entity_id:
+            - switch.adaptive_lighting_recessed_ceiling_adapt_color
+
+  # STARTUP CLEANUP - Reset everything to clean state
+  - id: adaptive_lighting_startup_cleanup
+    alias: "AL - Startup Cleanup and Reset"
+    description: "Ensures clean state on Home Assistant startup"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      # Wait for all components to load
+      - delay: "00:00:05"
+      
+      # Step 1: Reset all manual adjustment inputs to zero
+      - service: input_number.set_value
+        target:
+          entity_id:
+            - input_number.adaptive_lighting_total_brightness_adjustment
+            - input_number.adaptive_lighting_total_warmth_adjustment
+            - input_number.adaptive_lighting_environmental_brightness_offset
+            - input_number.al_sunset_fade_brightness_offset
+            - input_number.al_scene_brightness_offset
+            - input_number.al_scene_warmth_offset
+            - input_number.al_wake_sequence_offset
+        data:
+          value: 0
+        continue_on_error: true
+      
+      # Step 2: Reset all boolean flags
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_brighter_active
+            - input_boolean.al_script_dimmer_active
+            - input_boolean.al_script_warmer_active
+            - input_boolean.al_script_cooler_active
+            - input_boolean.al_environmental_boost_active
+            - input_boolean.movie_mode
+            - input_boolean.late_night_mode
+            - input_boolean.bright_work_mode
+            - input_boolean.al_disable_next_sonos_wakeup
+        continue_on_error: true
+      
+      # Step 3: Reset mode and scene to defaults
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Default
+        continue_on_error: true
+      
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.zen32_lighting_scene
+        data:
+          option: "Scene 1: All Lights"
+        continue_on_error: true
+      
+      # Step 4: Cancel all manual control timers
+      - service: timer.cancel
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+        continue_on_error: true
+      
+      # Step 5: Disable all sleep modes
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.adaptive_lighting_sleep_mode_main_living
+            - switch.adaptive_lighting_sleep_mode_kitchen_island
+            - switch.adaptive_lighting_sleep_mode_bedroom_primary
+            - switch.adaptive_lighting_sleep_mode_accent_spots
+            - switch.adaptive_lighting_sleep_mode_recessed_ceiling
+        continue_on_error: true
+      
+      # Step 6: Clear manual control from all zones
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id:
+            - switch.adaptive_lighting_main_living
+            - switch.adaptive_lighting_kitchen_island
+            - switch.adaptive_lighting_bedroom_primary
+            - switch.adaptive_lighting_accent_spots
+            - switch.adaptive_lighting_recessed_ceiling
+          manual_control: false
+        continue_on_error: true
+      
+      # Step 7: Restore AL configuration defaults
+      - service: adaptive_lighting.change_switch_settings
+        target:
+          entity_id:
+            - switch.adaptive_lighting_main_living
+            - switch.adaptive_lighting_kitchen_island
+            - switch.adaptive_lighting_bedroom_primary
+            - switch.adaptive_lighting_accent_spots
+            - switch.adaptive_lighting_recessed_ceiling
+        data:
+          use_defaults: 'configuration'
+        continue_on_error: true
+      
+      # Step 8: Log the cleanup
+      - service: system_log.write
+        data:
+          message: "Adaptive Lighting Startup Cleanup Complete: All inputs reset, manual control cleared, timers cancelled"
+          level: info
+
+  # ENHANCED - Master State Controller (Streamlined with fixed increments)
+  - id: adaptive_lighting_master_state_controller
+    alias: "Adaptive Lighting - Enhanced Master State Controller"
+    description: "Centralized controller with fixed increment logic"
+    trigger:
+      - platform: state
+        entity_id: input_select.current_home_mode
+    variables:
+      home_mode: "{{ states('input_select.current_home_mode') }}"
+      timeout_hours: "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) }}"
+      brightness_increment: "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}"
+      warmth_increment: "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}"
+      # Get zones without manual control
+      all_zones: "{{ state_attr('group.adaptive_lighting_switches', 'entity_id') | list }}"
+      non_manual_zones: >
+        {% set result = [] %}
+        {% for zone in all_zones %}
+          {% set manual = state_attr(zone, 'manual_control') | default([]) %}
+          {% if not (manual is iterable and manual is not string and manual | length > 0) %}
+            {% set result = result + [zone] %}
+          {% endif %}
+        {% endfor %}
+        {{ result }}
+    action:
+      # Start timer for temporary adjustments
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ home_mode in ['Bright Focus', 'Dim Relax', 'Warm Evening', 'Cool Energy'] }}"
+              - condition: template
+                value_template: "{{ timeout_hours > 0 }}"
+            sequence:
+              - service: timer.start
+                target:
+                  entity_id:
+                    - timer.adaptive_lighting_manual_timer_main_living
+                    - timer.adaptive_lighting_manual_timer_kitchen_island
+                    - timer.adaptive_lighting_manual_timer_bedroom_primary
+                    - timer.adaptive_lighting_manual_timer_accent_spots
+                    - timer.adaptive_lighting_manual_timer_recessed_ceiling
+                data:
+                  duration: "{{ (timeout_hours * 3600) | int }}"
+        default:
+          - service: timer.cancel
+            target:
+              entity_id:
+                - timer.adaptive_lighting_manual_timer_main_living
+                - timer.adaptive_lighting_manual_timer_kitchen_island
+                - timer.adaptive_lighting_manual_timer_bedroom_primary
+                - timer.adaptive_lighting_manual_timer_accent_spots
+                - timer.adaptive_lighting_manual_timer_recessed_ceiling
+      
+      
+      # Apply mode-specific lighting behavior
+      - choose:
+          # Movie Mode: Accent lighting only
+          - conditions:
+              - condition: template
+                value_template: "{{ home_mode == 'Movie' }}"
+            sequence:
+              # Create scene snapshot for restoration
+              - service: scene.create
+                data:
+                  scene_id: before_movie
+                  snapshot_entities: "{{ expand('light.all_adaptive_lights') | map(attribute='entity_id') | list }}"
+              # Turn off main lights, set accent lights
+              - service: light.turn_off
+                target:
+                  entity_id:
+                    - light.living_room_couch_lamp
+                    - light.living_room_credenza_light
+                    - light.living_room_floor_lamp
+                    - light.office_desk_lamp
+                    - light.entryway_lamp
+                data:
+                  transition: 1
+              - service: light.turn_on
+                target:
+                  entity_id:
+                    - light.living_room_corner_accent
+                    - light.living_room_spot_lights
+                    - light.dining_room_spot_lights
+                data:
+                  brightness_pct: 15
+                  color_temp: 454  # 2200K
+                  transition: 1
+          
+          # Work Mode: Bright, cool lighting
+          - conditions:
+              - condition: template
+                value_template: "{{ home_mode == 'Work' }}"
+            sequence:
+              - service: adaptive_lighting.change_switch_settings
+                data:
+                  entity_id: >
+                    {{ ['switch.adaptive_lighting_main_living',
+                        'switch.adaptive_lighting_kitchen_island',
+                        'switch.adaptive_lighting_accent_spots']
+                       | select('in', non_manual_zones) | list }}
+                  use_defaults: 'configuration'
+                  min_brightness: 85
+                  max_brightness: 100
+                  min_color_temp: 2700
+                  max_color_temp: 2900
+              - service: adaptive_lighting.apply
+                data:
+                  entity_id: >
+                    {{ ['switch.adaptive_lighting_main_living',
+                        'switch.adaptive_lighting_kitchen_island',
+                        'switch.adaptive_lighting_accent_spots']
+                       | select('in', non_manual_zones) | list }}
+                  turn_on_lights: false
+                  transition: 1
+          
+          # Late Night Mode
+          - conditions:
+              - condition: template
+                value_template: "{{ home_mode == 'Late Night' }}"
+            sequence:
+              - service: adaptive_lighting.change_switch_settings
+                data:
+                  entity_id: >
+                    {{ ['switch.adaptive_lighting_main_living',
+                        'switch.adaptive_lighting_kitchen_island',
+                        'switch.adaptive_lighting_bedroom_primary',
+                        'switch.adaptive_lighting_accent_spots',
+                        'switch.adaptive_lighting_recessed_ceiling']
+                       | select('in', non_manual_zones) | list }}
+                  use_defaults: 'configuration'
+                  max_brightness: 25
+                  max_color_temp: 2500
+              - service: adaptive_lighting.apply
+                data:
+                  entity_id: >
+                    {{ ['switch.adaptive_lighting_main_living',
+                        'switch.adaptive_lighting_kitchen_island',
+                        'switch.adaptive_lighting_bedroom_primary',
+                        'switch.adaptive_lighting_accent_spots',
+                        'switch.adaptive_lighting_recessed_ceiling']
+                       | select('in', non_manual_zones) | list }}
+                  turn_on_lights: false
+                  transition: 2
+          
+        
+        # Default mode: Reset everything
+        default:
+          - service: input_number.set_value
+            data:
+              entity_id: input_number.adaptive_lighting_total_brightness_adjustment
+              value: 0
+          - service: input_number.set_value
+            data:
+              entity_id: input_number.adaptive_lighting_total_warmth_adjustment
+              value: 0
+          - service: timer.cancel
+            target:
+              entity_id:
+                - timer.adaptive_lighting_manual_timer_main_living
+                - timer.adaptive_lighting_manual_timer_kitchen_island
+                - timer.adaptive_lighting_manual_timer_bedroom_primary
+                - timer.adaptive_lighting_manual_timer_accent_spots
+                - timer.adaptive_lighting_manual_timer_recessed_ceiling
+          - service: input_boolean.turn_off
+            target:
+              entity_id:
+                - input_boolean.al_script_brighter_active
+                - input_boolean.al_script_dimmer_active
+                - input_boolean.al_script_warmer_active
+                - input_boolean.al_script_cooler_active
+
+  # ENHANCED - Sonos Alarm Integration (using existing Sonos package sensors)
+  - id: adaptive_lighting_dynamic_sunrise_all
+    alias: "Adaptive Lighting - Dynamic Sunrise All Zones"
+    trigger:
+      - platform: state
+        entity_id: sensor.sonos_upcoming_alarms
+        attribute: earliest_alarm_timestamp
+      - platform: time
+        at: "03:00:00"
+      - platform: state
+        entity_id: sun.sun
+        attribute: next_rising
+    condition:
+      - condition: template
+        value_template: >
+          {% set current_alarm = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+          {% set last_alarm = state_attr('sensor.adaptive_lighting_sunrise_times', 'last_processed_alarm') %}
+          {{ current_alarm != last_alarm or trigger.platform == 'time' }}
+      - condition: state
+        entity_id: input_boolean.al_disable_next_sonos_wakeup
+        state: 'off'
+    variables:
+      al_switches:
+        - switch.adaptive_lighting_main_living
+        - switch.adaptive_lighting_kitchen_island
+        - switch.adaptive_lighting_bedroom_primary
+        - switch.adaptive_lighting_accent_spots
+        - switch.adaptive_lighting_recessed_ceiling
+    action:
+      - repeat:
+          count: "{{ al_switches | length }}"
+          sequence:
+            # Skip if zone has manual control
+            - condition: template
+              value_template: >
+                {% set switch = al_switches[repeat.index - 1] %}
+                {% set manual = state_attr(switch, 'manual_control') | default([]) %}
+                {{ not (manual is iterable and manual is not string and manual | length > 0) }}
+            - service: adaptive_lighting.change_switch_settings
+              data:
+                entity_id: "{{ al_switches[repeat.index - 1] }}"
+                use_defaults: 'configuration'
+                sunrise_time: >
+                  {% set alarm_timestamp = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+                  {% set current_switch = al_switches[repeat.index - 1] %}
+                  {% set natural_sunrise = state_attr('sun.sun', 'next_rising') | as_timestamp(0) %}
+                  {% if 'recessed_ceiling' in current_switch %}
+                    {% set offset_seconds = -2700 %}
+                  {% elif 'kitchen_island' in current_switch %}
+                    {% set offset_seconds = -2700 %}
+                  {% elif 'bedroom_primary' in current_switch %}
+                    {% set offset_seconds = -1800 %}
+                  {% elif 'accent_spots' in current_switch %}
+                    {% set offset_seconds = -2700 %}
+                  {% elif 'main_living' in current_switch %}
+                    {% set offset_seconds = -2700 %}
+                  {% else %}
+                    {% set offset_seconds = 0 %}
+                  {% endif %}
+                  {% set natural_sunrise_adjusted = natural_sunrise + offset_seconds %}
+                  {% if alarm_timestamp %}
+                    {% if 'bedroom_primary' in current_switch %}
+                      {% set alarm_based = alarm_timestamp - 1800 %}
+                    {% elif 'kitchen_island' in current_switch %}
+                      {% set alarm_based = alarm_timestamp - 2700 %}
+                    {% elif 'main_living' in current_switch %}
+                      {% set alarm_based = alarm_timestamp - 1200 %}
+                    {% else %}
+                      {% set alarm_based = alarm_timestamp - 1500 %}
+                    {% endif %}
+                    {% set final_time = [natural_sunrise_adjusted, alarm_based] | min %}
+                  {% else %}
+                    {% set final_time = natural_sunrise_adjusted %}
+                  {% endif %}
+                  {{ final_time | timestamp_custom('%H:%M:%S', true) }}
+
+  # ENHANCED - Environmental Adaptations
+  - id: adaptive_lighting_low_light_boost
+    alias: "Adaptive Lighting - Low Light Brightness Boost"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.living_room_presence_light_sensor_light_level
+        below: 1000
+        for: "00:05:00"
+      - platform: state
+        entity_id: weather.home
+        to: ['cloudy', 'partlycloudy', 'rainy', 'snowy', 'fog']
+        for: "00:05:00"
+    condition:
+      # Time restrictions are handled within sophisticated_environmental_boost variable
+      - condition: or
+        conditions:
+          - condition: numeric_state
+            entity_id: sensor.living_room_presence_light_sensor_light_level
+            below: 1000
+          - condition: state
+            entity_id: weather.home
+            state: ['cloudy', 'partlycloudy', 'rainy', 'snowy', 'fog']
+      - condition: state
+        entity_id: input_boolean.al_globally_paused
+        state: 'off'
+      - condition: state
+        entity_id: input_boolean.al_environmental_boost_active
+        state: 'off'
+    variables:
+      current_lux: "{{ states('sensor.living_room_presence_light_sensor_light_level') | int(0) }}"
+      current_weather: "{{ states('weather.home') }}"
+      sophisticated_environmental_boost: >
+        {% set lux = states('sensor.living_room_presence_light_sensor_light_level') | float(300) %}
+        {% set weather = states('weather.home') %}
+        {% set season = 'winter' if now().month in [12,1,2] else 
+                        'summer' if now().month in [6,7,8] else 
+                        'transition' %}
+        
+        {% set base_boost = 0 %}
+        
+        {# Softer logarithmic lux scaling - only boost when truly dark #}
+        {% if lux < 10 %}
+          {% set base_boost = base_boost + 15 %}
+        {% elif lux < 25 %}
+          {% set base_boost = base_boost + 10 %}
+        {% elif lux < 50 %}
+          {% set base_boost = base_boost + 7 %}
+        {% elif lux < 100 %}
+          {% set base_boost = base_boost + 5 %}
+        {% elif lux < 200 %}
+          {% set base_boost = base_boost + 3 %}
+        {% elif lux < 400 %}
+          {% set base_boost = base_boost + 1 %}
+        {% endif %}
+        
+        {# Weather modifiers - complete mapping with all states #}
+        {% set weather_boost = {
+          'fog': 20,
+          'pouring': 18,
+          'hail': 18,
+          'snowy': 15,
+          'snowy-rainy': 15,
+          'rainy': 12,
+          'lightning-rainy': 12,
+          'cloudy': 10,
+          'partlycloudy': 5,
+          'windy': 2,
+          'windy-variant': 2,
+          'lightning': 8,
+          'sunny': 0,
+          'clear-night': 0,
+          'exceptional': 15
+        } %}
+        {% set base_boost = base_boost + weather_boost.get(weather, 0) %}
+        
+        {# Seasonal adjustment #}
+        {% if season == 'winter' %}
+          {% set base_boost = base_boost + 8 %}
+        {% elif season == 'summer' %}
+          {% set base_boost = base_boost - 3 %}
+        {% endif %}
+        
+        {# Time-of-day scaling - disable at night #}
+        {% set hour = now().hour %}
+        {% if 22 <= hour or hour <= 6 %}
+          {# Disable environmental boost at night (10 PM - 6 AM) #}
+          {% set base_boost = 0 %}
+        {% elif 6 < hour <= 8 or 18 <= hour < 22 %}
+          {% set base_boost = base_boost * 0.7 %}
+        {% endif %}
+        
+        {{ [25, base_boost] | min | round(0) }}
+    
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.al_environmental_boost_active
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_environmental_brightness_offset
+        data:
+          value: "{{ sophisticated_environmental_boost }}"
+
+  - id: adaptive_lighting_bright_day_reset
+    alias: "Adaptive Lighting - Bright Day Reset"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.living_room_presence_light_sensor_light_level
+        above: 2000
+        for: "00:10:00"
+      - platform: state
+        entity_id: weather.home
+        to: ['sunny', 'clear-night']
+        for: "00:15:00"
+    condition:
+      - condition: sun
+        after: sunrise
+        after_offset: "01:00:00"
+        before: sunset
+        before_offset: "-01:00:00"
+      - condition: numeric_state
+        entity_id: sensor.living_room_presence_light_sensor_light_level
+        above: 2000
+      - condition: state
+        entity_id: input_boolean.al_environmental_boost_active
+        state: 'on'
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.al_environmental_boost_active
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_environmental_brightness_offset
+        data:
+          value: 0
+
+  # ASYMMETRIC BOUNDARY LOGIC - Revolutionary Implementation
+  - id: adaptive_lighting_apply_fixed_adjustments
+    alias: "Adaptive Lighting - Apply Asymmetric Adjustments"
+    initial_state: false  # DISABLED - replaced by v2
+    description: "Revolutionary asymmetric boundary logic implementation"
+    mode: restart  # Restart on rapid changes to prevent fighting
+    trigger:
+      - platform: state
+        entity_id:
+          - input_number.adaptive_lighting_total_brightness_adjustment
+          - input_number.adaptive_lighting_total_warmth_adjustment
+          - input_number.adaptive_lighting_environmental_brightness_offset
+          - input_number.al_sunset_fade_brightness_offset
+          - input_number.al_scene_brightness_offset
+          - input_number.al_scene_warmth_offset
+          - input_number.al_wake_sequence_offset
+        for: "00:00:01"
+      - platform: time_pattern
+        minutes: "/15"
+    
+    variables:
+      # Core adjustments
+      b_adj: "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}"
+      k_adj: "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}"
+      env_boost: "{{ states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) }}"
+      
+      # Additional offsets
+      sunset_fade: "{{ states('input_number.al_sunset_fade_brightness_offset') | int(0) }}"
+      scene_b_offset: "{{ states('input_number.al_scene_brightness_offset') | int(0) }}"
+      scene_k_offset: "{{ states('input_number.al_scene_warmth_offset') | int(0) }}"
+      wake_offset: "{{ states('input_number.al_wake_sequence_offset') | int(0) }}"
+      
+      # Combined adjustments
+      final_b_adj: "{{ b_adj + env_boost + sunset_fade + scene_b_offset + wake_offset }}"
+      final_k_adj: "{{ k_adj + scene_k_offset }}"
+      
+      # Zone configurations dictionary
+      zone_configs:
+        - entity_id: switch.adaptive_lighting_main_living
+          min_brightness: 45
+          max_brightness: 100
+          min_color_temp: 2250
+          max_color_temp: 2950
+        - entity_id: switch.adaptive_lighting_kitchen_island
+          min_brightness: 15
+          max_brightness: 100
+          min_color_temp: 2000
+          max_color_temp: 4000
+        - entity_id: switch.adaptive_lighting_bedroom_primary
+          min_brightness: 20
+          max_brightness: 40
+          min_color_temp: 1800
+          max_color_temp: 2250
+        - entity_id: switch.adaptive_lighting_accent_spots
+          min_brightness: 20
+          max_brightness: 50
+          min_color_temp: 2000
+          max_color_temp: 6500
+        - entity_id: switch.adaptive_lighting_recessed_ceiling
+          min_brightness: 2
+          max_brightness: 23
+          min_color_temp: 2400
+          max_color_temp: 5000
+    
+    condition:
+      - condition: state
+        entity_id: input_boolean.al_globally_paused
+        state: 'off'
+      - condition: template
+        value_template: "{{ trigger.platform != 'time_pattern' or (final_b_adj != 0 or final_k_adj != 0) }}"
+    
+    action:
+      # CRITICAL: Use repeat with dictionary lookup for asymmetric logic
+      - repeat:
+          for_each: "{{ zone_configs }}"
+          sequence:
+            - service: adaptive_lighting.change_switch_settings
+              target:
+                entity_id: "{{ repeat.item.entity_id }}"
+              data:
+                # ASYMMETRIC BRIGHTNESS LOGIC WITH BOUNDARY PROTECTION
+                # Positive adjustments only affect min, negative only affect max
+                # But we prevent invalid states where min > max
+                min_brightness: >
+                  {% set base_min = repeat.item.min_brightness %}
+                  {% set base_max = repeat.item.max_brightness %}
+                  {% set boost = final_b_adj if final_b_adj > 0 else 0 %}
+                  {% set proposed_min = base_min + boost %}
+                  {{ [1, [proposed_min, base_max] | min] | max }}
+                
+                max_brightness: >
+                  {% set base_min = repeat.item.min_brightness %}
+                  {% set base_max = repeat.item.max_brightness %}
+                  {% set reduction = final_b_adj if final_b_adj < 0 else 0 %}
+                  {% set proposed_max = base_max + reduction %}
+                  {{ [[proposed_max, base_min] | max, 100] | min }}
+                
+                # ASYMMETRIC COLOR TEMP LOGIC WITH BOUNDARY PROTECTION
+                # Positive adjustments (cooler) only affect min, negative (warmer) only affect max
+                min_color_temp: >
+                  {% if 'recessed' not in repeat.item.entity_id %}
+                    {% set base_min = repeat.item.min_color_temp %}
+                    {% set base_max = repeat.item.max_color_temp %}
+                    {% set cooler_adj = final_k_adj if final_k_adj > 0 else 0 %}
+                    {% set proposed_min = base_min + cooler_adj %}
+                    {{ [1500, [proposed_min, base_max] | min] | max }}
+                  {% else %}
+                    {{ repeat.item.min_color_temp | default(2400) }}
+                  {% endif %}
+                
+                max_color_temp: >
+                  {% if 'recessed' not in repeat.item.entity_id %}
+                    {% set base_min = repeat.item.min_color_temp %}
+                    {% set base_max = repeat.item.max_color_temp %}
+                    {% set warmer_adj = final_k_adj if final_k_adj < 0 else 0 %}
+                    {% set proposed_max = base_max + warmer_adj %}
+                    {{ [[proposed_max, base_min] | max, 6500] | min }}
+                  {% else %}
+                    {{ repeat.item.max_color_temp | default(5000) }}
+                  {% endif %}
+                
+                transition: 1
+              continue_on_error: true  # BEST PRACTICE: Resilience
+      
+      # Apply changes immediately
+      - service: adaptive_lighting.apply
+        target:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+        data:
+          turn_on_lights: false
+          transition: 1
+        continue_on_error: true
+      
+      # Fire event with all calculated values for real-time monitoring
+      - event: adaptive_lighting_calculation_complete
+        event_data:
+          timestamp: "{{ now().isoformat() }}"
+          trigger_source: "{{ trigger.platform if trigger is defined else 'manual' }}"
+          final_brightness_adjustment: "{{ final_b_adj }}"
+          final_warmth_adjustment: "{{ final_k_adj }}"
+          components:
+            brightness_manual: "{{ b_adj }}"
+            brightness_environmental: "{{ env_boost }}"
+            brightness_sunset_fade: "{{ sunset_fade }}"
+            brightness_scene: "{{ scene_b_offset }}"
+            brightness_wake: "{{ wake_offset }}"
+            warmth_manual: "{{ k_adj }}"
+            warmth_scene: "{{ scene_k_offset }}"
+          sun_elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
+          environmental_active: "{{ is_state('input_boolean.al_environmental_boost_active', 'on') }}"
+          zones_updated: "{{ zone_configs | map(attribute='entity_id') | list }}"
+          zones_calculated: >
+            {% set result = [] %}
+            {% for zone in zone_configs %}
+              {% set result = result + [{
+                'entity_id': zone.entity_id,
+                'min_brightness': zone.min_brightness + (final_b_adj if final_b_adj > 0 else 0),
+                'max_brightness': zone.max_brightness + (final_b_adj if final_b_adj < 0 else 0),
+                'min_color_temp': zone.min_color_temp + (final_k_adj if final_k_adj > 0 else 0),
+                'max_color_temp': zone.max_color_temp + (final_k_adj if final_k_adj < 0 else 0)
+              }] %}
+            {% endfor %}
+            {{ result }}
+
+  # MANUAL-AWARE CORE ADJUSTMENT ENGINE V2
+  - id: adaptive_lighting_core_engine_v2
+    alias: "AL - Core Adjustment Engine (Manual-Safe)"
+    description: "Applies adjustments only to non-manual zones"
+    mode: restart
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: state
+        entity_id:
+          - input_number.adaptive_lighting_total_brightness_adjustment
+          - input_number.adaptive_lighting_total_warmth_adjustment
+          - input_number.adaptive_lighting_environmental_brightness_offset
+          - input_number.al_sunset_fade_brightness_offset
+          - input_number.al_scene_brightness_offset
+          - input_number.al_scene_warmth_offset
+          - input_number.al_wake_sequence_offset
+        for: "00:00:01"
+      - platform: time_pattern
+        minutes: "/15"
+    condition:
+      - condition: state
+        entity_id: input_boolean.al_globally_paused
+        state: "off"
+    variables:
+      # Calculate combined adjustments
+      final_brightness: >
+        {{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0)
+           + states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0)
+           + states('input_number.al_sunset_fade_brightness_offset') | int(0)
+           + states('input_number.al_scene_brightness_offset') | int(0)
+           + states('input_number.al_wake_sequence_offset') | int(0) }}
+      final_warmth: >
+        {{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0)
+           + states('input_number.al_scene_warmth_offset') | int(0) }}
+      
+      # Zone configurations with defaults
+      zone_configs:
+        - entity_id: switch.adaptive_lighting_main_living
+          min_brightness: 45
+          max_brightness: 100
+          min_color_temp: 2250
+          max_color_temp: 2950
+        - entity_id: switch.adaptive_lighting_kitchen_island
+          min_brightness: 15
+          max_brightness: 100
+          min_color_temp: 2000
+          max_color_temp: 4000
+        - entity_id: switch.adaptive_lighting_bedroom_primary
+          min_brightness: 20
+          max_brightness: 40
+          min_color_temp: 1800
+          max_color_temp: 2250
+        - entity_id: switch.adaptive_lighting_accent_spots
+          min_brightness: 20
+          max_brightness: 50
+          min_color_temp: 2000
+          max_color_temp: 6500
+        - entity_id: switch.adaptive_lighting_recessed_ceiling
+          min_brightness: 2
+          max_brightness: 23
+          min_color_temp: 2400
+          max_color_temp: 5000
+    action:
+      - repeat:
+          for_each: "{{ zone_configs }}"
+          sequence:
+            # CRITICAL: Skip zones with manual control
+            - condition: template
+              value_template: >
+                {% set manual_list = state_attr(repeat.item.entity_id, 'manual_control') | default([]) %}
+                {{ not (manual_list is iterable and manual_list is not string and manual_list | length > 0) }}
+            
+            # Apply asymmetric adjustments
+            - service: adaptive_lighting.change_switch_settings
+              target:
+                entity_id: "{{ repeat.item.entity_id }}"
+              data:
+                use_defaults: 'configuration'
+                min_brightness: >
+                  {% set base_min = repeat.item.min_brightness %}
+                  {% set base_max = repeat.item.max_brightness %}
+                  {% set boost = final_brightness if final_brightness > 0 else 0 %}
+                  {% set proposed_min = base_min + boost %}
+                  {{ [1, [proposed_min, base_max] | min] | max }}
+                
+                max_brightness: >
+                  {% set base_min = repeat.item.min_brightness %}
+                  {% set base_max = repeat.item.max_brightness %}
+                  {% set reduction = final_brightness if final_brightness < 0 else 0 %}
+                  {% set proposed_max = base_max + reduction %}
+                  {{ [[proposed_max, base_min] | max, 100] | min }}
+                
+                min_color_temp: >
+                  {% if 'recessed' not in repeat.item.entity_id %}
+                    {% set base_min = repeat.item.min_color_temp %}
+                    {% set base_max = repeat.item.max_color_temp %}
+                    {% set cooler_adj = final_warmth if final_warmth > 0 else 0 %}
+                    {% set proposed_min = base_min + cooler_adj %}
+                    {{ [1500, [proposed_min, base_max] | min] | max }}
+                  {% else %}
+                    {{ repeat.item.min_color_temp }}
+                  {% endif %}
+                
+                max_color_temp: >
+                  {% if 'recessed' not in repeat.item.entity_id %}
+                    {% set base_min = repeat.item.min_color_temp %}
+                    {% set base_max = repeat.item.max_color_temp %}
+                    {% set warmer_adj = final_warmth if final_warmth < 0 else 0 %}
+                    {% set proposed_max = base_max + warmer_adj %}
+                    {{ [[proposed_max, base_min] | max, 6500] | min }}
+                  {% else %}
+                    {{ repeat.item.max_color_temp }}
+                  {% endif %}
+                
+                transition: 1
+              continue_on_error: true
+      
+      # Apply to non-manual zones only (skip if all zones are manual)
+      - condition: template
+        value_template: >
+          {% set switches = [
+            'switch.adaptive_lighting_main_living',
+            'switch.adaptive_lighting_kitchen_island',
+            'switch.adaptive_lighting_bedroom_primary',
+            'switch.adaptive_lighting_accent_spots',
+            'switch.adaptive_lighting_recessed_ceiling'
+          ] %}
+          {% set zones = [] %}
+          {% for switch in switches %}
+            {% set manual = state_attr(switch, 'manual_control') | default([]) %}
+            {% if not (manual is iterable and manual is not string and manual | length > 0) %}
+              {% set zones = zones + [switch] %}
+            {% endif %}
+          {% endfor %}
+          {{ zones | length > 0 }}
+      - service: adaptive_lighting.apply
+        target:
+          entity_id: >
+            {% set switches = [
+              'switch.adaptive_lighting_main_living',
+              'switch.adaptive_lighting_kitchen_island',
+              'switch.adaptive_lighting_bedroom_primary',
+              'switch.adaptive_lighting_accent_spots',
+              'switch.adaptive_lighting_recessed_ceiling'
+            ] %}
+            {% set zones = [] %}
+            {% for switch in switches %}
+              {% set manual = state_attr(switch, 'manual_control') | default([]) %}
+              {% if not (manual is iterable and manual is not string and manual | length > 0) %}
+                {% set zones = zones + [switch] %}
+              {% endif %}
+            {% endfor %}
+            {{ zones }}
+        data:
+          turn_on_lights: false
+          transition: 1
+        continue_on_error: true
+
+  # PER-ZONE TIMER EXPIRY HANDLERS
+  - id: adaptive_lighting_timer_expired_main_living
+    alias: "AL - Manual Timer Expired - Main Living"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_main_living
+    action:
+      - service: adaptive_lighting.set_manual_control
+        target:
+          entity_id: switch.adaptive_lighting_main_living
+        data:
+          manual_control: false
+      - service: adaptive_lighting.apply
+        data:
+          entity_id: switch.adaptive_lighting_main_living
+          lights: light.main_living_lights
+          transition: 2
+          turn_on_lights: false
+
+  - id: adaptive_lighting_timer_expired_kitchen_island
+    alias: "AL - Manual Timer Expired - Kitchen Island"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_kitchen_island
+    action:
+      - service: adaptive_lighting.set_manual_control
+        target:
+          entity_id: switch.adaptive_lighting_kitchen_island
+        data:
+          manual_control: false
+      - service: adaptive_lighting.apply
+        data:
+          entity_id: switch.adaptive_lighting_kitchen_island
+          lights: light.kitchen_island_lights
+          transition: 2
+          turn_on_lights: false
+
+  - id: adaptive_lighting_timer_expired_bedroom_primary
+    alias: "AL - Manual Timer Expired - Bedroom Primary"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_bedroom_primary
+    action:
+      - service: adaptive_lighting.set_manual_control
+        target:
+          entity_id: switch.adaptive_lighting_bedroom_primary
+        data:
+          manual_control: false
+      - service: adaptive_lighting.apply
+        data:
+          entity_id: switch.adaptive_lighting_bedroom_primary
+          lights: light.bedroom_primary_lights
+          transition: 2
+          turn_on_lights: false
+
+  - id: adaptive_lighting_timer_expired_accent_spots
+    alias: "AL - Manual Timer Expired - Accent Spots"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_accent_spots
+    action:
+      - service: adaptive_lighting.set_manual_control
+        target:
+          entity_id: switch.adaptive_lighting_accent_spots
+        data:
+          manual_control: false
+      - service: adaptive_lighting.apply
+        data:
+          entity_id: switch.adaptive_lighting_accent_spots
+          lights: light.accent_spots_lights
+          transition: 2
+          turn_on_lights: false
+
+  - id: adaptive_lighting_timer_expired_recessed_ceiling
+    alias: "AL - Manual Timer Expired - Recessed Ceiling"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_recessed_ceiling
+    action:
+      - service: adaptive_lighting.set_manual_control
+        target:
+          entity_id: switch.adaptive_lighting_recessed_ceiling
+        data:
+          manual_control: false
+      - service: adaptive_lighting.apply
+        data:
+          entity_id: switch.adaptive_lighting_recessed_ceiling
+          lights: light.recessed_ceiling_lights
+          transition: 2
+          turn_on_lights: false
+  
+  # GLOBAL MANUAL ADJUSTMENT RESET (for button presses only)
+  - id: adaptive_lighting_manual_adjustments_reset
+    alias: "AL - Reset Manual Adjustments Only"
+    description: "Resets only manual brightness/warmth, preserves environmental"
+    trigger:
+      # Trigger when ANY zone timer expires
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_main_living
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_kitchen_island
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_bedroom_primary
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_accent_spots
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.adaptive_lighting_manual_timer_recessed_ceiling
+    action:
+      # Only reset MANUAL adjustments, not environmental
+      - service: input_number.set_value
+        target:
+          entity_id:
+            - input_number.adaptive_lighting_total_brightness_adjustment
+            - input_number.adaptive_lighting_total_warmth_adjustment
+        data:
+          value: 0
+      
+      # Reset mode to default
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Default
+      
+      # Clear UI flags
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_brighter_active
+            - input_boolean.al_script_dimmer_active
+            - input_boolean.al_script_warmer_active
+            - input_boolean.al_script_cooler_active
+
+  # INTELLIGENT MANUAL CHANGE DETECTION - Sophisticated Implementation
+  - id: adaptive_lighting_ingest_manual_changes
+    alias: "AL - Detect & Preserve Manual Changes"
+    initial_state: false  # DISABLED - AL handles this internally now
+    description: "Captures physical control changes and preserves user intent"
+    mode: parallel
+    max: 10
+    trigger:
+      # Monitor individual light changes (not groups to avoid feedback)
+      - platform: state
+        entity_id:
+          - light.entryway_lamp
+          - light.living_room_floor_lamp
+          - light.office_desk_lamp
+          - light.living_room_corner_accent
+          - light.living_room_couch_lamp
+          - light.living_room_credenza_light
+          - light.kitchen_island_pendants
+          - light.master_bedroom_table_lamps
+          - light.dining_room_spot_lights
+          - light.living_room_spot_lights
+          - light.kitchen_main_lights
+          - light.living_room_hallway_lights
+        attribute: brightness
+        id: "brightness_change"
+      - platform: state
+        entity_id:
+          - light.entryway_lamp
+          - light.living_room_floor_lamp
+          - light.office_desk_lamp
+          - light.living_room_corner_accent
+          - light.living_room_couch_lamp
+          - light.living_room_credenza_light
+          - light.kitchen_island_pendants
+          - light.master_bedroom_table_lamps
+          - light.dining_room_spot_lights
+          - light.living_room_spot_lights
+          - light.kitchen_main_lights
+          - light.living_room_hallway_lights
+        attribute: color_temp_kelvin
+        id: "warmth_change"
+    
+    condition:
+      # Don't trigger within 60 seconds of Home Assistant starting
+      - condition: template
+        value_template: >
+          {{ (now() - states.sensor.uptime.last_changed).total_seconds() > 60 }}
+      
+      # Ensure change is from physical control or UI, not our automations
+      - condition: template
+        value_template: >
+          {% set context = trigger.to_state.context %}
+          {% set parent_id = context.parent_id %}
+          {% set user_id = context.user_id %}
+          
+          {# Physical change: no parent context and no user context #}
+          {% set is_physical = parent_id is none and user_id is none %}
+          
+          {# User change through UI: has user_id #}
+          {% set is_user = user_id is not none %}
+          
+          {# Get the parent automation if any #}
+          {% set parent_automation = '' %}
+          {% if parent_id is not none %}
+            {% for auto in states.automation %}
+              {% if auto.context.id == parent_id %}
+                {% set parent_automation = auto.entity_id %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          
+          {# Exclude our own automations #}
+          {% set excluded_automations = [
+            'automation.adaptive_lighting_apply_asymmetric_adjustments',
+            'automation.adaptive_lighting_apply_fixed_adjustments'
+          ] %}
+          
+          {% set not_from_our_automations = parent_automation not in excluded_automations %}
+          
+          {{ (is_physical or is_user) and not_from_our_automations }}
+    
+    action:
+      - variables:
+          # Find which AL switch controls this light
+          zone_switch: >
+            {% set light = trigger.entity_id %}
+            {% set zone_map = {
+              'light.entryway_lamp': 'switch.adaptive_lighting_main_living',
+              'light.living_room_floor_lamp': 'switch.adaptive_lighting_main_living',
+              'light.office_desk_lamp': 'switch.adaptive_lighting_main_living',
+              'light.living_room_corner_accent': 'switch.adaptive_lighting_main_living',
+              'light.living_room_couch_lamp': 'switch.adaptive_lighting_main_living',
+              'light.living_room_credenza_light': 'switch.adaptive_lighting_main_living',
+              'light.kitchen_island_pendants': 'switch.adaptive_lighting_kitchen_island',
+              'light.master_bedroom_table_lamps': 'switch.adaptive_lighting_bedroom_primary',
+              'light.master_bedroom_corner_accent': 'switch.adaptive_lighting_bedroom_primary',
+              'light.dining_room_spot_lights': 'switch.adaptive_lighting_accent_spots',
+              'light.living_room_spot_lights': 'switch.adaptive_lighting_accent_spots',
+              'light.kitchen_main_lights': 'switch.adaptive_lighting_recessed_ceiling',
+              'light.living_room_hallway_lights': 'switch.adaptive_lighting_recessed_ceiling'
+            } %}
+            {{ zone_map.get(light, none) }}
+      
+      - condition: template
+        value_template: "{{ zone_switch != none }}"
+      
+      - choose:
+          # Brightness change detection
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.id == 'brightness_change' }}"
+            sequence:
+              - variables:
+                  # Compare from_state to to_state to detect the actual change
+                  prev_brightness: "{{ trigger.from_state.attributes.brightness | float(0) }}"
+                  current_brightness: "{{ trigger.to_state.attributes.brightness | float(0) }}"
+                  prev_pct: "{{ (prev_brightness / 2.55) | round(0) }}"
+                  current_pct: "{{ (current_brightness / 2.55) | round(0) }}"
+                  # The offset is the difference from previous state
+                  offset: "{{ (current_pct - prev_pct) | round(0) }}"
+              
+              # Only update if significant change (>5%)
+              - condition: template
+                value_template: "{{ offset | abs > 5 }}"
+              
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.adaptive_lighting_total_brightness_adjustment
+                data:
+                  # Add the offset to the current adjustment value
+                  value: >
+                    {% set current = states('input_number.adaptive_lighting_total_brightness_adjustment') | float(0) %}
+                    {% set new_value = current + offset %}
+                    {{ [-100, [100, new_value] | min] | max }}
+              
+              # Note: Per-zone timers are handled by the manual control detection automation
+          
+          # Color temperature change detection
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.id == 'warmth_change' }}"
+            sequence:
+              - variables:
+                  current_k: "{{ trigger.to_state.attributes.get('color_temp_kelvin', 3000) | float(3000) }}"
+                  expected_k: "{{ state_attr(zone_switch, 'color_temp_kelvin') | float(3000) }}"
+                  offset: "{{ (current_k - expected_k) | round(-2) }}"
+              
+              # Only update if significant change (>200K)
+              - condition: template
+                value_template: "{{ offset | abs > 200 }}"
+              
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.adaptive_lighting_total_warmth_adjustment
+                data:
+                  value: "{{ [-2500, [2500, offset] | min] | max }}"
+              
+              # Note: Per-zone timers are handled by the manual control detection automation
+
+  # Boolean flag reset automations
+  - id: adaptive_lighting_reset_brightness_flags
+    alias: "Reset Brightness Flags When Adjustments Zero"
+    trigger:
+      - platform: state
+        entity_id: input_number.adaptive_lighting_total_brightness_adjustment
+        to: "0"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_brighter_active
+            - input_boolean.al_script_dimmer_active
+
+  - id: adaptive_lighting_reset_warmth_flags
+    alias: "Reset Warmth Flags When Adjustments Zero"
+    trigger:
+      - platform: state
+        entity_id: input_number.adaptive_lighting_total_warmth_adjustment
+        to: "0"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_warmer_active
+            - input_boolean.al_script_cooler_active
+
+  # MANUAL CONTROL DETECTION - Monitor AL switch attributes for changes
+  - id: adaptive_lighting_manual_override_triggered
+    alias: "AL - Per-Zone Manual Override Handler"
+    description: "Start zone-specific timer when AL detects manual control"
+    mode: queued
+    max: 10
+    trigger:
+      # Monitor when manual_control attribute changes on any AL switch
+      - platform: state
+        entity_id:
+          - switch.adaptive_lighting_main_living
+          - switch.adaptive_lighting_kitchen_island
+          - switch.adaptive_lighting_bedroom_primary
+          - switch.adaptive_lighting_accent_spots
+          - switch.adaptive_lighting_recessed_ceiling
+        attribute: manual_control
+    condition:
+      # Only proceed if manual control list is not empty
+      - condition: template
+        value_template: >
+          {% set manual = trigger.to_state.attributes.manual_control | default([]) %}
+          {{ manual is iterable and manual is not string and manual | length > 0 }}
+    variables:
+      # Map AL switch to its timer
+      timer_map:
+        switch.adaptive_lighting_main_living: timer.adaptive_lighting_manual_timer_main_living
+        switch.adaptive_lighting_kitchen_island: timer.adaptive_lighting_manual_timer_kitchen_island
+        switch.adaptive_lighting_bedroom_primary: timer.adaptive_lighting_manual_timer_bedroom_primary
+        switch.adaptive_lighting_accent_spots: timer.adaptive_lighting_manual_timer_accent_spots
+        switch.adaptive_lighting_recessed_ceiling: timer.adaptive_lighting_manual_timer_recessed_ceiling
+      zone_timer: "{{ timer_map.get(trigger.entity_id, 'timer.adaptive_lighting_manual_timer_main_living') }}"
+    action:
+      # Start the zone-specific timer
+      - service: timer.start
+        target:
+          entity_id: "{{ zone_timer }}"
+        data:
+          duration: "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+      
+      # Optional: Log for debugging
+      - service: system_log.write
+        data:
+          message: >
+            Manual control detected on {{ trigger.entity_id }}
+            Lights: {{ trigger.to_state.attributes.manual_control | default([]) | join(', ') }}
+            Starting timer: {{ zone_timer }}
+          level: info
+
+  # INSTANT MANUAL DETECTION for physical and HomeKit changes
+  - id: adaptive_lighting_instant_manual_detection
+    alias: "AL - Instant Manual Detection for Physical/HomeKit Changes"
+    description: "Immediately detects and sets manual control for physical/HomeKit adjustments"
+    initial_state: false  # DISABLED - causing feedback loops with v2 engine
+    mode: parallel
+    max: 10
+
+    trigger:
+      # Monitor brightness changes
+      - platform: state
+        entity_id:
+          - light.entryway_lamp
+          - light.living_room_floor_lamp
+          - light.office_desk_lamp
+          - light.living_room_corner_accent
+          - light.living_room_couch_lamp
+          - light.living_room_credenza_light
+          - light.kitchen_island_pendants
+          - light.master_bedroom_table_lamps
+          - light.master_bedroom_corner_accent
+          - light.dining_room_spot_lights
+          - light.living_room_spot_lights
+          - light.kitchen_main_lights
+          - light.living_room_hallway_lights
+        attribute: brightness
+
+      # Monitor color temp changes
+      - platform: state
+        entity_id:
+          - light.entryway_lamp
+          - light.living_room_floor_lamp
+          - light.office_desk_lamp
+          - light.living_room_corner_accent
+          - light.living_room_couch_lamp
+          - light.living_room_credenza_light
+          - light.kitchen_island_pendants
+          - light.master_bedroom_table_lamps
+          - light.master_bedroom_corner_accent
+          - light.dining_room_spot_lights
+          - light.living_room_spot_lights
+          - light.kitchen_main_lights
+          - light.living_room_hallway_lights
+        attribute: color_temp
+
+    condition:
+      # Detect physical or HomeKit changes only
+      - condition: template
+        value_template: >
+          {% set ctx = trigger.to_state.context %}
+          {% set is_physical = ctx.parent_id is none and ctx.user_id is none %}
+          {% set is_homekit = ctx.user_id is not none and ctx.parent_id is none %}
+          {{ is_physical or is_homekit }}
+
+      # Skip if already in manual control (avoid redundant calls)
+      - condition: template
+        value_template: >
+          {% set light_to_zone = {
+            'light.entryway_lamp': 'switch.adaptive_lighting_main_living',
+            'light.living_room_floor_lamp': 'switch.adaptive_lighting_main_living',
+            'light.office_desk_lamp': 'switch.adaptive_lighting_main_living',
+            'light.living_room_corner_accent': 'switch.adaptive_lighting_main_living',
+            'light.living_room_couch_lamp': 'switch.adaptive_lighting_main_living',
+            'light.living_room_credenza_light': 'switch.adaptive_lighting_main_living',
+            'light.kitchen_island_pendants': 'switch.adaptive_lighting_kitchen_island',
+            'light.master_bedroom_table_lamps': 'switch.adaptive_lighting_bedroom_primary',
+            'light.master_bedroom_corner_accent': 'switch.adaptive_lighting_bedroom_primary',
+            'light.dining_room_spot_lights': 'switch.adaptive_lighting_accent_spots',
+            'light.living_room_spot_lights': 'switch.adaptive_lighting_accent_spots',
+            'light.kitchen_main_lights': 'switch.adaptive_lighting_recessed_ceiling',
+            'light.living_room_hallway_lights': 'switch.adaptive_lighting_recessed_ceiling'
+          } %}
+          {% set zone = light_to_zone.get(trigger.entity_id) %}
+          {% set manual_list = state_attr(zone, 'manual_control') | default([]) %}
+          {{ trigger.entity_id not in manual_list }}
+
+    variables:
+      light_to_zone:
+        'light.entryway_lamp': 'switch.adaptive_lighting_main_living'
+        'light.living_room_floor_lamp': 'switch.adaptive_lighting_main_living'
+        'light.office_desk_lamp': 'switch.adaptive_lighting_main_living'
+        'light.living_room_corner_accent': 'switch.adaptive_lighting_main_living'
+        'light.living_room_couch_lamp': 'switch.adaptive_lighting_main_living'
+        'light.living_room_credenza_light': 'switch.adaptive_lighting_main_living'
+        'light.kitchen_island_pendants': 'switch.adaptive_lighting_kitchen_island'
+        'light.master_bedroom_table_lamps': 'switch.adaptive_lighting_bedroom_primary'
+        'light.master_bedroom_corner_accent': 'switch.adaptive_lighting_bedroom_primary'
+        'light.dining_room_spot_lights': 'switch.adaptive_lighting_accent_spots'
+        'light.living_room_spot_lights': 'switch.adaptive_lighting_accent_spots'
+        'light.kitchen_main_lights': 'switch.adaptive_lighting_recessed_ceiling'
+        'light.living_room_hallway_lights': 'switch.adaptive_lighting_recessed_ceiling'
+
+      al_zone: "{{ light_to_zone.get(trigger.entity_id) }}"
+
+    action:
+      # ONLY set manual control for the specific light that changed
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: "{{ al_zone }}"
+          lights: "{{ trigger.entity_id }}"
+          manual_control: true
+
+  # PRE-SUNSET DIMMING IMPLEMENTATION - Sophisticated Sun Position Mapping
+  - id: adaptive_lighting_sunset_fade
+    alias: "AL - Pre-Sunset Progressive Dimming"
+    description: "Smoothly reduces brightness as sun approaches horizon"
+    trigger:
+      - platform: time_pattern
+        minutes: "/5"  # Check every 5 minutes
+    condition:
+      - condition: template
+        value_template: >
+          {% set elevation = state_attr('sun.sun', 'elevation') | float(90) %}
+          {{ -4 <= elevation <= 4 }}
+    action:
+      - variables:
+          elevation: "{{ state_attr('sun.sun', 'elevation') | float(0) }}"
+          # Linear mapping: 4° = 0%, 0° = -12.5%, -4° = -25%
+          offset: "{{ ((4 - elevation) / 8 * -25) | round(0) }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.al_sunset_fade_brightness_offset
+        data:
+          value: "{{ offset }}"
+
+  - id: adaptive_lighting_sunset_fade_reset
+    alias: "AL - Reset Sunset Fade"
+    trigger:
+      - platform: numeric_state
+        entity_id: sun.sun
+        attribute: elevation
+        below: -4
+        for: "00:02:00"
+      - platform: numeric_state
+        entity_id: sun.sun
+        attribute: elevation
+        above: 4
+        for: "00:02:00"
+    action:
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.al_sunset_fade_brightness_offset
+        data:
+          value: 0
+
+  # ZEN32 SCENE CONTROLLER INTEGRATION - Using Native Event Entities  
+  - id: zen32_scene_controller
+    alias: "Zen32 Scene Controller - Adaptive Integration"
+    description: "Physical control using native event entities with debouncing"
+    mode: single
+    max_exceeded: silent  # Drop duplicate events
+    trigger:
+      # Button 1 (Top Left) - Scene Cycling
+      - platform: state
+        entity_id: event.scene_controller_scene_001
+        id: "button_1"
+      
+      # Button 2 (Top Right) - Brighter
+      - platform: state
+        entity_id: event.scene_controller_scene_002
+        id: "button_2"
+      
+      # Button 3 (Bottom Left) - Reset/Nuclear
+      - platform: state
+        entity_id: event.scene_controller_scene_003
+        id: "button_3"
+      
+      # Button 4 (Bottom Right) - Dimmer
+      - platform: state
+        entity_id: event.scene_controller_scene_004
+        id: "button_4"
+      
+      # Button 5 (Center) - Toggle All
+      - platform: state
+        entity_id: event.scene_controller_scene_005
+        id: "button_5"
+    
+    variables:
+      event_type: "{{ trigger.to_state.attributes.event_type | default('unknown') }}"
+      button_id: "{{ trigger.id }}"
+      
+      # Debouncing - check if this is a duplicate event
+      last_press: "{{ states('input_datetime.zen32_last_button_press') | as_timestamp(0) }}"
+      now_timestamp: "{{ now().timestamp() }}"
+      time_since_last: "{{ now_timestamp - last_press }}"
+    
+    condition:
+      # Debounce: ignore if less than 0.5 seconds since last press
+      - condition: template
+        value_template: "{{ time_since_last > 0.5 }}"
+      # Only process known event types
+      - condition: template
+        value_template: "{{ event_type in ['KeyPressed', 'KeyHeldDown'] }}"
+    
+    action:
+      # Update last button press time for debouncing
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.zen32_last_button_press
+        data:
+          timestamp: "{{ now_timestamp }}"
+      
+      - choose:
+          # Button 5 (Center) - Toggle all lights (direct control allowed)
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_5' and event_type == 'KeyPressed' }}"
+            sequence:
+              - service: light.toggle
+                target:
+                  entity_id: "{{ expand('light.all_adaptive_lights') | map(attribute='entity_id') | list }}"
+          
+          # Button 2 (Top Right) - Brighter
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_2' and event_type == 'KeyPressed' }}"
+            sequence:
+              - service: script.adaptive_lighting_brighter
+          
+          # Button 4 (Bottom Right) - Dimmer
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_4' and event_type == 'KeyPressed' }}"
+            sequence:
+              - service: script.adaptive_lighting_dimmer
+          
+          # Button 1 (Top Left) - Cycle scenes
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_1' and event_type == 'KeyPressed' }}"
+            sequence:
+              - service: script.zen32_cycle_scene
+          
+          # Button 3 (Bottom Left) - Press = Reset Manual Adjustments
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_3' and event_type == 'KeyPressed' }}"
+            sequence:
+              # Reset manual adjustments only
+              - service: input_number.set_value
+                target:
+                  entity_id:
+                    - input_number.adaptive_lighting_total_brightness_adjustment
+                    - input_number.adaptive_lighting_total_warmth_adjustment
+                data:
+                  value: 0
+              # Cancel all per-zone timers
+              - service: timer.cancel
+                target:
+                  entity_id:
+                    - timer.adaptive_lighting_manual_timer_main_living
+                    - timer.adaptive_lighting_manual_timer_kitchen_island
+                    - timer.adaptive_lighting_manual_timer_bedroom_primary
+                    - timer.adaptive_lighting_manual_timer_accent_spots
+                    - timer.adaptive_lighting_manual_timer_recessed_ceiling
+              
+              # Clear manual control from all zones
+              - service: adaptive_lighting.set_manual_control
+                data:
+                  entity_id: 
+                    - switch.adaptive_lighting_main_living
+                    - switch.adaptive_lighting_kitchen_island
+                    - switch.adaptive_lighting_bedroom_primary
+                    - switch.adaptive_lighting_accent_spots
+                    - switch.adaptive_lighting_recessed_ceiling
+                  manual_control: false
+                continue_on_error: true
+              
+              # Log the reset action
+              - service: system_log.write
+                data:
+                  message: "Button 3 Press: Cleared manual control and cancelled timers"
+                  level: info
+          
+          # Button 3 (Bottom Left) - Hold = Nuclear Reset
+          - conditions:
+              - condition: template
+                value_template: "{{ button_id == 'button_3' and event_type == 'KeyHeldDown' }}"
+            sequence:
+              # Nuclear reset - complete system restoration
+              - service: script.adaptive_lighting_reset_all_adjustments
+
+# =============================================================================
+# ENHANCED CONTROL SCRIPTS (Fixed Increment Logic)
+# =============================================================================
+
+script:
+  # FIXED INCREMENT MANUAL CONTROLS
+  adaptive_lighting_brighter:
+    alias: "AL Brighter (Fixed Increment)"
+    icon: mdi:brightness-plus
+    mode: single
+    sequence:
+      - variables:
+          current_adjustment: "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}"
+          increment: "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}"
+          new_adjustment: "{{ [100, current_adjustment + increment] | min }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_total_brightness_adjustment
+        data:
+          value: "{{ new_adjustment }}"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.al_script_dimmer_active
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.al_script_brighter_active
+      - condition: template
+        value_template: "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+      - service: timer.start
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+        data:
+          duration: "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+
+  adaptive_lighting_dimmer:
+    alias: "AL Dimmer (Fixed Increment)"
+    icon: mdi:brightness-minus
+    mode: single
+    sequence:
+      - variables:
+          current_adjustment: "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}"
+          increment: "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}"
+          new_adjustment: "{{ [-100, current_adjustment - increment] | max }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_total_brightness_adjustment
+        data:
+          value: "{{ new_adjustment }}"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.al_script_brighter_active
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.al_script_dimmer_active
+      - condition: template
+        value_template: "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+      - service: timer.start
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+        data:
+          duration: "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+
+  adaptive_lighting_warmer:
+    alias: "AL Warmer (Fixed Increment)"
+    icon: mdi:thermometer-minus
+    mode: single
+    sequence:
+      - variables:
+          current_adjustment: "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}"
+          increment: "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}"
+          new_adjustment: "{{ [-2500, current_adjustment - increment] | max }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_total_warmth_adjustment
+        data:
+          value: "{{ new_adjustment }}"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.al_script_cooler_active
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.al_script_warmer_active
+      - condition: template
+        value_template: "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+      - service: timer.start
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+        data:
+          duration: "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+
+  adaptive_lighting_cooler:
+    alias: "AL Cooler (Fixed Increment)"
+    icon: mdi:thermometer-plus
+    mode: single
+    sequence:
+      - variables:
+          current_adjustment: "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}"
+          increment: "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}"
+          new_adjustment: "{{ [2500, current_adjustment + increment] | min }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.adaptive_lighting_total_warmth_adjustment
+        data:
+          value: "{{ new_adjustment }}"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.al_script_warmer_active
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.al_script_cooler_active
+      - condition: template
+        value_template: "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+      - service: timer.start
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+        data:
+          duration: "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+
+  # MANUAL ADJUSTMENTS RESET - Resets only manual adjustments (not nuclear)
+  adaptive_lighting_reset_manual_adjustments:
+    alias: "AL Reset Manual Adjustments Only"
+    icon: mdi:restore
+    mode: single
+    sequence:
+      # Reset manual brightness and warmth adjustments
+      - service: input_number.set_value
+        target:
+          entity_id:
+            - input_number.adaptive_lighting_total_brightness_adjustment
+            - input_number.adaptive_lighting_total_warmth_adjustment
+        data:
+          value: 0
+      
+      # Clear manual control flags
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_brighter_active
+            - input_boolean.al_script_dimmer_active
+            - input_boolean.al_script_warmer_active
+            - input_boolean.al_script_cooler_active
+      
+      # Cancel the manual adjustment timer
+      - service: timer.cancel
+        target:
+          entity_id: timer.adaptive_lighting_manual_adjustment
+      
+      # Reset home mode to default
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Default
+      
+      # Clear manual control on all switches
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          manual_control: false
+        continue_on_error: true
+      
+      # Apply the reset immediately
+      - service: adaptive_lighting.apply
+        target:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+        data:
+          turn_on_lights: false
+          transition: 1
+        continue_on_error: true
+
+  # COMPREHENSIVE GLOBAL RESET SYSTEM - Definitive Solution
+  adaptive_lighting_reset_all_adjustments:
+    alias: "AL Nuclear Reset - Complete System Restoration"
+    icon: mdi:refresh-circle
+    mode: single
+    sequence:
+      # Step 1: Reset ALL helpers to zero/default
+      - service: input_number.set_value
+        target:
+          entity_id:
+            - input_number.adaptive_lighting_total_brightness_adjustment
+            - input_number.adaptive_lighting_total_warmth_adjustment
+            - input_number.adaptive_lighting_environmental_brightness_offset
+            - input_number.al_sunset_fade_brightness_offset
+            - input_number.al_scene_brightness_offset
+            - input_number.al_scene_warmth_offset
+            - input_number.al_wake_sequence_offset
+        data:
+          value: 0
+      
+      # Step 2: Reset ALL boolean flags
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.al_script_brighter_active
+            - input_boolean.al_script_dimmer_active
+            - input_boolean.al_script_warmer_active
+            - input_boolean.al_script_cooler_active
+            - input_boolean.al_environmental_boost_active
+            - input_boolean.movie_mode
+            - input_boolean.late_night_mode
+            - input_boolean.bright_work_mode
+            - input_boolean.al_disable_next_sonos_wakeup
+      
+      # Step 3: Reset mode selector
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Default
+      
+      # Step 4: Reset scene selector
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.zen32_lighting_scene
+        data:
+          option: "Scene 1: All Lights"
+        continue_on_error: true
+      
+      # Step 5: Cancel ALL timers (per-zone)
+      - service: timer.cancel
+        target:
+          entity_id:
+            - timer.adaptive_lighting_manual_timer_main_living
+            - timer.adaptive_lighting_manual_timer_kitchen_island
+            - timer.adaptive_lighting_manual_timer_bedroom_primary
+            - timer.adaptive_lighting_manual_timer_accent_spots
+            - timer.adaptive_lighting_manual_timer_recessed_ceiling
+      
+      # Step 6: Disable all sleep modes
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.adaptive_lighting_sleep_mode_main_living
+            - switch.adaptive_lighting_sleep_mode_kitchen_island
+            - switch.adaptive_lighting_sleep_mode_bedroom_primary
+            - switch.adaptive_lighting_sleep_mode_accent_spots
+            - switch.adaptive_lighting_sleep_mode_recessed_ceiling
+        continue_on_error: true
+      
+      # Step 7: Clear manual control
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          manual_control: false
+        continue_on_error: true
+      
+      # Step 8: CRITICAL - Use ONLY configuration defaults
+      - service: adaptive_lighting.change_switch_settings
+        target:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+        data:
+          use_defaults: 'configuration'  # NO OTHER PARAMETERS
+        continue_on_error: true
+      
+      # Fallback for individual entities
+      - service: adaptive_lighting.change_switch_settings
+        target:
+          entity_id:
+            - switch.adaptive_lighting_main_living
+            - switch.adaptive_lighting_kitchen_island
+            - switch.adaptive_lighting_bedroom_primary
+            - switch.adaptive_lighting_accent_spots
+            - switch.adaptive_lighting_recessed_ceiling
+        data:
+          use_defaults: 'configuration'
+        continue_on_error: true
+      
+      # Step 9: Apply restored settings
+      - delay: "00:00:02"
+      - service: adaptive_lighting.apply
+        target:
+          entity_id: "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+        data:
+          turn_on_lights: false
+          transition: 2
+        continue_on_error: true
+      
+      # Step 10: Turn on all adaptive lights
+      - service: light.turn_on
+        target:
+          entity_id: light.all_adaptive_lights
+        data:
+          transition: 2
+      
+      # Step 11: Log the nuclear reset
+      - service: system_log.write
+        data:
+          message: "Nuclear Reset Complete: All manual control cleared, timers cancelled, lights turned on"
+          level: warning
+      
+
+  # ENHANCED - Global pause toggle
+  toggle_al_global_pause:
+    alias: "Toggle Adaptive Lighting Global Pause"
+    icon: mdi:pause-circle
+    mode: single
+    variables:
+      al_switches:
+        - switch.adaptive_lighting_main_living
+        - switch.adaptive_lighting_kitchen_island
+        - switch.adaptive_lighting_bedroom_primary
+        - switch.adaptive_lighting_recessed_ceiling
+        - switch.adaptive_lighting_accent_spots
+    sequence:
+      - service: input_boolean.toggle
+        target:
+          entity_id: input_boolean.al_globally_paused
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.al_globally_paused
+                state: 'on'
+            sequence:
+              - service: switch.turn_off
+                target:
+                  entity_id: "{{ al_switches }}"
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.al_globally_paused
+                state: 'off'
+            sequence:
+              - service: switch.turn_on
+                target:
+                  entity_id: "{{ al_switches }}"
+              - delay: "00:00:02"
+              - service: adaptive_lighting.apply
+                data:
+                  entity_id: "{{ al_switches }}"
+                  turn_on_lights: false
+                  transition: 1
+
+  # Mode selection scripts (for dashboard)
+  set_movie_mode:
+    alias: "Set Movie Mode"
+    icon: mdi:movie-roll
+    sequence:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Movie
+
+  set_work_mode:
+    alias: "Set Work Mode"
+    icon: mdi:laptop
+    sequence:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Work
+
+  set_late_night_mode:
+    alias: "Set Late Night Mode"
+    icon: mdi:sleep
+    sequence:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: "Late Night"
+
+  reset_to_default_mode:
+    alias: "Reset to Default Mode"
+    icon: mdi:home
+    sequence:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.current_home_mode
+        data:
+          option: Default
+
+  # Zone-specific reset scripts
+  adaptive_lighting_reset_manual_living:
+    alias: "Reset Manual Control - Living"
+    icon: mdi:sofa-outline
+    sequence:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_main_living
+          manual_control: false
+
+  adaptive_lighting_reset_manual_kitchen:
+    alias: "Reset Manual Control - Kitchen"
+    icon: mdi:countertop-outline
+    sequence:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_kitchen_island
+          manual_control: false
+
+  adaptive_lighting_reset_manual_bedroom:
+    alias: "Reset Manual Control - Bedroom"
+    icon: mdi:bed-king-outline
+    sequence:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom_primary
+          manual_control: false
+
+  adaptive_lighting_reset_manual_recessed:
+    alias: "Reset Manual Control - Recessed"
+    icon: mdi:ceiling-light-outline
+    sequence:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_recessed_ceiling
+          manual_control: false
+
+  adaptive_lighting_reset_manual_accent:
+    alias: "Reset Manual Control - Accent"
+    icon: mdi:spotlight-beam
+    sequence:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_accent_spots
+          manual_control: false
+
+  adaptive_lighting_force_apply_all:
+    alias: "Force Apply Adaptive Lighting"
+    icon: mdi:refresh-auto
+    sequence:
+      - service: adaptive_lighting.apply
+        data:
+          entity_id:
+            - switch.adaptive_lighting_main_living
+            - switch.adaptive_lighting_kitchen_island
+            - switch.adaptive_lighting_bedroom_primary
+            - switch.adaptive_lighting_recessed_ceiling
+            - switch.adaptive_lighting_accent_spots
+          lights: true
+          transition: 1
+          adapt_brightness: true
+          adapt_color: true
+          turn_on_lights: false
+
+  # ZEN32 SCENE MANAGEMENT SCRIPTS
+  zen32_cycle_scene:
+    alias: "Cycle Through Lighting Scenes"
+    icon: mdi:rotate-right
+    sequence:
+      - variables:
+          current_scene: "{{ states('input_select.zen32_lighting_scene') }}"
+          scenes:
+            - "Scene 1: All Lights"
+            - "Scene 2: No Spotlights"
+            - "Scene 3: Evening Comfort"
+            - "Scene 4: Ultra Dim"
+          current_index: "{{ scenes.index(current_scene) if current_scene in scenes else 0 }}"
+          next_index: "{{ (current_index + 1) % 4 }}"
+          next_scene: "{{ scenes[next_index] }}"
+      
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.zen32_lighting_scene
+        data:
+          option: "{{ next_scene }}"
+      
+      - service: script.apply_lighting_scene
+        data:
+          scene: "{{ next_scene }}"
+  
+  apply_lighting_scene:
+    alias: "Apply Selected Lighting Scene"
+    icon: mdi:palette
+    fields:
+      scene:
+        description: "Scene name to apply"
+        required: true
+    sequence:
+      - choose:
+          # Scene 1: All Lights (neutral)
+          - conditions:
+              - condition: template
+                value_template: "{{ scene == 'Scene 1: All Lights' }}"
+            sequence:
+              - service: input_number.set_value
+                target:
+                  entity_id:
+                    - input_number.al_scene_brightness_offset
+                    - input_number.al_scene_warmth_offset
+                data:
+                  value: 0
+              - service: light.turn_on
+                target:
+                  entity_id: 
+                    - light.accent_spots_lights
+                data:
+                  brightness_pct: 2
+                  transition: 2
+              - service: adaptive_lighting.set_manual_control
+                data:
+                  entity_id: switch.adaptive_lighting_accent_spots
+                  lights: 
+                    - light.dining_room_spot_lights
+                    - light.living_room_spot_lights
+                  manual_control: true
+              - service: light.turn_on
+                target:
+                  entity_id: 
+                    - light.recessed_ceiling_lights
+                    - light.all_adaptive_lights
+                data:
+                  transition: 2
+          
+          # Scene 2: No Spotlights (+10% brightness compensation)
+          - conditions:
+              - condition: template
+                value_template: "{{ scene == 'Scene 2: No Spotlights' }}"
+            sequence:
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_brightness_offset
+                data:
+                  value: 15
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_warmth_offset
+                data:
+                  value: 0
+              - service: light.turn_off
+                target:
+                  entity_id:
+                    - light.living_room_spot_lights
+                    - light.dining_room_spot_lights
+                data:
+                  transition: 2
+          
+          # Scene 3: Evening Comfort (warm, -5% overall, pendant lights on)
+          - conditions:
+              - condition: template
+                value_template: "{{ scene == 'Scene 3: Evening Comfort' }}"
+            sequence:
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_brightness_offset
+                data:
+                  value: -5
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_warmth_offset
+                data:
+                  value: -500
+              - service: light.turn_off
+                target:
+                  entity_id: 
+                  - light.recessed_ceiling_lights
+                  - light.living_room_hallway_lights
+                data:
+                  transition: 1
+              - service: light.turn_on
+                target:
+                  entity_id: 
+                  - light.kitchen_island_pendants
+                  - light.cradenza_accent
+                  - light.living_room_corner_accent
+                data:
+                  transition: 1
+              - service: adaptive_lighting.set_manual_control
+                data:
+                  entity_id: switch.adaptive_lighting_accent_spots
+                  lights: 
+                    - light.dining_room_spot_lights                  
+              - service: light.turn_on
+                target:
+                  entity_id: light.dining_room_spot_lights
+                data:
+                  brightness_pct: 15
+                  transition: 1
+                  manual_control: true
+                  
+          # Scene 4: Ultra Dim (-70% brightness)          
+          - conditions:
+              - condition: template
+                value_template: "{{ scene == 'Scene 4: Ultra Dim' }}"
+            sequence:
+              - service: light.turn_off
+                target:
+                  entity_id:
+                    - light.dining_room_spot_lights
+                    - light.living_room_spot_lights
+                    - light.kitchen_main_lights
+                    - light.living_room_hallway_lights
+                data:
+                  transition: 1
+              - service: light.turn_on
+                target:
+                  entity_id:
+                    - light.kitchen_island_lights
+                data:
+                  brightness_pct: 10
+                  transition: 2
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_brightness_offset
+                data:
+                  value: -50
+              - service: input_number.set_value
+                target:
+                  entity_id: input_number.al_scene_warmth_offset
+                data:
+                  value: -1000
