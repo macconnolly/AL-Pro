@@ -1,0 +1,13 @@
+{
+  "domain": "adaptive_lighting_pro",
+  "name": "Adaptive Lighting Pro",
+  "codeowners": ["@adaptive-lighting-pro"],
+  "config_flow": true,
+  "dependencies": ["adaptive_lighting"],
+  "documentation": "https://github.com/adaptive-lighting-pro/adaptive-lighting-pro",
+  "integration_type": "hub",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/adaptive-lighting-pro/adaptive-lighting-pro/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

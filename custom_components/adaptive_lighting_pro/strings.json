@@ -1,0 +1,246 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Lighting Pro Setup",
+        "description": "Configure advanced adaptive lighting with per-zone manual control, environmental adaptation, and home modes.",
+        "data": {
+          "name": "Integration Name"
+        }
+      },
+      "zones": {
+        "title": "Zone Configuration - {zone_name}",
+        "description": "Define a lighting zone and select the lights it contains. Each zone can have independent brightness and color temperature ranges.",
+        "data": {
+          "zone_id": "Zone ID (slug)",
+          "zone_name": "Zone Name (friendly)",
+          "lights": "Lights in this zone",
+          "adaptive_lighting_switch": "Associated Adaptive Lighting switch"
+        }
+      },
+      "zone_profile": {
+        "title": "Zone Profile - {zone_name}",
+        "description": "Configure brightness and color temperature ranges for this zone.",
+        "data": {
+          "brightness_min": "Minimum Brightness (%)",
+          "brightness_max": "Maximum Brightness (%)",
+          "color_temp_min": "Minimum Color Temperature (K)",
+          "color_temp_max": "Maximum Color Temperature (K)",
+          "manual_timer_duration": "Manual Control Timeout (seconds)",
+          "brightness_only": "Brightness Only (no color temp)"
+        }
+      },
+      "global_settings": {
+        "title": "Global Settings",
+        "description": "Configure adjustment increments and default timeouts that apply to all zones.",
+        "data": {
+          "brightness_increment": "Brightness Increment (%)",
+          "color_temp_increment": "Color Temperature Increment (K)",
+          "manual_control_timeout": "Default Manual Control Timeout (seconds)",
+          "general_transition_speed": "Transition Speed (seconds)"
+        }
+      },
+      "environmental": {
+        "title": "Environmental Settings",
+        "description": "Configure lux sensor and weather integration for environmental brightness adaptation.",
+        "data": {
+          "environmental_enabled": "Enable Environmental Adaptation",
+          "lux_sensor": "Outdoor Lux Sensor",
+          "weather_entity": "Weather Entity",
+          "max_boost": "Maximum Boost (%)",
+          "sunset_fade_enabled": "Enable Sunset Fade"
+        }
+      },
+      "integrations": {
+        "title": "Integration Settings",
+        "description": "Configure optional Sonos alarm synchronization and Zen32 scene controller integration.",
+        "data": {
+          "sonos_enabled": "Enable Sonos Integration",
+          "sonos_alarm_sensor": "Sonos Upcoming Alarms Sensor",
+          "sonos_bedroom_offset": "Bedroom Sunrise Offset (seconds)",
+          "sonos_kitchen_offset": "Kitchen Sunrise Offset (seconds)",
+          "zen32_enabled": "Enable Zen32 Integration",
+          "zen32_event_entity": "Zen32 Event Entity",
+          "zen32_debounce": "Debounce Time (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_brightness_range": "Minimum brightness must be less than maximum brightness",
+      "invalid_color_temp_range": "Minimum color temperature must be less than maximum color temperature",
+      "no_lights_selected": "At least one light must be selected for each zone",
+      "zone_id_exists": "A zone with this ID already exists",
+      "invalid_zone_id": "Zone ID must be a valid slug (lowercase, no spaces)",
+      "adaptive_lighting_not_found": "Adaptive Lighting integration not found. Please install it first.",
+      "switch_not_found": "The specified Adaptive Lighting switch was not found",
+      "entity_not_found": "Entity not found: {entity_id}",
+      "unknown": "An unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This integration is already configured",
+      "single_instance_allowed": "Only one instance of Adaptive Lighting Pro is allowed"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Reconfigure Adaptive Lighting Pro",
+        "description": "Modify settings for this integration.",
+        "data": {
+          "brightness_increment": "Brightness Increment (%)",
+          "color_temp_increment": "Color Temperature Increment (K)",
+          "manual_control_timeout": "Manual Control Timeout (seconds)",
+          "general_transition_speed": "Transition Speed (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "global_pause": {
+        "name": "Global Pause"
+      },
+      "zone": {
+        "name": "{zone_name} Zone"
+      }
+    },
+    "number": {
+      "brightness_adjustment": {
+        "name": "Brightness Adjustment"
+      },
+      "warmth_adjustment": {
+        "name": "Warmth Adjustment"
+      },
+      "brightness_increment": {
+        "name": "Brightness Increment"
+      },
+      "color_temp_increment": {
+        "name": "Color Temperature Increment"
+      },
+      "manual_timeout": {
+        "name": "Manual Control Timeout"
+      }
+    },
+    "select": {
+      "home_mode": {
+        "name": "Home Mode"
+      },
+      "lighting_scene": {
+        "name": "Lighting Scene"
+      }
+    },
+    "sensor": {
+      "system_status": {
+        "name": "System Status"
+      },
+      "manual_control_count": {
+        "name": "Manual Control Count"
+      },
+      "environmental_boost": {
+        "name": "Environmental Boost"
+      },
+      "performance_metrics": {
+        "name": "Performance Metrics"
+      }
+    },
+    "button": {
+      "brighter": {
+        "name": "Brighter"
+      },
+      "dimmer": {
+        "name": "Dimmer"
+      },
+      "warmer": {
+        "name": "Warmer"
+      },
+      "cooler": {
+        "name": "Cooler"
+      },
+      "reset_manual": {
+        "name": "Reset Manual Adjustments"
+      },
+      "reset_all": {
+        "name": "Nuclear Reset"
+      }
+    },
+    "light": {
+      "zone": {
+        "name": "{zone_name} Lights"
+      }
+    }
+  },
+  "services": {
+    "adjust_brightness": {
+      "name": "Adjust Brightness",
+      "description": "Adjust brightness by a fixed increment for specified zones or all zones.",
+      "fields": {
+        "increment": {
+          "name": "Increment",
+          "description": "Brightness change in percent (positive = brighter, negative = dimmer)"
+        },
+        "zones": {
+          "name": "Zones",
+          "description": "Specific zones to adjust (optional, defaults to all zones)"
+        }
+      }
+    },
+    "adjust_color_temp": {
+      "name": "Adjust Color Temperature",
+      "description": "Adjust color temperature by a fixed increment for specified zones or all zones.",
+      "fields": {
+        "increment": {
+          "name": "Increment",
+          "description": "Color temperature change in Kelvin (positive = cooler, negative = warmer)"
+        },
+        "zones": {
+          "name": "Zones",
+          "description": "Specific zones to adjust (optional, defaults to all zones)"
+        }
+      }
+    },
+    "set_mode": {
+      "name": "Set Home Mode",
+      "description": "Change the current home lighting mode.",
+      "fields": {
+        "mode": {
+          "name": "Mode",
+          "description": "The mode to activate"
+        }
+      }
+    },
+    "apply_scene": {
+      "name": "Apply Lighting Scene",
+      "description": "Apply a predefined lighting scene.",
+      "fields": {
+        "scene": {
+          "name": "Scene",
+          "description": "The scene to apply"
+        }
+      }
+    },
+    "reset_manual_adjustments": {
+      "name": "Reset Manual Adjustments",
+      "description": "Reset manual brightness and warmth adjustments to zero for specified zones or all zones.",
+      "fields": {
+        "zones": {
+          "name": "Zones",
+          "description": "Specific zones to reset (optional, defaults to all zones)"
+        }
+      }
+    },
+    "reset_all": {
+      "name": "Nuclear Reset",
+      "description": "Completely reset all settings, adjustments, modes, and timers to default state."
+    },
+    "clear_manual_control": {
+      "name": "Clear Manual Control",
+      "description": "Clear manual control flags for specified zones to restore adaptive lighting.",
+      "fields": {
+        "zones": {
+          "name": "Zones",
+          "description": "Zones to clear manual control for (required)"
+        }
+      }
+    }
+  }
+}

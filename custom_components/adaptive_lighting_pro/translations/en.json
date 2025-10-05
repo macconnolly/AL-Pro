@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Lighting Pro Setup",
+        "description": "Configure advanced adaptive lighting with per-zone manual control, environmental adaptation, and home modes.",
+        "data": {
+          "name": "Integration Name"
+        }
+      },
+      "zones": {
+        "title": "Zone Configuration - {zone_name}",
+        "description": "Define a lighting zone and select the lights it contains. Each zone can have independent brightness and color temperature ranges.",
+        "data": {
+          "zone_id": "Zone ID (slug)",
+          "zone_name": "Zone Name (friendly)",
+          "lights": "Lights in this zone",
+          "adaptive_lighting_switch": "Associated Adaptive Lighting switch"
+        }
+      },
+      "zone_profile": {
+        "title": "Zone Profile - {zone_name}",
+        "description": "Configure brightness and color temperature ranges for this zone.",
+        "data": {
+          "brightness_min": "Minimum Brightness (%)",
+          "brightness_max": "Maximum Brightness (%)",
+          "color_temp_min": "Minimum Color Temperature (K)",
+          "color_temp_max": "Maximum Color Temperature (K)",
+          "manual_timer_duration": "Manual Control Timeout (seconds)",
+          "brightness_only": "Brightness Only (no color temp)"
+        }
+      },
+      "global_settings": {
+        "title": "Global Settings",
+        "description": "Configure adjustment increments and default timeouts that apply to all zones.",
+        "data": {
+          "brightness_increment": "Brightness Increment (%)",
+          "color_temp_increment": "Color Temperature Increment (K)",
+          "manual_control_timeout": "Default Manual Control Timeout (seconds)",
+          "general_transition_speed": "Transition Speed (seconds)"
+        }
+      },
+      "environmental": {
+        "title": "Environmental Settings",
+        "description": "Configure lux sensor and weather integration for environmental brightness adaptation.",
+        "data": {
+          "environmental_enabled": "Enable Environmental Adaptation",
+          "lux_sensor": "Outdoor Lux Sensor",
+          "weather_entity": "Weather Entity",
+          "max_boost": "Maximum Boost (%)",
+          "sunset_fade_enabled": "Enable Sunset Fade"
+        }
+      },
+      "integrations": {
+        "title": "Integration Settings",
+        "description": "Configure optional Sonos alarm synchronization and Zen32 scene controller integration.",
+        "data": {
+          "sonos_enabled": "Enable Sonos Integration",
+          "sonos_alarm_sensor": "Sonos Upcoming Alarms Sensor",
+          "sonos_bedroom_offset": "Bedroom Sunrise Offset (seconds)",
+          "sonos_kitchen_offset": "Kitchen Sunrise Offset (seconds)",
+          "zen32_enabled": "Enable Zen32 Integration",
+          "zen32_event_entity": "Zen32 Event Entity",
+          "zen32_debounce": "Debounce Time (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_brightness_range": "Minimum brightness must be less than maximum brightness",
+      "invalid_color_temp_range": "Minimum color temperature must be less than maximum color temperature",
+      "no_lights_selected": "At least one light must be selected for each zone",
+      "zone_id_exists": "A zone with this ID already exists",
+      "invalid_zone_id": "Zone ID must be a valid slug (lowercase, no spaces)",
+      "adaptive_lighting_not_found": "Adaptive Lighting integration not found. Please install it first.",
+      "switch_not_found": "The specified Adaptive Lighting switch was not found",
+      "entity_not_found": "Entity not found: {entity_id}",
+      "unknown": "An unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This integration is already configured",
+      "single_instance_allowed": "Only one instance of Adaptive Lighting Pro is allowed"
+    }
+  }
+}
