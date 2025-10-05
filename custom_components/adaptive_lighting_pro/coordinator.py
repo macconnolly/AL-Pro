@@ -247,9 +247,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._restore_adaptive_control(zone_id)
 
             # Calculate environmental features
-            env_boost = self._env_adapter.calculate_boost()
+            env_boost, _ = self._env_adapter.calculate_boost()
             lux = self._get_current_lux()
-            sunset_boost = self._sunset_boost.calculate_boost(lux)
+            sunset_boost, _ = self._sunset_boost.calculate_boost(lux)
 
             # Initialize state structure
             state: dict[str, Any] = {
@@ -420,15 +420,13 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sunset_boost = 0
         wake_boost = 0
 
-        # Phase 2.5: Calculate environmental boost with detailed breakdown
-        env_breakdown = {}
-        sunset_breakdown = {}
+        # Phase 2.5: Calculate environmental boost
         if zone_config.get("environmental_enabled", True):
-            env_boost, env_breakdown = self._env_adapter.calculate_boost()
+            env_boost, _ = self._env_adapter.calculate_boost()
 
         if zone_config.get("sunset_enabled", True):
             lux = self._get_current_lux()
-            sunset_boost, sunset_breakdown = self._sunset_boost.calculate_boost(lux)
+            sunset_boost, _ = self._sunset_boost.calculate_boost(lux)
 
         # Phase 2.1: Calculate wake sequence boost (per-zone, only affects target zone)
         if zone_config.get("wake_sequence_enabled", True):
@@ -438,14 +436,6 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_env_boost = env_boost
         self._last_sunset_boost = sunset_boost
         self._last_wake_boost = wake_boost
-
-        # Phase 2.5: Store environmental and sunset breakdowns for sensors
-        if not hasattr(self, '_env_breakdown'):
-            self._env_breakdown = {}
-        if not hasattr(self, '_sunset_breakdown'):
-            self._sunset_breakdown = {}
-        self._env_breakdown = env_breakdown
-        self._sunset_breakdown = sunset_breakdown
 
         # Combine all offsets with intelligent capping
         # Layer all 5 brightness components: env + sunset + wake + manual + scene
@@ -674,10 +664,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._brightness_adjustment,
                         self._warmth_adjustment,
                     )
-                    self._brightness_adjustment = 0
-                    self._warmth_adjustment = 0
-                    # Trigger refresh to apply cleared adjustments
-                    await self.async_request_refresh()
+                    # Use API methods instead of direct assignment (architectural compliance)
+                    await self.set_brightness_adjustment(0, start_timers=False)
+                    await self.set_warmth_adjustment(0, start_timers=False)
 
         except Exception as err:
             _LOGGER.error(
@@ -995,13 +984,13 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Start manual timers for temporary overrides (buttons, not sliders)
         if start_timers and old_value != value:  # Only if value actually changed
             for zone_id in self.zones:
-                await self.start_manual_timer(zone_id)
+                await self.start_manual_timer(zone_id, skip_refresh=True)
             _LOGGER.info(
                 "Started manual timers for %d zones (temporary brightness override)",
                 len(self.zones)
             )
 
-        # Trigger immediate coordinator update
+        # Trigger immediate coordinator update (once, after all timers started)
         await self.async_request_refresh()
 
     async def set_warmth_adjustment(self, value: int, start_timers: bool = False) -> None:
@@ -1029,13 +1018,13 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Start manual timers for temporary overrides (buttons, not sliders)
         if start_timers and old_value != value:  # Only if value actually changed
             for zone_id in self.zones:
-                await self.start_manual_timer(zone_id)
+                await self.start_manual_timer(zone_id, skip_refresh=True)
             _LOGGER.info(
                 "Started manual timers for %d zones (temporary warmth override)",
                 len(self.zones)
             )
 
-        # Trigger immediate coordinator update
+        # Trigger immediate coordinator update (once, after all timers started)
         await self.async_request_refresh()
 
     async def set_brightness_increment(self, value: int) -> None:
@@ -1251,12 +1240,13 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # ========== Public API: Manual Control ==========
 
-    async def start_manual_timer(self, zone_id: str, duration_seconds: int | None = None) -> bool:
+    async def start_manual_timer(self, zone_id: str, duration_seconds: int | None = None, skip_refresh: bool = False) -> bool:
         """Start manual control timer for a zone.
 
         Args:
             zone_id: Zone identifier
             duration_seconds: Optional timer duration (uses smart calculation if None)
+            skip_refresh: If True, skip the coordinator refresh (caller will refresh)
 
         Returns:
             True if timer started successfully
@@ -1272,7 +1262,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sun_elevation = sun_state.attributes.get("elevation")
 
             # Get current environmental boost
-            env_boost = self._env_adapter.calculate_boost()
+            env_boost, _ = self._env_adapter.calculate_boost()
 
         # Step 1: Mark lights as manually controlled in AL
         await self._mark_zone_lights_as_manual(zone_id)
@@ -1285,8 +1275,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             env_boost=env_boost,
         )
 
-        # Step 3: Trigger immediate coordinator update to reflect new state
-        await self.async_request_refresh()
+        # Step 3: Trigger immediate coordinator update to reflect new state (unless caller will do it)
+        if not skip_refresh:
+            await self.async_request_refresh()
 
         return True
 
@@ -1452,18 +1443,11 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     exc_info=True,
                 )
 
-        # Start manual timers for all zones (scenes are temporary like buttons)
-        # This matches YAML behavior where scene/button actions were temporary,
-        # while slider preferences were persistent
-        # Manual timers FREEZE the scene boundaries - env/sunset/manual adjustments
-        # won't layer on until timers expire
-        for zone_id in self.zones:
-            await self.start_manual_timer(zone_id)
-        _LOGGER.info(
-            "Started manual timers for %d zones (scene '%s' is temporary override)",
-            len(self.zones),
-            config["name"]
-        )
+        # ARCHITECTURAL NOTE: Scenes do NOT start/cancel timers
+        # Scenes are a separate layer that adds to manual adjustments
+        # Timers are only controlled by manual adjustment buttons/sliders
+        # This prevents scenes from interfering with user's manual control state
+        _LOGGER.debug("Scene '%s' applied without affecting manual timers", config["name"])
 
         return True
 
