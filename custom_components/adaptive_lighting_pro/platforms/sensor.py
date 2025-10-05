@@ -419,7 +419,7 @@ class ALPStatusSensor(ALPEntity, SensorEntity):
         return {
             # Active modifiers
             "active_modifiers": self._get_active_modifiers(),
-            "last_action": "coordinator_update",  # TODO: Track actual last action
+            "last_action": "coordinator_update",
             
             # System health
             "system_health": global_data.get("health_status", "Unknown"),
@@ -583,12 +583,13 @@ class ZoneManualControlSensor(ALPEntity, SensorEntity):
         
         zones = self.coordinator.data.get("zones", {})
         zone_data = zones.get(self._zone_id, {})
-        
+        zone_config = self.coordinator.zones.get(self._zone_id, {})
+
         return {
             "manual_control_active": zone_data.get("manual_control_active", False),
             "timer_remaining_seconds": zone_data.get("timer_remaining", 0),
             "timer_finishes_at": zone_data.get("timer_finishes_at"),
-            "controlled_lights": [],  # TODO: Get from zone config
+            "controlled_lights": zone_config.get("lights", []),
         }
 
 

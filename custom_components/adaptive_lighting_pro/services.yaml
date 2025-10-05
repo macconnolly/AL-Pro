@@ -1,88 +1,37 @@
 # Service definitions for Adaptive Lighting Pro
-# These will be fully implemented in Phase 2+
 
-# Phase 2: Manual Adjustments
 adjust_brightness:
   name: Adjust Brightness
-  description: Adjust brightness by a fixed increment for specified zones or all zones.
+  description: Adjust global brightness using asymmetric boundary logic. Positive values raise minimum, negative lower maximum.
   fields:
-    increment:
-      name: Increment
-      description: Brightness change in percent (positive = brighter, negative = dimmer)
+    value:
+      name: Brightness Adjustment
+      description: Brightness adjustment in percent (-100 to +100)
       required: true
-      example: 20
+      example: 25
       selector:
         number:
           min: -100
           max: 100
           step: 5
           unit_of_measurement: "%"
-    zones:
-      name: Zones
-      description: Specific zones to adjust (optional, defaults to all zones)
-      required: false
-      example: ["main_living", "kitchen_island"]
-      selector:
-        select:
-          multiple: true
-          options: []
 
 adjust_color_temp:
   name: Adjust Color Temperature
-  description: Adjust color temperature by a fixed increment for specified zones or all zones.
+  description: Adjust global color temperature using asymmetric boundary logic. Positive = cooler (higher K), negative = warmer (lower K).
   fields:
-    increment:
-      name: Increment
-      description: Color temperature change in Kelvin (positive = cooler, negative = warmer)
+    value:
+      name: Color Temperature Adjustment
+      description: Color temperature adjustment in Kelvin (-2500 to +2500)
       required: true
       example: -500
       selector:
         number:
           min: -2500
           max: 2500
-          step: 50
+          step: 100
           unit_of_measurement: "K"
-    zones:
-      name: Zones
-      description: Specific zones to adjust (optional, defaults to all zones)
-      required: false
-      example: ["main_living"]
-      selector:
-        select:
-          multiple: true
-          options: []
 
-# Phase 4: Mode System
-set_mode:
-  name: Set Home Mode
-  description: Change the current home lighting mode.
-  fields:
-    mode:
-      name: Mode
-      description: The mode to activate
-      required: true
-      example: "movie"
-      selector:
-        select:
-          options:
-            - label: "Default"
-              value: "default"
-            - label: "Work"
-              value: "work"
-            - label: "Late Night"
-              value: "late_night"
-            - label: "Movie"
-              value: "movie"
-            - label: "Bright Focus"
-              value: "bright_focus"
-            - label: "Dim Relax"
-              value: "dim_relax"
-            - label: "Warm Evening"
-              value: "warm_evening"
-            - label: "Cool Energy"
-              value: "cool_energy"
-
-# Phase 6: Scene System
 apply_scene:
   name: Apply Lighting Scene
   description: Apply a predefined lighting scene. ALL_LIGHTS scene clears all offsets and returns to pure adaptive lighting.
@@ -104,41 +53,30 @@ apply_scene:
             - label: "Ultra Dim"
               value: "ultra_dim"
 
-# Phase 2: Reset Functions
+cycle_scene:
+  name: Cycle Scene
+  description: Cycle to the next scene in the sequence. Useful for physical button control.
+
 reset_manual_adjustments:
   name: Reset Manual Adjustments
-  description: Reset manual brightness and warmth adjustments AND scene offsets to zero. Returns system to pure adaptive lighting. Does not cancel manual control timers.
-  fields:
-    zones:
-      name: Zones
-      description: Specific zones to reset (optional, defaults to all zones)
-      required: false
-      example: ["bedroom_primary"]
-      selector:
-        select:
-          multiple: true
-          options: []
+  description: Reset manual brightness and warmth adjustments AND scene offsets to zero. Does not cancel manual control timers.
 
 reset_all:
   name: Nuclear Reset
-  description: Completely reset all settings, adjustments, scene offsets, and timers to default state. Restores full adaptive lighting control.
+  description: Completely reset all settings - adjustments, scene offsets, and timers. Restores full adaptive lighting control.
 
-# Phase 2: Manual Control Management
 clear_manual_control:
   name: Clear Manual Control
-  description: Clear manual control flags for specified zones to restore adaptive lighting.
+  description: Clear manual control timer for a specific zone or all zones to restore adaptive lighting.
   fields:
-    zones:
-      name: Zones
-      description: Zones to clear manual control for
-      required: true
-      example: ["main_living"]
+    zone_id:
+      name: Zone ID
+      description: Zone to clear manual control for (optional, clears all if not specified)
+      required: false
+      example: "bedroom"
       selector:
-        select:
-          multiple: true
-          options: []
+        text:
 
-# Phase 2.1: Wake Sequence Services
 set_wake_alarm:
   name: Set Wake Alarm
   description: Manually set wake alarm time to trigger wake sequence (for testing or non-Sonos alarms).

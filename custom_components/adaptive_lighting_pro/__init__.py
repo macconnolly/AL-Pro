@@ -97,7 +97,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if sonos_enabled and sonos_alarm_sensor:
         _LOGGER.info("Setting up Sonos integration for wake sequence")
-        sonos_integration = SonosIntegration(hass, coordinator._wake_sequence)
+        sonos_integration = SonosIntegration(hass, coordinator.wake_sequence)
         sonos_integration.configure(
             enabled=True,
             alarm_sensor=sonos_alarm_sensor,

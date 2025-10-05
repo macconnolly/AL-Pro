@@ -1137,6 +1137,15 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         return self._warmth_adjustment
 
+    @property
+    def wake_sequence(self) -> WakeSequenceCalculator:
+        """Get wake sequence calculator for integration access.
+
+        Returns:
+            WakeSequenceCalculator instance
+        """
+        return self._wake_sequence
+
     def get_brightness_increment(self) -> int:
         """Get configured brightness increment for manual adjustments.
 
