@@ -1,0 +1,19 @@
+{
+  "title": "Adaptive Lighting Pro",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Lighting Pro",
+        "description": "Configure zones and sensors"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Adaptive Lighting Pro Options",
+        "description": "Tune timers and rate limits"
+      }
+    }
+  }
+}

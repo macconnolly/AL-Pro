@@ -1,0 +1,11 @@
+{
+  "title": "Adaptive Lighting Pro",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Lighting Pro",
+        "description": "Configure zones for Adaptive Lighting Pro"
+      }
+    }
+  }
+}

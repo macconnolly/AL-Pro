@@ -1,0 +1,120 @@
+# Adaptive Lighting Pro Companion Package (implementation_2)
+# This YAML file demonstrates how to orchestrate the custom integration's
+# public services without re-implementing core logic. Import as a package or
+# use snippets within existing configuration.yaml files.
+
+script:
+  alp_scene_full_bright:
+    alias: "ALP Scene 1 - Full Bright"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: all_lights
+
+  alp_scene_no_spots:
+    alias: "ALP Scene 2 - No Spotlights"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: no_spots
+
+  alp_scene_evening_comfort:
+    alias: "ALP Scene 3 - Evening Comfort"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: evening_comfort
+
+  alp_scene_reset:
+    alias: "ALP Scene Reset"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  alp_adjust_brighter:
+    alias: "ALP Brighter"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_brightness_pct: 20
+
+  alp_adjust_warmer:
+    alias: "ALP Warmer"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_color_temp: -500
+
+automation:
+  - id: alp_autoreset_movie_mode
+    alias: "ALP Auto Reset After Movie"
+    description: "When the media player stops, restore adaptive scene"
+    trigger:
+      - platform: state
+        entity_id: media_player.living_room_theater
+        to: "idle"
+    condition: []
+    action:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  - id: alp_sunset_scene_nudge
+    alias: "ALP Sunset Boost Nudge"
+    description: "If sunset boost sensor reports high boost, reinforce the comfort scene"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_system_snapshot
+        attribute: sunset_boost_pct
+        above: 15
+    condition:
+      - condition: state
+        entity_id: select.alp_scene
+        state: default
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: evening_comfort
+
+  - id: alp_manual_watchdog_reset
+    alias: "ALP Manual Watchdog Reset"
+    description: "When manual adjustment flags fall idle, return to default scene"
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.alp_brighter_active
+          - binary_sensor.alp_dimmer_active
+          - binary_sensor.alp_warmer_active
+          - binary_sensor.alp_cooler_active
+        to: "off"
+        for: "00:10:00"
+    condition:
+      - condition: template
+        value_template: "{{ states('select.alp_scene') != 'default' }}"
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+# Optional helper exposing the integration's backup workflow via a single button.
+button:
+  - platform: template
+    buttons:
+      alp_backup_and_sync:
+        name: "ALP Backup & Sync"
+        press:
+          - service: adaptive_lighting_pro.backup_prefs
+          - service: adaptive_lighting_pro.force_sync
