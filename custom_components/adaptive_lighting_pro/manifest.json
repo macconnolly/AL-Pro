@@ -1,0 +1,12 @@
+{
+  "domain": "adaptive_lighting_pro",
+  "name": "Adaptive Lighting Pro",
+  "codeowners": ["@openai-assistant"],
+  "version": "1.0.0",
+  "documentation": "https://example.com/adaptive_lighting_pro",
+  "requirements": [],
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "after_dependencies": ["adaptive_lighting", "logbook"],
+  "loggers": ["custom_components.adaptive_lighting_pro"]
+}

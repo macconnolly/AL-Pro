@@ -1,0 +1,58 @@
+force_sync:
+  name: Force Sync
+  description: Request adaptive lighting to sync parameters.
+  fields:
+    zone:
+      description: Optional zone id to sync.
+      example: living_room
+reset_zone:
+  name: Reset Zone
+  description: Clear manual state and resync a zone.
+  fields:
+    zone:
+      required: true
+      description: Zone id to reset.
+enable_zone:
+  name: Enable Zone
+  description: Enable orchestration for a zone.
+  fields:
+    zone:
+      required: true
+      description: Zone id to enable.
+disable_zone:
+  name: Disable Zone
+  description: Disable orchestration for a zone.
+  fields:
+    zone:
+      required: true
+      description: Zone id to disable.
+select_mode:
+  name: Select Mode
+  description: Apply a lighting mode.
+  fields:
+    mode:
+      required: true
+      description: Mode name to apply.
+select_scene:
+  name: Select Scene
+  description: Apply a lighting scene intent.
+  fields:
+    scene:
+      required: true
+      description: Scene name to apply.
+adjust:
+  name: Adjust Lighting
+  description: Incrementally adjust brightness or color temperature.
+  fields:
+    step_brightness_pct:
+      description: Brightness change percent.
+      example: 10
+    step_color_temp:
+      description: Color temperature change in kelvin.
+      example: -250
+backup_prefs:
+  name: Backup Preferences
+  description: Save current preferences for restore.
+restore_prefs:
+  name: Restore Preferences
+  description: Restore preferences from last backup.
