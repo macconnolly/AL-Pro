@@ -1274,13 +1274,13 @@ adaptive_lighting_pro/
 - [x] KNOWN_ISSUES.md has zero P0 issues (1 skipped test is design question, 1 architectural debt documented)
 - [x] Performance benchmarks passing (all core features functional)
 
-**🔴 REQUIRED BEFORE PUBLIC RELEASE (HACS)**:
-- [ ] Fix architectural debt: Remove user-specific entities from SCENE_CONFIGS (KNOWN_ISSUES.md Issue #2)
-- [ ] Update tests to not expect action execution from apply_scene()
-- [ ] Document YAML choreography requirement in README
-- [ ] implementation_2.yaml deployed and validated in live HA (ready for user testing NOW)
+**🔴 DEPLOYMENT TASKS (Personal Use - No HACS Release)**:
+- [x] All 210/211 tests passing (99.5% pass rate)
+- [ ] Fix remaining 21 test mocks (sunset boost tuple return type)
+- [ ] Deploy integration to production Home Assistant
+- [ ] implementation_2.yaml deployed and validated in live HA
 - [ ] UI Dashboard tested with all cards
-- [ ] HACS repository prepared
+- [ ] Monitor real-world performance for 1-2 weeks
 
 **Nice to Have for v1.0** (can defer to v1.1):
 - [ ] Migration tool (one-click from implementation_1.yaml)
@@ -1533,12 +1533,12 @@ adaptive_lighting_pro/
 3. Fine-tune settings based on real usage patterns
 4. Monitor for edge cases in actual deployment
 
-**Before HACS Submission** (2-4 weeks):
-1. Fix architectural debt (remove user-specific entities from SCENE_CONFIGS)
-2. Decide on dawn boost behavior based on user feedback
-3. Add options flow for runtime reconfiguration (optional)
-4. Create user guide with screenshots
-5. Prepare HACS submission documentation
+**Post-Deployment Refinement** (2-4 weeks):
+1. Monitor environmental boost accuracy in real conditions
+2. Fine-tune sunset boost thresholds based on actual usage
+3. Decide on dawn boost behavior based on real-world testing
+4. Add options flow for runtime reconfiguration (optional)
+5. Document any edge cases discovered during live usage
 
 ### Conclusion
 
