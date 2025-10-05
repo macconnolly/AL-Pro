@@ -1,0 +1,600 @@
+# Adaptive Lighting Pro Companion Package (implementation_2)
+# This package re-creates the lifestyle conveniences from implementation_1.yaml
+# while delegating orchestration, timers, and calculations to the custom
+# integration. Import as a Home Assistant package or merge into configuration.yaml.
+
+# -----------------------------------------------------------------------------
+# Groups required by scene presets and physical controllers
+# -----------------------------------------------------------------------------
+group:
+  all_lights:
+    name: "ALP All Adaptive Lights"
+    entities:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+      - light.kitchen_island_pendants
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+  no_spots:
+    name: "ALP Accent Spotlights"
+    entities:
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+
+# -----------------------------------------------------------------------------
+# Input booleans for lifestyle toggles
+# -----------------------------------------------------------------------------
+input_boolean:
+  alp_skip_next_sunrise:
+    name: "Skip Next Sunrise Sync"
+    icon: mdi:alarm-off
+
+# -----------------------------------------------------------------------------
+# Scripts: wrappers around Adaptive Lighting Pro public services
+# -----------------------------------------------------------------------------
+script:
+  alp_scene_full_bright:
+    alias: "ALP Scene 1 - Full Bright"
+    description: "Restore adaptive mode and apply the all-lights preset."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: all_lights
+
+  alp_scene_no_spots:
+    alias: "ALP Scene 2 - No Track Lights"
+    description: "Keep lamps bright while track lights stay off."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: no_spots
+
+  alp_scene_evening_comfort:
+    alias: "ALP Scene 3 - Evening Comfort"
+    description: "Warm, dimmed evening scene with timer hand-off."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: evening_comfort
+
+  alp_scene_ultra_dim:
+    alias: "ALP Scene 4 - Ultra Dim"
+    description: "Ultra dim fallback for late night wind-down."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: ultra_dim
+
+  alp_scene_reset:
+    alias: "ALP Scene Reset"
+    description: "Return to adaptive scene defaults and clear manual overrides."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  alp_skip_next_sunrise:
+    alias: "ALP Skip Next Sunrise"
+    description: "Skip the upcoming Sonos-driven sunrise anchor."
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.skip_next_alarm
+        data:
+          skip: true
+
+  alp_resume_sunrise_sync:
+    alias: "ALP Resume Sunrise Sync"
+    description: "Re-enable the next Sonos alarm after a skip."
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.skip_next_alarm
+        data:
+          skip: false
+
+  alp_adjust_brighter:
+    alias: "ALP Brighter"
+    description: "Increase brightness using the configured step."
+    mode: single
+    sequence:
+      - variables:
+          step: "{{ states('number.alp_brightness_step') | int(20) }}"
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_brightness_pct: "{{ step }}"
+
+  alp_adjust_dimmer:
+    alias: "ALP Dimmer"
+    description: "Decrease brightness using the configured step."
+    mode: single
+    sequence:
+      - variables:
+          step: "{{ states('number.alp_brightness_step') | int(20) }}"
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_brightness_pct: "{{ (0 - step) | int }}"
+
+  alp_adjust_warmer:
+    alias: "ALP Warmer"
+    description: "Lower color temperature with the configured increment."
+    mode: single
+    sequence:
+      - variables:
+          step: "{{ states('number.alp_color_temp_step') | int(500) }}"
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_color_temp: "{{ (0 - step) | int }}"
+
+  alp_adjust_cooler:
+    alias: "ALP Cooler"
+    description: "Raise color temperature with the configured increment."
+    mode: single
+    sequence:
+      - variables:
+          step: "{{ states('number.alp_color_temp_step') | int(500) }}"
+      - service: adaptive_lighting_pro.adjust
+        data:
+          step_color_temp: "{{ step }}"
+
+  alp_reset_manual_adjustments:
+    alias: "ALP Reset Manual Adjustments"
+    description: "Clear manual timers and restore adaptive parameters."
+    mode: restart
+    sequence:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  alp_reset_all_zones:
+    alias: "ALP Reset All Zones"
+    description: "Clear manual flags and resync every configured zone."
+    mode: queued
+    sequence:
+      - repeat:
+          for_each:
+            - main_living
+            - kitchen_island
+            - bedroom_primary
+            - accent_spots
+            - recessed_ceiling
+          sequence:
+            - service: adaptive_lighting_pro.reset_zone
+              data:
+                zone: "{{ repeat.item }}"
+            - delay: "00:00:01"
+      - service: adaptive_lighting_pro.force_sync
+
+  alp_force_sync_all:
+    alias: "ALP Force Sync"
+    description: "Request an immediate synchronization for all zones."
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.force_sync
+
+  alp_force_sync_zone:
+    alias: "ALP Force Sync Zone"
+    description: "Sync a single zone after external changes."
+    mode: single
+    fields:
+      zone:
+        description: "Zone identifier from the integration configuration."
+        example: main_living
+    sequence:
+      - condition: template
+        value_template: "{{ zone is not none and zone != '' }}"
+      - service: adaptive_lighting_pro.force_sync
+        data:
+          zone: "{{ zone }}"
+
+  alp_select_mode:
+    alias: "ALP Select Mode"
+    description: "Wrap the mode service for dashboards and voice assistants."
+    mode: single
+    fields:
+      mode:
+        description: "Mode to activate (adaptive, work, focus, relax, movie, late_night)."
+        example: movie
+    sequence:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: "{{ mode | default('adaptive') }}"
+
+  alp_select_scene:
+    alias: "ALP Select Scene"
+    description: "Expose the scene service with friendly names."
+    mode: single
+    fields:
+      scene:
+        description: "Scene identifier (default, all_lights, no_spots, evening_comfort, ultra_dim)."
+        example: evening_comfort
+    sequence:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: "{{ scene | default('default') }}"
+
+  alp_toggle_global_pause:
+    alias: "ALP Toggle Global Pause"
+    description: "Toggle the global pause switch for the entire system."
+    mode: single
+    sequence:
+      - service: switch.toggle
+        target:
+          entity_id: switch.alp_global_pause_switch
+
+  alp_enable_all_zones:
+    alias: "ALP Enable All Zones"
+    mode: queued
+    sequence:
+      - repeat:
+          for_each:
+            - main_living
+            - kitchen_island
+            - bedroom_primary
+            - accent_spots
+            - recessed_ceiling
+          sequence:
+            - service: adaptive_lighting_pro.enable_zone
+              data:
+                zone: "{{ repeat.item }}"
+            - delay: "00:00:01"
+
+  alp_disable_all_zones:
+    alias: "ALP Disable All Zones"
+    mode: queued
+    sequence:
+      - repeat:
+          for_each:
+            - main_living
+            - kitchen_island
+            - bedroom_primary
+            - accent_spots
+            - recessed_ceiling
+          sequence:
+            - service: adaptive_lighting_pro.disable_zone
+              data:
+                zone: "{{ repeat.item }}"
+            - delay: "00:00:01"
+
+  alp_backup_preferences:
+    alias: "ALP Backup Preferences"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.backup_prefs
+
+  alp_restore_preferences:
+    alias: "ALP Restore Preferences"
+    mode: single
+    sequence:
+      - service: adaptive_lighting_pro.restore_prefs
+
+  alp_cycle_scene:
+    alias: "ALP Cycle Scene"
+    description: "Advance to the next configured scene order."
+    mode: single
+    sequence:
+      - service: select.select_next
+        target:
+          entity_id: select.alp_scene
+
+  alp_cycle_mode:
+    alias: "ALP Cycle Mode"
+    description: "Advance to the next configured mode order."
+    mode: single
+    sequence:
+      - service: select.select_next
+        target:
+          entity_id: select.alp_mode
+
+  alp_toggle_all_lights:
+    alias: "ALP Toggle All Lights"
+    description: "Fallback physical control using the consolidated light group."
+    mode: single
+    sequence:
+      - service: light.toggle
+        target:
+          entity_id: group.all_lights
+
+# -----------------------------------------------------------------------------
+# Automations: lifestyle glue that complements the integration runtime
+# -----------------------------------------------------------------------------
+automation:
+  - id: alp_startup_restore_and_sync
+    alias: "ALP Startup Restore & Sync"
+    description: "Restore preferences and sync shortly after Home Assistant boots."
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - service: adaptive_lighting_pro.restore_prefs
+        continue_on_error: true
+      - delay: "00:00:05"
+      - service: adaptive_lighting_pro.force_sync
+
+  - id: alp_media_movie_mode_bridge
+    alias: "ALP Movie Mode Bridge"
+    description: "When the theater starts playing, switch to movie mode and ultra dim scene."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: media_player.living_room_theater
+        to: "playing"
+        for: "00:00:10"
+    action:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: movie
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: ultra_dim
+
+  - id: alp_autoreset_movie_mode
+    alias: "ALP Auto Reset After Movie"
+    description: "When playback stops or turns off, return to adaptive defaults."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: media_player.living_room_theater
+        to: "idle"
+        for: "00:00:30"
+      - platform: state
+        entity_id: media_player.living_room_theater
+        to: "off"
+        for: "00:00:30"
+    action:
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  - id: alp_manual_decay_reversion
+    alias: "ALP Manual Decay Reversion"
+    description: "Return to default scene once manual action sensors stay idle."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.alp_brighter_active
+          - binary_sensor.alp_dimmer_active
+          - binary_sensor.alp_warmer_active
+          - binary_sensor.alp_cooler_active
+        to: "off"
+        for: "00:10:00"
+    condition:
+      - condition: template
+        value_template: >-
+          {{
+            states('binary_sensor.alp_brighter_active') == 'off' and
+            states('binary_sensor.alp_dimmer_active') == 'off' and
+            states('binary_sensor.alp_warmer_active') == 'off' and
+            states('binary_sensor.alp_cooler_active') == 'off' and
+            expand('binary_sensor.alp_manual_main_living',
+                   'binary_sensor.alp_manual_kitchen_island',
+                   'binary_sensor.alp_manual_bedroom_primary',
+                   'binary_sensor.alp_manual_accent_spots',
+                   'binary_sensor.alp_manual_recessed_ceiling') | selectattr('state','eq','on') | list | length == 0
+          }}
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  - id: alp_sunset_scene_nudge
+    alias: "ALP Sunset Scene Nudge"
+    description: "When sunset boost climbs, shift into the evening comfort scene."
+    mode: restart
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_system_snapshot
+        attribute: sunset_boost_pct
+        above: 15
+        for: "00:02:00"
+    condition:
+      - condition: state
+        entity_id: select.alp_mode
+        state: adaptive
+      - condition: template
+        value_template: "{{ states('select.alp_scene') == 'default' }}"
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: evening_comfort
+
+  - id: alp_rate_limit_notification
+    alias: "ALP Rate Limit Notification"
+    description: "Alert the household when Adaptive Lighting Pro is rate limited."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alp_rate_limit_reached
+        to: "on"
+        for: "00:00:30"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Adaptive Lighting Pro rate limited"
+          message: >-
+            Adaptive Lighting has throttled updates to protect the system. Check the
+            analytics summary sensor for details. Manual overrides will persist
+            until the rate limiter clears.
+          notification_id: alp_rate_limit_guard
+
+  - id: alp_rate_limit_clear
+    alias: "ALP Rate Limit Clear"
+    description: "Remove the notification once the limiter recovers."
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alp_rate_limit_reached
+        to: "off"
+        for: "00:00:15"
+    action:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: alp_rate_limit_guard
+
+  - id: alp_skip_next_sunrise_toggle
+    alias: "ALP Skip Sunrise Toggle"
+    description: "Mirror the skip next sunrise boolean into the integration service."
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.alp_skip_next_sunrise
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.alp_skip_next_sunrise
+                state: "on"
+            sequence:
+              - service: adaptive_lighting_pro.skip_next_alarm
+                data:
+                  skip: true
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.alp_skip_next_sunrise
+                state: "off"
+            sequence:
+              - service: adaptive_lighting_pro.skip_next_alarm
+                data:
+                  skip: false
+
+  - id: alp_skip_next_sunrise_sync_boolean
+    alias: "ALP Sync Skip Sunrise Boolean"
+    description: "Keep the helper boolean aligned with the integration binary sensor."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.alp_sonos_skip_next
+    action:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {{ is_state('binary_sensor.alp_sonos_skip_next', 'on') and
+                     is_state('input_boolean.alp_skip_next_sunrise', 'off') }}
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.alp_skip_next_sunrise
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {{ is_state('binary_sensor.alp_sonos_skip_next', 'off') and
+                     is_state('input_boolean.alp_skip_next_sunrise', 'on') }}
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.alp_skip_next_sunrise
+
+  - id: alp_global_pause_exit_resync
+    alias: "ALP Global Pause Exit Resync"
+    description: "When global pause is lifted, resync to restore automation."
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.alp_global_pause_switch
+        to: "off"
+        for: "00:00:05"
+    condition:
+      - condition: state
+        entity_id: switch.alp_global_pause_switch
+        state: "off"
+    action:
+      - service: adaptive_lighting_pro.force_sync
+
+  - id: alp_nightly_backup
+    alias: "ALP Nightly Backup"
+    description: "Back up preferences and request a sync shortly after the nightly sweep."
+    mode: single
+    trigger:
+      - platform: time
+        at: "03:35:00"
+    action:
+      - service: adaptive_lighting_pro.backup_prefs
+      - delay: "00:00:05"
+      - service: adaptive_lighting_pro.force_sync
+
+  - id: alp_mode_adaptive_scene_alignment
+    alias: "ALP Adaptive Scene Alignment"
+    description: "Whenever the mode returns to adaptive, reapply the default scene."
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: select.alp_mode
+        to: adaptive
+    condition:
+      - condition: template
+        value_template: "{{ states('select.alp_scene') != 'default' }}"
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+
+  - id: alp_manual_zone_recovery
+    alias: "ALP Manual Zone Recovery"
+    description: "If a zone stays manual for longer than its timer, request a reset."
+    mode: parallel
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.alp_manual_main_living
+          - binary_sensor.alp_manual_kitchen_island
+          - binary_sensor.alp_manual_bedroom_primary
+          - binary_sensor.alp_manual_accent_spots
+          - binary_sensor.alp_manual_recessed_ceiling
+        to: "on"
+        for: "02:30:00"
+    action:
+      - variables:
+          zone_id: "{{ trigger.entity_id.split('alp_manual_')[1] }}"
+      - service: adaptive_lighting_pro.reset_zone
+        data:
+          zone: "{{ zone_id }}"
+      - service: logbook.log
+        data:
+          name: "Adaptive Lighting Pro"
+          message: "Manual override on {{ zone_id }} exceeded timer; zone reset triggered."
+          entity_id: "binary_sensor.alp_manual_{{ zone_id }}"
+
+# -----------------------------------------------------------------------------
+# Optional helper button to chain backup and sync
+# -----------------------------------------------------------------------------
+button:
+  - platform: template
+    buttons:
+      alp_backup_and_sync:
+        name: "ALP Backup & Sync"
+        press:
+          - service: adaptive_lighting_pro.backup_prefs
+          - delay: "00:00:02"
+          - service: adaptive_lighting_pro.force_sync
