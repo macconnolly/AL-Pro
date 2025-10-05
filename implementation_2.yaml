@@ -1,0 +1,87 @@
+# Beta automation harness leveraging AL Layer Manager bridge + upstream layer_manager
+
+blueprints:
+  automation:
+    home_adaptive_lighting:al_layer_manager_sonos_wake:
+      name: "AL Layer Manager - Sonos Wake"
+      description: "Coordinated wake routine using layer_manager services emitted by AL bridge"
+      domain: automation
+      input:
+        zone:
+          name: Zone ID
+          selector:
+            text:
+        alarm_time:
+          name: Alarm Time Input Datetime
+          selector:
+            entity:
+              domain: input_datetime
+        sonos_player:
+          name: Sonos Player
+          selector:
+            entity:
+              domain: media_player
+        bridge_helper:
+          name: Bridge Helper Sensor
+          selector:
+            entity:
+              domain: sensor
+  script:
+    home_adaptive_lighting:al_layer_manager_manual_scene:
+      name: "AL Layer Manager - Manual Scene"
+      description: "Activate a manual scene via layer_manager.insert_state"
+      domain: script
+      blueprint:
+        input:
+          zone:
+            selector:
+              text:
+          brightness:
+            selector:
+              number:
+                min: 0.1
+                max: 1.0
+                step: 0.05
+          kelvin:
+            selector:
+              number:
+                min: 2200
+                max: 6000
+                step: 100
+
+automation:
+  - alias: "ALM Wake Routine"
+    use_blueprint:
+      path: home_adaptive_lighting:al_layer_manager_sonos_wake
+      input:
+        zone: office
+        alarm_time: input_datetime.office_alarm
+        sonos_player: media_player.office
+        bridge_helper: sensor.al_layer_manager_office_state
+
+script:
+  al_layer_manager_manual_scene:
+    description: "Manual scene helper that mirrors bridge output"
+    fields:
+      zone_id:
+        example: office
+      brightness:
+        example: 0.65
+      kelvin:
+        example: 3400
+    sequence:
+      - repeat:
+          for_each: "{{ state_attr('sensor.al_layer_manager_' ~ zone_id ~ '_lights', 'entities') }}"
+          sequence:
+            - service: layer_manager.insert_state
+              data:
+                entity_id: "{{ repeat.item }}"
+                id: "{{ zone_id }}_manual"
+                priority: 40
+                state: "on"
+                clear_layer: true
+                attributes:
+                  brightness: "{{ (brightness * 255) | int }}"
+                  color_temp_kelvin: "{{ kelvin }}"
+                  transition: 1
+                  al_reason: "blueprint_manual"

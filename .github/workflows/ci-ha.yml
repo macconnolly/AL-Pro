@@ -1,0 +1,18 @@
+name: Home Assistant Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install homeassistant hacs-cli
+      - run: hassfest validate --integration-path custom_components/al_layer_manager
+      - run: hacs validate

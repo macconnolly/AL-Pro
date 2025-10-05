@@ -1,0 +1,3208 @@
+{
+  "adaptive_lighting": [
+    {
+      "adapt_delay": 0,
+      "autoreset_control_seconds": 0,
+      "detect_non_ha_changes": true,
+      "include_config_in_attributes": true,
+      "initial_transition": 0,
+      "interval": 20,
+      "lights": [
+        "light.kitchen_main_lights",
+        "light.living_room_hallway_lights"
+      ],
+      "max_brightness": 23,
+      "min_brightness": 2,
+      "name": "recessed_ceiling",
+      "skip_redundant_commands": true,
+      "sleep_brightness": 1,
+      "sleep_transition": 3,
+      "take_over_control": true,
+      "transition": 0
+    },
+    {
+      "adapt_delay": 0,
+      "autoreset_control_seconds": 0,
+      "detect_non_ha_changes": true,
+      "include_config_in_attributes": true,
+      "initial_transition": 0,
+      "interval": 20,
+      "lights": [
+        "light.kitchen_island_pendants"
+      ],
+      "max_brightness": 100,
+      "max_color_temp": 4000,
+      "min_brightness": 30,
+      "min_color_temp": 2000,
+      "name": "kitchen_island",
+      "skip_redundant_commands": true,
+      "sleep_brightness": 1,
+      "sleep_transition": 3,
+      "take_over_control": true,
+      "transition": 0
+    },
+    {
+      "adapt_delay": 0,
+      "autoreset_control_seconds": 0,
+      "detect_non_ha_changes": true,
+      "include_config_in_attributes": true,
+      "initial_transition": 0,
+      "interval": 20,
+      "lights": [
+        "light.master_bedroom_table_lamps",
+        "light.master_bedroom_corner_accent"
+      ],
+      "max_brightness": 40,
+      "max_color_temp": 2250,
+      "min_brightness": 20,
+      "min_color_temp": 1800,
+      "name": "bedroom_primary",
+      "skip_redundant_commands": true,
+      "sleep_brightness": 5,
+      "sleep_transition": 5,
+      "take_over_control": true,
+      "transition": 0
+    },
+    {
+      "adapt_delay": 0,
+      "autoreset_control_seconds": 0,
+      "detect_non_ha_changes": true,
+      "include_config_in_attributes": true,
+      "initial_transition": 0,
+      "interval": 20,
+      "lights": [
+        "light.dining_room_spot_lights",
+        "light.living_room_spot_lights"
+      ],
+      "max_brightness": 50,
+      "max_color_temp": 6500,
+      "min_brightness": 20,
+      "min_color_temp": 2000,
+      "name": "accent_spots",
+      "send_split_delay": 0,
+      "skip_redundant_commands": true,
+      "sleep_brightness": 1,
+      "sleep_transition": 5,
+      "take_over_control": true,
+      "transition": 0
+    },
+    {
+      "adapt_delay": 5,
+      "autoreset_control_seconds": 0,
+      "detect_non_ha_changes": true,
+      "include_config_in_attributes": true,
+      "initial_transition": 0,
+      "interval": 20,
+      "lights": [
+        "light.entryway_lamp",
+        "light.living_room_floor_lamp",
+        "light.office_desk_lamp",
+        "light.living_room_corner_accent",
+        "light.living_room_couch_lamp",
+        "light.living_room_credenza_light",
+        "light.entryway_lamp"
+      ],
+      "max_brightness": 100,
+      "max_color_temp": 2950,
+      "min_brightness": 45,
+      "min_color_temp": 2250,
+      "name": "main_living",
+      "send_split_delay": 0,
+      "separate_turn_on_commands": false,
+      "skip_redundant_commands": true,
+      "sleep_brightness": 25,
+      "sleep_color_temp": 1800,
+      "sleep_transition": 0,
+      "take_over_control": true,
+      "transition": 0
+    }
+  ],
+  "automation": [
+    {
+      "action": [
+        {
+          "delay": "00:00:10"
+        },
+        {
+          "data": {
+            "entity_id": [
+              "switch.adaptive_lighting_recessed_ceiling_adapt_color"
+            ]
+          },
+          "service": "switch.turn_off"
+        }
+      ],
+      "alias": "Adaptive Lighting - Disable Color for Brightness-Only Lights",
+      "id": "adaptive_lighting_disable_color_adaptation",
+      "trigger": [
+        {
+          "event": "start",
+          "platform": "homeassistant"
+        },
+        {
+          "event_data": {
+            "component": "adaptive_lighting"
+          },
+          "event_type": "component_loaded",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "delay": "00:00:05"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": [
+              "input_number.adaptive_lighting_total_brightness_adjustment",
+              "input_number.adaptive_lighting_total_warmth_adjustment",
+              "input_number.adaptive_lighting_environmental_brightness_offset",
+              "input_number.al_sunset_fade_brightness_offset",
+              "input_number.al_scene_brightness_offset",
+              "input_number.al_scene_warmth_offset",
+              "input_number.al_wake_sequence_offset"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_brighter_active",
+              "input_boolean.al_script_dimmer_active",
+              "input_boolean.al_script_warmer_active",
+              "input_boolean.al_script_cooler_active",
+              "input_boolean.al_environmental_boost_active",
+              "input_boolean.movie_mode",
+              "input_boolean.late_night_mode",
+              "input_boolean.bright_work_mode",
+              "input_boolean.al_disable_next_sonos_wakeup"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "option": "Default"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "option": "Scene 1: All Lights"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.zen32_lighting_scene"
+          }
+        },
+        {
+          "continue_on_error": true,
+          "service": "timer.cancel",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "service": "switch.turn_off",
+          "target": {
+            "entity_id": [
+              "switch.adaptive_lighting_sleep_mode_main_living",
+              "switch.adaptive_lighting_sleep_mode_kitchen_island",
+              "switch.adaptive_lighting_sleep_mode_bedroom_primary",
+              "switch.adaptive_lighting_sleep_mode_accent_spots",
+              "switch.adaptive_lighting_sleep_mode_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "entity_id": [
+              "switch.adaptive_lighting_main_living",
+              "switch.adaptive_lighting_kitchen_island",
+              "switch.adaptive_lighting_bedroom_primary",
+              "switch.adaptive_lighting_accent_spots",
+              "switch.adaptive_lighting_recessed_ceiling"
+            ],
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "use_defaults": "configuration"
+          },
+          "service": "adaptive_lighting.change_switch_settings",
+          "target": {
+            "entity_id": [
+              "switch.adaptive_lighting_main_living",
+              "switch.adaptive_lighting_kitchen_island",
+              "switch.adaptive_lighting_bedroom_primary",
+              "switch.adaptive_lighting_accent_spots",
+              "switch.adaptive_lighting_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "data": {
+            "level": "info",
+            "message": "Adaptive Lighting Startup Cleanup Complete: All inputs reset, manual control cleared, timers cancelled"
+          },
+          "service": "system_log.write"
+        }
+      ],
+      "alias": "AL - Startup Cleanup and Reset",
+      "description": "Ensures clean state on Home Assistant startup",
+      "id": "adaptive_lighting_startup_cleanup",
+      "trigger": [
+        {
+          "event": "start",
+          "platform": "homeassistant"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ home_mode in ['Bright Focus', 'Dim Relax', 'Warm Evening', 'Cool Energy'] }}"
+                },
+                {
+                  "condition": "template",
+                  "value_template": "{{ timeout_hours > 0 }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "duration": "{{ (timeout_hours * 3600) | int }}"
+                  },
+                  "service": "timer.start",
+                  "target": {
+                    "entity_id": [
+                      "timer.adaptive_lighting_manual_timer_main_living",
+                      "timer.adaptive_lighting_manual_timer_kitchen_island",
+                      "timer.adaptive_lighting_manual_timer_bedroom_primary",
+                      "timer.adaptive_lighting_manual_timer_accent_spots",
+                      "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "service": "timer.cancel",
+              "target": {
+                "entity_id": [
+                  "timer.adaptive_lighting_manual_timer_main_living",
+                  "timer.adaptive_lighting_manual_timer_kitchen_island",
+                  "timer.adaptive_lighting_manual_timer_bedroom_primary",
+                  "timer.adaptive_lighting_manual_timer_accent_spots",
+                  "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ home_mode == 'Movie' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "scene_id": "before_movie",
+                    "snapshot_entities": "{{ expand('light.all_adaptive_lights') | map(attribute='entity_id') | list }}"
+                  },
+                  "service": "scene.create"
+                },
+                {
+                  "data": {
+                    "transition": 1
+                  },
+                  "service": "light.turn_off",
+                  "target": {
+                    "entity_id": [
+                      "light.living_room_couch_lamp",
+                      "light.living_room_credenza_light",
+                      "light.living_room_floor_lamp",
+                      "light.office_desk_lamp",
+                      "light.entryway_lamp"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "brightness_pct": 15,
+                    "color_temp": 454,
+                    "transition": 1
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "light.living_room_corner_accent",
+                      "light.living_room_spot_lights",
+                      "light.dining_room_spot_lights"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ home_mode == 'Work' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "entity_id": "{{ ['switch.adaptive_lighting_main_living',\n    'switch.adaptive_lighting_kitchen_island',\n    'switch.adaptive_lighting_accent_spots']\n   | select('in', non_manual_zones) | list }}\n",
+                    "max_brightness": 100,
+                    "max_color_temp": 2900,
+                    "min_brightness": 85,
+                    "min_color_temp": 2700,
+                    "use_defaults": "configuration"
+                  },
+                  "service": "adaptive_lighting.change_switch_settings"
+                },
+                {
+                  "data": {
+                    "entity_id": "{{ ['switch.adaptive_lighting_main_living',\n    'switch.adaptive_lighting_kitchen_island',\n    'switch.adaptive_lighting_accent_spots']\n   | select('in', non_manual_zones) | list }}\n",
+                    "transition": 1,
+                    "turn_on_lights": false
+                  },
+                  "service": "adaptive_lighting.apply"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ home_mode == 'Late Night' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "entity_id": "{{ ['switch.adaptive_lighting_main_living',\n    'switch.adaptive_lighting_kitchen_island',\n    'switch.adaptive_lighting_bedroom_primary',\n    'switch.adaptive_lighting_accent_spots',\n    'switch.adaptive_lighting_recessed_ceiling']\n   | select('in', non_manual_zones) | list }}\n",
+                    "max_brightness": 25,
+                    "max_color_temp": 2500,
+                    "use_defaults": "configuration"
+                  },
+                  "service": "adaptive_lighting.change_switch_settings"
+                },
+                {
+                  "data": {
+                    "entity_id": "{{ ['switch.adaptive_lighting_main_living',\n    'switch.adaptive_lighting_kitchen_island',\n    'switch.adaptive_lighting_bedroom_primary',\n    'switch.adaptive_lighting_accent_spots',\n    'switch.adaptive_lighting_recessed_ceiling']\n   | select('in', non_manual_zones) | list }}\n",
+                    "transition": 2,
+                    "turn_on_lights": false
+                  },
+                  "service": "adaptive_lighting.apply"
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "data": {
+                "entity_id": "input_number.adaptive_lighting_total_brightness_adjustment",
+                "value": 0
+              },
+              "service": "input_number.set_value"
+            },
+            {
+              "data": {
+                "entity_id": "input_number.adaptive_lighting_total_warmth_adjustment",
+                "value": 0
+              },
+              "service": "input_number.set_value"
+            },
+            {
+              "service": "timer.cancel",
+              "target": {
+                "entity_id": [
+                  "timer.adaptive_lighting_manual_timer_main_living",
+                  "timer.adaptive_lighting_manual_timer_kitchen_island",
+                  "timer.adaptive_lighting_manual_timer_bedroom_primary",
+                  "timer.adaptive_lighting_manual_timer_accent_spots",
+                  "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+                ]
+              }
+            },
+            {
+              "service": "input_boolean.turn_off",
+              "target": {
+                "entity_id": [
+                  "input_boolean.al_script_brighter_active",
+                  "input_boolean.al_script_dimmer_active",
+                  "input_boolean.al_script_warmer_active",
+                  "input_boolean.al_script_cooler_active"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "alias": "Adaptive Lighting - Enhanced Master State Controller",
+      "description": "Centralized controller with fixed increment logic",
+      "id": "adaptive_lighting_master_state_controller",
+      "trigger": [
+        {
+          "entity_id": "input_select.current_home_mode",
+          "platform": "state"
+        }
+      ],
+      "variables": {
+        "all_zones": "{{ state_attr('group.adaptive_lighting_switches', 'entity_id') | list }}",
+        "brightness_increment": "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}",
+        "home_mode": "{{ states('input_select.current_home_mode') }}",
+        "non_manual_zones": "{% set result = [] %} {% for zone in all_zones %}\n  {% set manual = state_attr(zone, 'manual_control') | default([]) %}\n  {% if not (manual is iterable and manual is not string and manual | length > 0) %}\n    {% set result = result + [zone] %}\n  {% endif %}\n{% endfor %} {{ result }}\n",
+        "timeout_hours": "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) }}",
+        "warmth_increment": "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}"
+      }
+    },
+    {
+      "action": [
+        {
+          "repeat": {
+            "count": "{{ al_switches | length }}",
+            "sequence": [
+              {
+                "condition": "template",
+                "value_template": "{% set switch = al_switches[repeat.index - 1] %} {% set manual = state_attr(switch, 'manual_control') | default([]) %} {{ not (manual is iterable and manual is not string and manual | length > 0) }}\n"
+              },
+              {
+                "data": {
+                  "entity_id": "{{ al_switches[repeat.index - 1] }}",
+                  "sunrise_time": "{% set alarm_timestamp = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %} {% set current_switch = al_switches[repeat.index - 1] %} {% set natural_sunrise = state_attr('sun.sun', 'next_rising') | as_timestamp(0) %} {% if 'recessed_ceiling' in current_switch %}\n  {% set offset_seconds = -2700 %}\n{% elif 'kitchen_island' in current_switch %}\n  {% set offset_seconds = -2700 %}\n{% elif 'bedroom_primary' in current_switch %}\n  {% set offset_seconds = -1800 %}\n{% elif 'accent_spots' in current_switch %}\n  {% set offset_seconds = -2700 %}\n{% elif 'main_living' in current_switch %}\n  {% set offset_seconds = -2700 %}\n{% else %}\n  {% set offset_seconds = 0 %}\n{% endif %} {% set natural_sunrise_adjusted = natural_sunrise + offset_seconds %} {% if alarm_timestamp %}\n  {% if 'bedroom_primary' in current_switch %}\n    {% set alarm_based = alarm_timestamp - 1800 %}\n  {% elif 'kitchen_island' in current_switch %}\n    {% set alarm_based = alarm_timestamp - 2700 %}\n  {% elif 'main_living' in current_switch %}\n    {% set alarm_based = alarm_timestamp - 1200 %}\n  {% else %}\n    {% set alarm_based = alarm_timestamp - 1500 %}\n  {% endif %}\n  {% set final_time = [natural_sunrise_adjusted, alarm_based] | min %}\n{% else %}\n  {% set final_time = natural_sunrise_adjusted %}\n{% endif %} {{ final_time | timestamp_custom('%H:%M:%S', true) }}\n",
+                  "use_defaults": "configuration"
+                },
+                "service": "adaptive_lighting.change_switch_settings"
+              }
+            ]
+          }
+        }
+      ],
+      "alias": "Adaptive Lighting - Dynamic Sunrise All Zones",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{% set current_alarm = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %} {% set last_alarm = state_attr('sensor.adaptive_lighting_sunrise_times', 'last_processed_alarm') %} {{ current_alarm != last_alarm or trigger.platform == 'time' }}\n"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_disable_next_sonos_wakeup",
+          "state": "off"
+        }
+      ],
+      "id": "adaptive_lighting_dynamic_sunrise_all",
+      "trigger": [
+        {
+          "attribute": "earliest_alarm_timestamp",
+          "entity_id": "sensor.sonos_upcoming_alarms",
+          "platform": "state"
+        },
+        {
+          "at": "03:00:00",
+          "platform": "time"
+        },
+        {
+          "attribute": "next_rising",
+          "entity_id": "sun.sun",
+          "platform": "state"
+        }
+      ],
+      "variables": {
+        "al_switches": [
+          "switch.adaptive_lighting_main_living",
+          "switch.adaptive_lighting_kitchen_island",
+          "switch.adaptive_lighting_bedroom_primary",
+          "switch.adaptive_lighting_accent_spots",
+          "switch.adaptive_lighting_recessed_ceiling"
+        ]
+      }
+    },
+    {
+      "action": [
+        {
+          "service": "input_boolean.turn_on",
+          "target": {
+            "entity_id": "input_boolean.al_environmental_boost_active"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ sophisticated_environmental_boost }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_environmental_brightness_offset"
+          }
+        }
+      ],
+      "alias": "Adaptive Lighting - Low Light Brightness Boost",
+      "condition": [
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "below": 1000,
+              "condition": "numeric_state",
+              "entity_id": "sensor.living_room_presence_light_sensor_light_level"
+            },
+            {
+              "condition": "state",
+              "entity_id": "weather.home",
+              "state": [
+                "cloudy",
+                "partlycloudy",
+                "rainy",
+                "snowy",
+                "fog"
+              ]
+            }
+          ]
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_globally_paused",
+          "state": "off"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_environmental_boost_active",
+          "state": "off"
+        }
+      ],
+      "id": "adaptive_lighting_low_light_boost",
+      "trigger": [
+        {
+          "below": 1000,
+          "entity_id": "sensor.living_room_presence_light_sensor_light_level",
+          "for": "00:05:00",
+          "platform": "numeric_state"
+        },
+        {
+          "entity_id": "weather.home",
+          "for": "00:05:00",
+          "platform": "state",
+          "to": [
+            "cloudy",
+            "partlycloudy",
+            "rainy",
+            "snowy",
+            "fog"
+          ]
+        }
+      ],
+      "variables": {
+        "current_lux": "{{ states('sensor.living_room_presence_light_sensor_light_level') | int(0) }}",
+        "current_weather": "{{ states('weather.home') }}",
+        "sophisticated_environmental_boost": "{% set lux = states('sensor.living_room_presence_light_sensor_light_level') | float(300) %} {% set weather = states('weather.home') %} {% set season = 'winter' if now().month in [12,1,2] else \n                'summer' if now().month in [6,7,8] else \n                'transition' %}\n\n{% set base_boost = 0 %}\n{# Softer logarithmic lux scaling - only boost when truly dark #} {% if lux < 10 %}\n  {% set base_boost = base_boost + 15 %}\n{% elif lux < 25 %}\n  {% set base_boost = base_boost + 10 %}\n{% elif lux < 50 %}\n  {% set base_boost = base_boost + 7 %}\n{% elif lux < 100 %}\n  {% set base_boost = base_boost + 5 %}\n{% elif lux < 200 %}\n  {% set base_boost = base_boost + 3 %}\n{% elif lux < 400 %}\n  {% set base_boost = base_boost + 1 %}\n{% endif %}\n{# Weather modifiers - complete mapping with all states #} {% set weather_boost = {\n  'fog': 20,\n  'pouring': 18,\n  'hail': 18,\n  'snowy': 15,\n  'snowy-rainy': 15,\n  'rainy': 12,\n  'lightning-rainy': 12,\n  'cloudy': 10,\n  'partlycloudy': 5,\n  'windy': 2,\n  'windy-variant': 2,\n  'lightning': 8,\n  'sunny': 0,\n  'clear-night': 0,\n  'exceptional': 15\n} %} {% set base_boost = base_boost + weather_boost.get(weather, 0) %}\n{# Seasonal adjustment #} {% if season == 'winter' %}\n  {% set base_boost = base_boost + 8 %}\n{% elif season == 'summer' %}\n  {% set base_boost = base_boost - 3 %}\n{% endif %}\n{# Time-of-day scaling - disable at night #} {% set hour = now().hour %} {% if 22 <= hour or hour <= 6 %}\n  {# Disable environmental boost at night (10 PM - 6 AM) #}\n  {% set base_boost = 0 %}\n{% elif 6 < hour <= 8 or 18 <= hour < 22 %}\n  {% set base_boost = base_boost * 0.7 %}\n{% endif %}\n{{ [25, base_boost] | min | round(0) }}\n"
+      }
+    },
+    {
+      "action": [
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": "input_boolean.al_environmental_boost_active"
+          }
+        },
+        {
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_environmental_brightness_offset"
+          }
+        }
+      ],
+      "alias": "Adaptive Lighting - Bright Day Reset",
+      "condition": [
+        {
+          "after": "sunrise",
+          "after_offset": "01:00:00",
+          "before": "sunset",
+          "before_offset": "-01:00:00",
+          "condition": "sun"
+        },
+        {
+          "above": 2000,
+          "condition": "numeric_state",
+          "entity_id": "sensor.living_room_presence_light_sensor_light_level"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_environmental_boost_active",
+          "state": "on"
+        }
+      ],
+      "id": "adaptive_lighting_bright_day_reset",
+      "trigger": [
+        {
+          "above": 2000,
+          "entity_id": "sensor.living_room_presence_light_sensor_light_level",
+          "for": "00:10:00",
+          "platform": "numeric_state"
+        },
+        {
+          "entity_id": "weather.home",
+          "for": "00:15:00",
+          "platform": "state",
+          "to": [
+            "sunny",
+            "clear-night"
+          ]
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "repeat": {
+            "for_each": "{{ zone_configs }}",
+            "sequence": [
+              {
+                "continue_on_error": true,
+                "data": {
+                  "max_brightness": "{% set base_min = repeat.item.min_brightness %} {% set base_max = repeat.item.max_brightness %} {% set reduction = final_b_adj if final_b_adj < 0 else 0 %} {% set proposed_max = base_max + reduction %} {{ [[proposed_max, base_min] | max, 100] | min }}\n",
+                  "max_color_temp": "{% if 'recessed' not in repeat.item.entity_id %}\n  {% set base_min = repeat.item.min_color_temp %}\n  {% set base_max = repeat.item.max_color_temp %}\n  {% set warmer_adj = final_k_adj if final_k_adj < 0 else 0 %}\n  {% set proposed_max = base_max + warmer_adj %}\n  {{ [[proposed_max, base_min] | max, 6500] | min }}\n{% else %}\n  {{ repeat.item.max_color_temp | default(5000) }}\n{% endif %}\n",
+                  "min_brightness": "{% set base_min = repeat.item.min_brightness %} {% set base_max = repeat.item.max_brightness %} {% set boost = final_b_adj if final_b_adj > 0 else 0 %} {% set proposed_min = base_min + boost %} {{ [1, [proposed_min, base_max] | min] | max }}\n",
+                  "min_color_temp": "{% if 'recessed' not in repeat.item.entity_id %}\n  {% set base_min = repeat.item.min_color_temp %}\n  {% set base_max = repeat.item.max_color_temp %}\n  {% set cooler_adj = final_k_adj if final_k_adj > 0 else 0 %}\n  {% set proposed_min = base_min + cooler_adj %}\n  {{ [1500, [proposed_min, base_max] | min] | max }}\n{% else %}\n  {{ repeat.item.min_color_temp | default(2400) }}\n{% endif %}\n",
+                  "transition": 1
+                },
+                "service": "adaptive_lighting.change_switch_settings",
+                "target": {
+                  "entity_id": "{{ repeat.item.entity_id }}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "transition": 1,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply",
+          "target": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          }
+        },
+        {
+          "event": "adaptive_lighting_calculation_complete",
+          "event_data": {
+            "components": {
+              "brightness_environmental": "{{ env_boost }}",
+              "brightness_manual": "{{ b_adj }}",
+              "brightness_scene": "{{ scene_b_offset }}",
+              "brightness_sunset_fade": "{{ sunset_fade }}",
+              "brightness_wake": "{{ wake_offset }}",
+              "warmth_manual": "{{ k_adj }}",
+              "warmth_scene": "{{ scene_k_offset }}"
+            },
+            "environmental_active": "{{ is_state('input_boolean.al_environmental_boost_active', 'on') }}",
+            "final_brightness_adjustment": "{{ final_b_adj }}",
+            "final_warmth_adjustment": "{{ final_k_adj }}",
+            "sun_elevation": "{{ state_attr('sun.sun', 'elevation') | float(0) }}",
+            "timestamp": "{{ now().isoformat() }}",
+            "trigger_source": "{{ trigger.platform if trigger is defined else 'manual' }}",
+            "zones_calculated": "{% set result = [] %} {% for zone in zone_configs %}\n  {% set result = result + [{\n    'entity_id': zone.entity_id,\n    'min_brightness': zone.min_brightness + (final_b_adj if final_b_adj > 0 else 0),\n    'max_brightness': zone.max_brightness + (final_b_adj if final_b_adj < 0 else 0),\n    'min_color_temp': zone.min_color_temp + (final_k_adj if final_k_adj > 0 else 0),\n    'max_color_temp': zone.max_color_temp + (final_k_adj if final_k_adj < 0 else 0)\n  }] %}\n{% endfor %} {{ result }}\n",
+            "zones_updated": "{{ zone_configs | map(attribute='entity_id') | list }}"
+          }
+        }
+      ],
+      "alias": "Adaptive Lighting - Apply Asymmetric Adjustments",
+      "condition": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_globally_paused",
+          "state": "off"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ trigger.platform != 'time_pattern' or (final_b_adj != 0 or final_k_adj != 0) }}"
+        }
+      ],
+      "description": "Revolutionary asymmetric boundary logic implementation",
+      "id": "adaptive_lighting_apply_fixed_adjustments",
+      "initial_state": false,
+      "mode": "restart",
+      "trigger": [
+        {
+          "entity_id": [
+            "input_number.adaptive_lighting_total_brightness_adjustment",
+            "input_number.adaptive_lighting_total_warmth_adjustment",
+            "input_number.adaptive_lighting_environmental_brightness_offset",
+            "input_number.al_sunset_fade_brightness_offset",
+            "input_number.al_scene_brightness_offset",
+            "input_number.al_scene_warmth_offset",
+            "input_number.al_wake_sequence_offset"
+          ],
+          "for": "00:00:01",
+          "platform": "state"
+        },
+        {
+          "minutes": "/15",
+          "platform": "time_pattern"
+        }
+      ],
+      "variables": {
+        "b_adj": "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}",
+        "env_boost": "{{ states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) }}",
+        "final_b_adj": "{{ b_adj + env_boost + sunset_fade + scene_b_offset + wake_offset }}",
+        "final_k_adj": "{{ k_adj + scene_k_offset }}",
+        "k_adj": "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}",
+        "scene_b_offset": "{{ states('input_number.al_scene_brightness_offset') | int(0) }}",
+        "scene_k_offset": "{{ states('input_number.al_scene_warmth_offset') | int(0) }}",
+        "sunset_fade": "{{ states('input_number.al_sunset_fade_brightness_offset') | int(0) }}",
+        "wake_offset": "{{ states('input_number.al_wake_sequence_offset') | int(0) }}",
+        "zone_configs": [
+          {
+            "entity_id": "switch.adaptive_lighting_main_living",
+            "max_brightness": 100,
+            "max_color_temp": 2950,
+            "min_brightness": 45,
+            "min_color_temp": 2250
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_kitchen_island",
+            "max_brightness": 100,
+            "max_color_temp": 4000,
+            "min_brightness": 15,
+            "min_color_temp": 2000
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_bedroom_primary",
+            "max_brightness": 40,
+            "max_color_temp": 2250,
+            "min_brightness": 20,
+            "min_color_temp": 1800
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_accent_spots",
+            "max_brightness": 50,
+            "max_color_temp": 6500,
+            "min_brightness": 20,
+            "min_color_temp": 2000
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_recessed_ceiling",
+            "max_brightness": 23,
+            "max_color_temp": 5000,
+            "min_brightness": 2,
+            "min_color_temp": 2400
+          }
+        ]
+      }
+    },
+    {
+      "action": [
+        {
+          "repeat": {
+            "for_each": "{{ zone_configs }}",
+            "sequence": [
+              {
+                "condition": "template",
+                "value_template": "{% set manual_list = state_attr(repeat.item.entity_id, 'manual_control') | default([]) %} {{ not (manual_list is iterable and manual_list is not string and manual_list | length > 0) }}\n"
+              },
+              {
+                "continue_on_error": true,
+                "data": {
+                  "max_brightness": "{% set base_min = repeat.item.min_brightness %} {% set base_max = repeat.item.max_brightness %} {% set reduction = final_brightness if final_brightness < 0 else 0 %} {% set proposed_max = base_max + reduction %} {{ [[proposed_max, base_min] | max, 100] | min }}\n",
+                  "max_color_temp": "{% if 'recessed' not in repeat.item.entity_id %}\n  {% set base_min = repeat.item.min_color_temp %}\n  {% set base_max = repeat.item.max_color_temp %}\n  {% set warmer_adj = final_warmth if final_warmth < 0 else 0 %}\n  {% set proposed_max = base_max + warmer_adj %}\n  {{ [[proposed_max, base_min] | max, 6500] | min }}\n{% else %}\n  {{ repeat.item.max_color_temp }}\n{% endif %}\n",
+                  "min_brightness": "{% set base_min = repeat.item.min_brightness %} {% set base_max = repeat.item.max_brightness %} {% set boost = final_brightness if final_brightness > 0 else 0 %} {% set proposed_min = base_min + boost %} {{ [1, [proposed_min, base_max] | min] | max }}\n",
+                  "min_color_temp": "{% if 'recessed' not in repeat.item.entity_id %}\n  {% set base_min = repeat.item.min_color_temp %}\n  {% set base_max = repeat.item.max_color_temp %}\n  {% set cooler_adj = final_warmth if final_warmth > 0 else 0 %}\n  {% set proposed_min = base_min + cooler_adj %}\n  {{ [1500, [proposed_min, base_max] | min] | max }}\n{% else %}\n  {{ repeat.item.min_color_temp }}\n{% endif %}\n",
+                  "transition": 1,
+                  "use_defaults": "configuration"
+                },
+                "service": "adaptive_lighting.change_switch_settings",
+                "target": {
+                  "entity_id": "{{ repeat.item.entity_id }}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{% set switches = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island',\n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% set zones = [] %} {% for switch in switches %}\n  {% set manual = state_attr(switch, 'manual_control') | default([]) %}\n  {% if not (manual is iterable and manual is not string and manual | length > 0) %}\n    {% set zones = zones + [switch] %}\n  {% endif %}\n{% endfor %} {{ zones | length > 0 }}\n"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "transition": 1,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply",
+          "target": {
+            "entity_id": "{% set switches = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island',\n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% set zones = [] %} {% for switch in switches %}\n  {% set manual = state_attr(switch, 'manual_control') | default([]) %}\n  {% if not (manual is iterable and manual is not string and manual | length > 0) %}\n    {% set zones = zones + [switch] %}\n  {% endif %}\n{% endfor %} {{ zones }}\n"
+          }
+        }
+      ],
+      "alias": "AL - Core Adjustment Engine (Manual-Safe)",
+      "condition": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.al_globally_paused",
+          "state": "off"
+        }
+      ],
+      "description": "Applies adjustments only to non-manual zones",
+      "id": "adaptive_lighting_core_engine_v2",
+      "mode": "restart",
+      "trigger": [
+        {
+          "event": "start",
+          "platform": "homeassistant"
+        },
+        {
+          "entity_id": [
+            "input_number.adaptive_lighting_total_brightness_adjustment",
+            "input_number.adaptive_lighting_total_warmth_adjustment",
+            "input_number.adaptive_lighting_environmental_brightness_offset",
+            "input_number.al_sunset_fade_brightness_offset",
+            "input_number.al_scene_brightness_offset",
+            "input_number.al_scene_warmth_offset",
+            "input_number.al_wake_sequence_offset"
+          ],
+          "for": "00:00:01",
+          "platform": "state"
+        },
+        {
+          "minutes": "/15",
+          "platform": "time_pattern"
+        }
+      ],
+      "variables": {
+        "final_brightness": "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0)\n   + states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0)\n   + states('input_number.al_sunset_fade_brightness_offset') | int(0)\n   + states('input_number.al_scene_brightness_offset') | int(0)\n   + states('input_number.al_wake_sequence_offset') | int(0) }}\n",
+        "final_warmth": "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0)\n   + states('input_number.al_scene_warmth_offset') | int(0) }}\n",
+        "zone_configs": [
+          {
+            "entity_id": "switch.adaptive_lighting_main_living",
+            "max_brightness": 100,
+            "max_color_temp": 2950,
+            "min_brightness": 45,
+            "min_color_temp": 2250
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_kitchen_island",
+            "max_brightness": 100,
+            "max_color_temp": 4000,
+            "min_brightness": 15,
+            "min_color_temp": 2000
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_bedroom_primary",
+            "max_brightness": 40,
+            "max_color_temp": 2250,
+            "min_brightness": 20,
+            "min_color_temp": 1800
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_accent_spots",
+            "max_brightness": 50,
+            "max_color_temp": 6500,
+            "min_brightness": 20,
+            "min_color_temp": 2000
+          },
+          {
+            "entity_id": "switch.adaptive_lighting_recessed_ceiling",
+            "max_brightness": 23,
+            "max_color_temp": 5000,
+            "min_brightness": 2,
+            "min_color_temp": 2400
+          }
+        ]
+      }
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control",
+          "target": {
+            "entity_id": "switch.adaptive_lighting_main_living"
+          }
+        },
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_main_living",
+            "lights": "light.main_living_lights",
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ],
+      "alias": "AL - Manual Timer Expired - Main Living",
+      "id": "adaptive_lighting_timer_expired_main_living",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_main_living"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control",
+          "target": {
+            "entity_id": "switch.adaptive_lighting_kitchen_island"
+          }
+        },
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_kitchen_island",
+            "lights": "light.kitchen_island_lights",
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ],
+      "alias": "AL - Manual Timer Expired - Kitchen Island",
+      "id": "adaptive_lighting_timer_expired_kitchen_island",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_kitchen_island"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control",
+          "target": {
+            "entity_id": "switch.adaptive_lighting_bedroom_primary"
+          }
+        },
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_bedroom_primary",
+            "lights": "light.bedroom_primary_lights",
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ],
+      "alias": "AL - Manual Timer Expired - Bedroom Primary",
+      "id": "adaptive_lighting_timer_expired_bedroom_primary",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_bedroom_primary"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control",
+          "target": {
+            "entity_id": "switch.adaptive_lighting_accent_spots"
+          }
+        },
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_accent_spots",
+            "lights": "light.accent_spots_lights",
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ],
+      "alias": "AL - Manual Timer Expired - Accent Spots",
+      "id": "adaptive_lighting_timer_expired_accent_spots",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_accent_spots"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control",
+          "target": {
+            "entity_id": "switch.adaptive_lighting_recessed_ceiling"
+          }
+        },
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_recessed_ceiling",
+            "lights": "light.recessed_ceiling_lights",
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ],
+      "alias": "AL - Manual Timer Expired - Recessed Ceiling",
+      "id": "adaptive_lighting_timer_expired_recessed_ceiling",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": [
+              "input_number.adaptive_lighting_total_brightness_adjustment",
+              "input_number.adaptive_lighting_total_warmth_adjustment"
+            ]
+          }
+        },
+        {
+          "data": {
+            "option": "Default"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_brighter_active",
+              "input_boolean.al_script_dimmer_active",
+              "input_boolean.al_script_warmer_active",
+              "input_boolean.al_script_cooler_active"
+            ]
+          }
+        }
+      ],
+      "alias": "AL - Reset Manual Adjustments Only",
+      "description": "Resets only manual brightness/warmth, preserves environmental",
+      "id": "adaptive_lighting_manual_adjustments_reset",
+      "trigger": [
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_main_living"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        },
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_kitchen_island"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        },
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_bedroom_primary"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        },
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_accent_spots"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        },
+        {
+          "event_data": {
+            "entity_id": "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+          },
+          "event_type": "timer.finished",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "variables": {
+            "zone_switch": "{% set light = trigger.entity_id %} {% set zone_map = {\n  'light.entryway_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_floor_lamp': 'switch.adaptive_lighting_main_living',\n  'light.office_desk_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_corner_accent': 'switch.adaptive_lighting_main_living',\n  'light.living_room_couch_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_credenza_light': 'switch.adaptive_lighting_main_living',\n  'light.kitchen_island_pendants': 'switch.adaptive_lighting_kitchen_island',\n  'light.master_bedroom_table_lamps': 'switch.adaptive_lighting_bedroom_primary',\n  'light.master_bedroom_corner_accent': 'switch.adaptive_lighting_bedroom_primary',\n  'light.dining_room_spot_lights': 'switch.adaptive_lighting_accent_spots',\n  'light.living_room_spot_lights': 'switch.adaptive_lighting_accent_spots',\n  'light.kitchen_main_lights': 'switch.adaptive_lighting_recessed_ceiling',\n  'light.living_room_hallway_lights': 'switch.adaptive_lighting_recessed_ceiling'\n} %} {{ zone_map.get(light, none) }}\n"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ zone_switch != none }}"
+        },
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ trigger.id == 'brightness_change' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "variables": {
+                    "current_brightness": "{{ trigger.to_state.attributes.brightness | float(0) }}",
+                    "current_pct": "{{ (current_brightness / 2.55) | round(0) }}",
+                    "offset": "{{ (current_pct - prev_pct) | round(0) }}",
+                    "prev_brightness": "{{ trigger.from_state.attributes.brightness | float(0) }}",
+                    "prev_pct": "{{ (prev_brightness / 2.55) | round(0) }}"
+                  }
+                },
+                {
+                  "condition": "template",
+                  "value_template": "{{ offset | abs > 5 }}"
+                },
+                {
+                  "data": {
+                    "value": "{% set current = states('input_number.adaptive_lighting_total_brightness_adjustment') | float(0) %} {% set new_value = current + offset %} {{ [-100, [100, new_value] | min] | max }}\n"
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.adaptive_lighting_total_brightness_adjustment"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ trigger.id == 'warmth_change' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "variables": {
+                    "current_k": "{{ trigger.to_state.attributes.get('color_temp_kelvin', 3000) | float(3000) }}",
+                    "expected_k": "{{ state_attr(zone_switch, 'color_temp_kelvin') | float(3000) }}",
+                    "offset": "{{ (current_k - expected_k) | round(-2) }}"
+                  }
+                },
+                {
+                  "condition": "template",
+                  "value_template": "{{ offset | abs > 200 }}"
+                },
+                {
+                  "data": {
+                    "value": "{{ [-2500, [2500, offset] | min] | max }}"
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.adaptive_lighting_total_warmth_adjustment"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "alias": "AL - Detect & Preserve Manual Changes",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{{ (now() - states.sensor.uptime.last_changed).total_seconds() > 60 }}\n"
+        },
+        {
+          "condition": "template",
+          "value_template": "{% set context = trigger.to_state.context %} {% set parent_id = context.parent_id %} {% set user_id = context.user_id %}\n{# Physical change: no parent context and no user context #} {% set is_physical = parent_id is none and user_id is none %}\n{# User change through UI: has user_id #} {% set is_user = user_id is not none %}\n{# Get the parent automation if any #} {% set parent_automation = '' %} {% if parent_id is not none %}\n  {% for auto in states.automation %}\n    {% if auto.context.id == parent_id %}\n      {% set parent_automation = auto.entity_id %}\n    {% endif %}\n  {% endfor %}\n{% endif %}\n{# Exclude our own automations #} {% set excluded_automations = [\n  'automation.adaptive_lighting_apply_asymmetric_adjustments',\n  'automation.adaptive_lighting_apply_fixed_adjustments'\n] %}\n{% set not_from_our_automations = parent_automation not in excluded_automations %}\n{{ (is_physical or is_user) and not_from_our_automations }}\n"
+        }
+      ],
+      "description": "Captures physical control changes and preserves user intent",
+      "id": "adaptive_lighting_ingest_manual_changes",
+      "initial_state": false,
+      "max": 10,
+      "mode": "parallel",
+      "trigger": [
+        {
+          "attribute": "brightness",
+          "entity_id": [
+            "light.entryway_lamp",
+            "light.living_room_floor_lamp",
+            "light.office_desk_lamp",
+            "light.living_room_corner_accent",
+            "light.living_room_couch_lamp",
+            "light.living_room_credenza_light",
+            "light.kitchen_island_pendants",
+            "light.master_bedroom_table_lamps",
+            "light.dining_room_spot_lights",
+            "light.living_room_spot_lights",
+            "light.kitchen_main_lights",
+            "light.living_room_hallway_lights"
+          ],
+          "id": "brightness_change",
+          "platform": "state"
+        },
+        {
+          "attribute": "color_temp_kelvin",
+          "entity_id": [
+            "light.entryway_lamp",
+            "light.living_room_floor_lamp",
+            "light.office_desk_lamp",
+            "light.living_room_corner_accent",
+            "light.living_room_couch_lamp",
+            "light.living_room_credenza_light",
+            "light.kitchen_island_pendants",
+            "light.master_bedroom_table_lamps",
+            "light.dining_room_spot_lights",
+            "light.living_room_spot_lights",
+            "light.kitchen_main_lights",
+            "light.living_room_hallway_lights"
+          ],
+          "id": "warmth_change",
+          "platform": "state"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_brighter_active",
+              "input_boolean.al_script_dimmer_active"
+            ]
+          }
+        }
+      ],
+      "alias": "Reset Brightness Flags When Adjustments Zero",
+      "id": "adaptive_lighting_reset_brightness_flags",
+      "trigger": [
+        {
+          "entity_id": "input_number.adaptive_lighting_total_brightness_adjustment",
+          "platform": "state",
+          "to": "0"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_warmer_active",
+              "input_boolean.al_script_cooler_active"
+            ]
+          }
+        }
+      ],
+      "alias": "Reset Warmth Flags When Adjustments Zero",
+      "id": "adaptive_lighting_reset_warmth_flags",
+      "trigger": [
+        {
+          "entity_id": "input_number.adaptive_lighting_total_warmth_adjustment",
+          "platform": "state",
+          "to": "0"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "duration": "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+          },
+          "service": "timer.start",
+          "target": {
+            "entity_id": "{{ zone_timer }}"
+          }
+        },
+        {
+          "data": {
+            "level": "info",
+            "message": "Manual control detected on {{ trigger.entity_id }} Lights: {{ trigger.to_state.attributes.manual_control | default([]) | join(', ') }} Starting timer: {{ zone_timer }}\n"
+          },
+          "service": "system_log.write"
+        }
+      ],
+      "alias": "AL - Per-Zone Manual Override Handler",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{% set manual = trigger.to_state.attributes.manual_control | default([]) %} {{ manual is iterable and manual is not string and manual | length > 0 }}\n"
+        }
+      ],
+      "description": "Start zone-specific timer when AL detects manual control",
+      "id": "adaptive_lighting_manual_override_triggered",
+      "max": 10,
+      "mode": "queued",
+      "trigger": [
+        {
+          "attribute": "manual_control",
+          "entity_id": [
+            "switch.adaptive_lighting_main_living",
+            "switch.adaptive_lighting_kitchen_island",
+            "switch.adaptive_lighting_bedroom_primary",
+            "switch.adaptive_lighting_accent_spots",
+            "switch.adaptive_lighting_recessed_ceiling"
+          ],
+          "platform": "state"
+        }
+      ],
+      "variables": {
+        "timer_map": {
+          "switch.adaptive_lighting_accent_spots": "timer.adaptive_lighting_manual_timer_accent_spots",
+          "switch.adaptive_lighting_bedroom_primary": "timer.adaptive_lighting_manual_timer_bedroom_primary",
+          "switch.adaptive_lighting_kitchen_island": "timer.adaptive_lighting_manual_timer_kitchen_island",
+          "switch.adaptive_lighting_main_living": "timer.adaptive_lighting_manual_timer_main_living",
+          "switch.adaptive_lighting_recessed_ceiling": "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+        },
+        "zone_timer": "{{ timer_map.get(trigger.entity_id, 'timer.adaptive_lighting_manual_timer_main_living') }}"
+      }
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "entity_id": "{{ al_zone }}",
+            "lights": "{{ trigger.entity_id }}",
+            "manual_control": true
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ],
+      "alias": "AL - Instant Manual Detection for Physical/HomeKit Changes",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{% set ctx = trigger.to_state.context %} {% set is_physical = ctx.parent_id is none and ctx.user_id is none %} {% set is_homekit = ctx.user_id is not none and ctx.parent_id is none %} {{ is_physical or is_homekit }}\n"
+        },
+        {
+          "condition": "template",
+          "value_template": "{% set light_to_zone = {\n  'light.entryway_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_floor_lamp': 'switch.adaptive_lighting_main_living',\n  'light.office_desk_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_corner_accent': 'switch.adaptive_lighting_main_living',\n  'light.living_room_couch_lamp': 'switch.adaptive_lighting_main_living',\n  'light.living_room_credenza_light': 'switch.adaptive_lighting_main_living',\n  'light.kitchen_island_pendants': 'switch.adaptive_lighting_kitchen_island',\n  'light.master_bedroom_table_lamps': 'switch.adaptive_lighting_bedroom_primary',\n  'light.master_bedroom_corner_accent': 'switch.adaptive_lighting_bedroom_primary',\n  'light.dining_room_spot_lights': 'switch.adaptive_lighting_accent_spots',\n  'light.living_room_spot_lights': 'switch.adaptive_lighting_accent_spots',\n  'light.kitchen_main_lights': 'switch.adaptive_lighting_recessed_ceiling',\n  'light.living_room_hallway_lights': 'switch.adaptive_lighting_recessed_ceiling'\n} %} {% set zone = light_to_zone.get(trigger.entity_id) %} {% set manual_list = state_attr(zone, 'manual_control') | default([]) %} {{ trigger.entity_id not in manual_list }}\n"
+        }
+      ],
+      "description": "Immediately detects and sets manual control for physical/HomeKit adjustments",
+      "id": "adaptive_lighting_instant_manual_detection",
+      "initial_state": false,
+      "max": 10,
+      "mode": "parallel",
+      "trigger": [
+        {
+          "attribute": "brightness",
+          "entity_id": [
+            "light.entryway_lamp",
+            "light.living_room_floor_lamp",
+            "light.office_desk_lamp",
+            "light.living_room_corner_accent",
+            "light.living_room_couch_lamp",
+            "light.living_room_credenza_light",
+            "light.kitchen_island_pendants",
+            "light.master_bedroom_table_lamps",
+            "light.master_bedroom_corner_accent",
+            "light.dining_room_spot_lights",
+            "light.living_room_spot_lights",
+            "light.kitchen_main_lights",
+            "light.living_room_hallway_lights"
+          ],
+          "platform": "state"
+        },
+        {
+          "attribute": "color_temp",
+          "entity_id": [
+            "light.entryway_lamp",
+            "light.living_room_floor_lamp",
+            "light.office_desk_lamp",
+            "light.living_room_corner_accent",
+            "light.living_room_couch_lamp",
+            "light.living_room_credenza_light",
+            "light.kitchen_island_pendants",
+            "light.master_bedroom_table_lamps",
+            "light.master_bedroom_corner_accent",
+            "light.dining_room_spot_lights",
+            "light.living_room_spot_lights",
+            "light.kitchen_main_lights",
+            "light.living_room_hallway_lights"
+          ],
+          "platform": "state"
+        }
+      ],
+      "variables": {
+        "al_zone": "{{ light_to_zone.get(trigger.entity_id) }}",
+        "light_to_zone": {
+          "light.dining_room_spot_lights": "switch.adaptive_lighting_accent_spots",
+          "light.entryway_lamp": "switch.adaptive_lighting_main_living",
+          "light.kitchen_island_pendants": "switch.adaptive_lighting_kitchen_island",
+          "light.kitchen_main_lights": "switch.adaptive_lighting_recessed_ceiling",
+          "light.living_room_corner_accent": "switch.adaptive_lighting_main_living",
+          "light.living_room_couch_lamp": "switch.adaptive_lighting_main_living",
+          "light.living_room_credenza_light": "switch.adaptive_lighting_main_living",
+          "light.living_room_floor_lamp": "switch.adaptive_lighting_main_living",
+          "light.living_room_hallway_lights": "switch.adaptive_lighting_recessed_ceiling",
+          "light.living_room_spot_lights": "switch.adaptive_lighting_accent_spots",
+          "light.master_bedroom_corner_accent": "switch.adaptive_lighting_bedroom_primary",
+          "light.master_bedroom_table_lamps": "switch.adaptive_lighting_bedroom_primary",
+          "light.office_desk_lamp": "switch.adaptive_lighting_main_living"
+        }
+      }
+    },
+    {
+      "action": [
+        {
+          "variables": {
+            "elevation": "{{ state_attr('sun.sun', 'elevation') | float(0) }}",
+            "offset": "{{ ((4 - elevation) / 8 * -25) | round(0) }}"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ offset }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.al_sunset_fade_brightness_offset"
+          }
+        }
+      ],
+      "alias": "AL - Pre-Sunset Progressive Dimming",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{% set elevation = state_attr('sun.sun', 'elevation') | float(90) %} {{ -4 <= elevation <= 4 }}\n"
+        }
+      ],
+      "description": "Smoothly reduces brightness as sun approaches horizon",
+      "id": "adaptive_lighting_sunset_fade",
+      "trigger": [
+        {
+          "minutes": "/5",
+          "platform": "time_pattern"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.al_sunset_fade_brightness_offset"
+          }
+        }
+      ],
+      "alias": "AL - Reset Sunset Fade",
+      "id": "adaptive_lighting_sunset_fade_reset",
+      "trigger": [
+        {
+          "attribute": "elevation",
+          "below": -4,
+          "entity_id": "sun.sun",
+          "for": "00:02:00",
+          "platform": "numeric_state"
+        },
+        {
+          "above": 4,
+          "attribute": "elevation",
+          "entity_id": "sun.sun",
+          "for": "00:02:00",
+          "platform": "numeric_state"
+        }
+      ]
+    },
+    {
+      "action": [
+        {
+          "data": {
+            "timestamp": "{{ now_timestamp }}"
+          },
+          "service": "input_datetime.set_datetime",
+          "target": {
+            "entity_id": "input_datetime.zen32_last_button_press"
+          }
+        },
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_5' and event_type == 'KeyPressed' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "light.toggle",
+                  "target": {
+                    "entity_id": "{{ expand('light.all_adaptive_lights') | map(attribute='entity_id') | list }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_2' and event_type == 'KeyPressed' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "script.adaptive_lighting_brighter"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_4' and event_type == 'KeyPressed' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "script.adaptive_lighting_dimmer"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_1' and event_type == 'KeyPressed' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "script.zen32_cycle_scene"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_3' and event_type == 'KeyPressed' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "value": 0
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": [
+                      "input_number.adaptive_lighting_total_brightness_adjustment",
+                      "input_number.adaptive_lighting_total_warmth_adjustment"
+                    ]
+                  }
+                },
+                {
+                  "service": "timer.cancel",
+                  "target": {
+                    "entity_id": [
+                      "timer.adaptive_lighting_manual_timer_main_living",
+                      "timer.adaptive_lighting_manual_timer_kitchen_island",
+                      "timer.adaptive_lighting_manual_timer_bedroom_primary",
+                      "timer.adaptive_lighting_manual_timer_accent_spots",
+                      "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+                    ]
+                  }
+                },
+                {
+                  "continue_on_error": true,
+                  "data": {
+                    "entity_id": [
+                      "switch.adaptive_lighting_main_living",
+                      "switch.adaptive_lighting_kitchen_island",
+                      "switch.adaptive_lighting_bedroom_primary",
+                      "switch.adaptive_lighting_accent_spots",
+                      "switch.adaptive_lighting_recessed_ceiling"
+                    ],
+                    "manual_control": false
+                  },
+                  "service": "adaptive_lighting.set_manual_control"
+                },
+                {
+                  "data": {
+                    "level": "info",
+                    "message": "Button 3 Press: Cleared manual control and cancelled timers"
+                  },
+                  "service": "system_log.write"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ button_id == 'button_3' and event_type == 'KeyHeldDown' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "script.adaptive_lighting_reset_all_adjustments"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "alias": "Zen32 Scene Controller - Adaptive Integration",
+      "condition": [
+        {
+          "condition": "template",
+          "value_template": "{{ time_since_last > 0.5 }}"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ event_type in ['KeyPressed', 'KeyHeldDown'] }}"
+        }
+      ],
+      "description": "Physical control using native event entities with debouncing",
+      "id": "zen32_scene_controller",
+      "max_exceeded": "silent",
+      "mode": "single",
+      "trigger": [
+        {
+          "entity_id": "event.scene_controller_scene_001",
+          "id": "button_1",
+          "platform": "state"
+        },
+        {
+          "entity_id": "event.scene_controller_scene_002",
+          "id": "button_2",
+          "platform": "state"
+        },
+        {
+          "entity_id": "event.scene_controller_scene_003",
+          "id": "button_3",
+          "platform": "state"
+        },
+        {
+          "entity_id": "event.scene_controller_scene_004",
+          "id": "button_4",
+          "platform": "state"
+        },
+        {
+          "entity_id": "event.scene_controller_scene_005",
+          "id": "button_5",
+          "platform": "state"
+        }
+      ],
+      "variables": {
+        "button_id": "{{ trigger.id }}",
+        "event_type": "{{ trigger.to_state.attributes.event_type | default('unknown') }}",
+        "last_press": "{{ states('input_datetime.zen32_last_button_press') | as_timestamp(0) }}",
+        "now_timestamp": "{{ now().timestamp() }}",
+        "time_since_last": "{{ now_timestamp - last_press }}"
+      }
+    }
+  ],
+  "group": {
+    "adaptive_lighting_switches": {
+      "entities": [
+        "switch.adaptive_lighting_main_living",
+        "switch.adaptive_lighting_kitchen_island",
+        "switch.adaptive_lighting_bedroom_primary",
+        "switch.adaptive_lighting_accent_spots",
+        "switch.adaptive_lighting_recessed_ceiling"
+      ],
+      "name": "All Adaptive Lighting Control Switches"
+    }
+  },
+  "input_boolean": {
+    "al_disable_next_sonos_wakeup": {
+      "icon": "mdi:alarm-snooze",
+      "initial": false,
+      "name": "Disable Next Sonos Wake-up"
+    },
+    "al_environmental_boost_active": {
+      "icon": "mdi:weather-partly-cloudy",
+      "initial": false,
+      "name": "Environmental Brightness Boost Active"
+    },
+    "al_globally_paused": {
+      "icon": "mdi:pause-circle",
+      "initial": false,
+      "name": "Adaptive Lighting Globally Paused"
+    },
+    "al_script_brighter_active": {
+      "icon": "mdi:brightness-7",
+      "initial": false,
+      "name": "AL Brighter Active"
+    },
+    "al_script_cooler_active": {
+      "icon": "mdi:thermometer-chevron-up",
+      "initial": false,
+      "name": "AL Cooler Active"
+    },
+    "al_script_dimmer_active": {
+      "icon": "mdi:brightness-4",
+      "initial": false,
+      "name": "AL Dimmer Active"
+    },
+    "al_script_warmer_active": {
+      "icon": "mdi:thermometer-chevron-down",
+      "initial": false,
+      "name": "AL Warmer Active"
+    },
+    "bright_work_mode": {
+      "icon": "mdi:laptop",
+      "initial": false,
+      "name": "Bright Work Mode"
+    },
+    "late_night_mode": {
+      "icon": "mdi:sleep",
+      "initial": false,
+      "name": "Late Night Mode"
+    },
+    "movie_mode": {
+      "icon": "mdi:movie-roll",
+      "initial": false,
+      "name": "Movie Mode"
+    }
+  },
+  "input_datetime": {
+    "late_night_start": {
+      "has_date": false,
+      "has_time": true,
+      "initial": "22:00:00",
+      "name": "Late Night Start Time"
+    },
+    "zen32_last_button_press": {
+      "has_date": true,
+      "has_time": true,
+      "icon": "mdi:clock-outline",
+      "name": "Zen32 Last Button Press"
+    }
+  },
+  "input_number": {
+    "adaptive_lighting_brightness_increment": {
+      "icon": "mdi:brightness-percent",
+      "initial": 20,
+      "max": 50,
+      "min": 5,
+      "name": "AL Brightness Increment",
+      "step": 5,
+      "unit_of_measurement": "%"
+    },
+    "adaptive_lighting_color_temp_increment": {
+      "icon": "mdi:thermometer-lines",
+      "initial": 500,
+      "max": 1000,
+      "min": 100,
+      "name": "AL Color Temperature Increment",
+      "step": 50,
+      "unit_of_measurement": "K"
+    },
+    "adaptive_lighting_environmental_brightness_offset": {
+      "icon": "mdi:brightness-auto",
+      "initial": 0,
+      "max": 50,
+      "min": 0,
+      "name": "Environmental Brightness Offset",
+      "step": 5,
+      "unit_of_measurement": "%"
+    },
+    "adaptive_lighting_general_transition_speed": {
+      "icon": "mdi:transition",
+      "initial": 1,
+      "max": 10,
+      "min": 0,
+      "name": "AL General Transition Speed",
+      "step": 1,
+      "unit_of_measurement": "seconds"
+    },
+    "adaptive_lighting_manual_control_timeout_hours": {
+      "icon": "mdi:clock-outline",
+      "initial": 2,
+      "max": 24,
+      "min": 0,
+      "name": "AL Manual Control Timeout",
+      "step": 1,
+      "unit_of_measurement": "hours"
+    },
+    "adaptive_lighting_total_brightness_adjustment": {
+      "icon": "mdi:brightness-percent",
+      "initial": 0,
+      "max": 100,
+      "min": -100,
+      "name": "Total Brightness Adjustment",
+      "step": 5,
+      "unit_of_measurement": "%"
+    },
+    "adaptive_lighting_total_warmth_adjustment": {
+      "icon": "mdi:thermometer-lines",
+      "initial": 0,
+      "max": 2500,
+      "min": -2500,
+      "name": "Total Warmth Adjustment",
+      "step": 50,
+      "unit_of_measurement": "K"
+    },
+    "al_scene_brightness_offset": {
+      "icon": "mdi:palette-outline",
+      "initial": 0,
+      "max": 20,
+      "min": -80,
+      "name": "Scene Brightness Offset",
+      "step": 5,
+      "unit_of_measurement": "%"
+    },
+    "al_scene_warmth_offset": {
+      "icon": "mdi:palette-swatch-outline",
+      "initial": 0,
+      "max": 500,
+      "min": -1000,
+      "name": "Scene Warmth Offset",
+      "step": 100,
+      "unit_of_measurement": "K"
+    },
+    "al_sunset_fade_brightness_offset": {
+      "icon": "mdi:weather-sunset-down",
+      "initial": 0,
+      "max": 0,
+      "min": -50,
+      "name": "Sunset Fade Brightness Offset",
+      "step": 1,
+      "unit_of_measurement": "%"
+    },
+    "al_wake_sequence_offset": {
+      "icon": "mdi:alarm-light",
+      "initial": 0,
+      "max": 50,
+      "min": -50,
+      "name": "Wake Sequence Brightness Offset",
+      "step": 5,
+      "unit_of_measurement": "%"
+    }
+  },
+  "input_select": {
+    "current_home_mode": {
+      "icon": "mdi:palette-outline",
+      "initial": "Default",
+      "name": "Current Home Mode",
+      "options": [
+        "Default",
+        "Work",
+        "Late Night",
+        "Movie",
+        "Bright Focus",
+        "Dim Relax",
+        "Warm Evening",
+        "Cool Energy"
+      ]
+    },
+    "zen32_lighting_scene": {
+      "icon": "mdi:lightbulb-group",
+      "initial": "Scene 1: All Lights",
+      "name": "Current Lighting Scene",
+      "options": [
+        "Scene 1: All Lights",
+        "Scene 2: No Spotlights",
+        "Scene 3: Evening Comfort",
+        "Scene 4: Ultra Dim"
+      ]
+    }
+  },
+  "light": [
+    {
+      "entities": [
+        "light.entryway_lamp",
+        "light.living_room_floor_lamp",
+        "light.office_desk_lamp",
+        "light.living_room_corner_accent",
+        "light.living_room_couch_lamp",
+        "light.living_room_credenza_light"
+      ],
+      "name": "main_living_lights",
+      "platform": "group",
+      "unique_id": "al_main_living_lights_group"
+    },
+    {
+      "entities": [
+        "light.kitchen_island_pendants"
+      ],
+      "name": "kitchen_island_lights",
+      "platform": "group",
+      "unique_id": "al_kitchen_island_lights_group"
+    },
+    {
+      "entities": [
+        "light.master_bedroom_table_lamps",
+        "light.master_bedroom_corner_accent"
+      ],
+      "name": "bedroom_primary_lights",
+      "platform": "group",
+      "unique_id": "al_bedroom_primary_lights_group"
+    },
+    {
+      "entities": [
+        "light.dining_room_spot_lights",
+        "light.living_room_spot_lights"
+      ],
+      "name": "accent_spots_lights",
+      "platform": "group",
+      "unique_id": "al_accent_spots_lights_group"
+    },
+    {
+      "entities": [
+        "light.kitchen_main_lights",
+        "light.living_room_hallway_lights"
+      ],
+      "name": "recessed_ceiling_lights",
+      "platform": "group",
+      "unique_id": "al_recessed_ceiling_lights_group"
+    },
+    {
+      "entities": [
+        "light.entryway_lamp",
+        "light.living_room_floor_lamp",
+        "light.office_desk_lamp",
+        "light.living_room_corner_accent",
+        "light.living_room_couch_lamp",
+        "light.living_room_credenza_light",
+        "light.kitchen_island_pendants",
+        "light.master_bedroom_table_lamps",
+        "light.master_bedroom_corner_accent",
+        "light.dining_room_spot_lights",
+        "light.living_room_spot_lights",
+        "light.kitchen_main_lights",
+        "light.living_room_hallway_lights"
+      ],
+      "name": "all_adaptive_lights",
+      "platform": "group",
+      "unique_id": "al_all_adaptive_lights_group"
+    }
+  ],
+  "script": {
+    "adaptive_lighting_brighter": {
+      "alias": "AL Brighter (Fixed Increment)",
+      "icon": "mdi:brightness-plus",
+      "mode": "single",
+      "sequence": [
+        {
+          "variables": {
+            "current_adjustment": "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}",
+            "increment": "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}",
+            "new_adjustment": "{{ [100, current_adjustment + increment] | min }}"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ new_adjustment }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_total_brightness_adjustment"
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": "input_boolean.al_script_dimmer_active"
+          }
+        },
+        {
+          "service": "input_boolean.turn_on",
+          "target": {
+            "entity_id": "input_boolean.al_script_brighter_active"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+        },
+        {
+          "data": {
+            "duration": "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+          },
+          "service": "timer.start",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        }
+      ]
+    },
+    "adaptive_lighting_cooler": {
+      "alias": "AL Cooler (Fixed Increment)",
+      "icon": "mdi:thermometer-plus",
+      "mode": "single",
+      "sequence": [
+        {
+          "variables": {
+            "current_adjustment": "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}",
+            "increment": "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}",
+            "new_adjustment": "{{ [2500, current_adjustment + increment] | min }}"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ new_adjustment }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_total_warmth_adjustment"
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": "input_boolean.al_script_warmer_active"
+          }
+        },
+        {
+          "service": "input_boolean.turn_on",
+          "target": {
+            "entity_id": "input_boolean.al_script_cooler_active"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+        },
+        {
+          "data": {
+            "duration": "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+          },
+          "service": "timer.start",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        }
+      ]
+    },
+    "adaptive_lighting_dimmer": {
+      "alias": "AL Dimmer (Fixed Increment)",
+      "icon": "mdi:brightness-minus",
+      "mode": "single",
+      "sequence": [
+        {
+          "variables": {
+            "current_adjustment": "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}",
+            "increment": "{{ states('input_number.adaptive_lighting_brightness_increment') | int(20) }}",
+            "new_adjustment": "{{ [-100, current_adjustment - increment] | max }}"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ new_adjustment }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_total_brightness_adjustment"
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": "input_boolean.al_script_brighter_active"
+          }
+        },
+        {
+          "service": "input_boolean.turn_on",
+          "target": {
+            "entity_id": "input_boolean.al_script_dimmer_active"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+        },
+        {
+          "data": {
+            "duration": "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+          },
+          "service": "timer.start",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        }
+      ]
+    },
+    "adaptive_lighting_force_apply_all": {
+      "alias": "Force Apply Adaptive Lighting",
+      "icon": "mdi:refresh-auto",
+      "sequence": [
+        {
+          "data": {
+            "adapt_brightness": true,
+            "adapt_color": true,
+            "entity_id": [
+              "switch.adaptive_lighting_main_living",
+              "switch.adaptive_lighting_kitchen_island",
+              "switch.adaptive_lighting_bedroom_primary",
+              "switch.adaptive_lighting_recessed_ceiling",
+              "switch.adaptive_lighting_accent_spots"
+            ],
+            "lights": true,
+            "transition": 1,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_all_adjustments": {
+      "alias": "AL Nuclear Reset - Complete System Restoration",
+      "icon": "mdi:refresh-circle",
+      "mode": "single",
+      "sequence": [
+        {
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": [
+              "input_number.adaptive_lighting_total_brightness_adjustment",
+              "input_number.adaptive_lighting_total_warmth_adjustment",
+              "input_number.adaptive_lighting_environmental_brightness_offset",
+              "input_number.al_sunset_fade_brightness_offset",
+              "input_number.al_scene_brightness_offset",
+              "input_number.al_scene_warmth_offset",
+              "input_number.al_wake_sequence_offset"
+            ]
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_brighter_active",
+              "input_boolean.al_script_dimmer_active",
+              "input_boolean.al_script_warmer_active",
+              "input_boolean.al_script_cooler_active",
+              "input_boolean.al_environmental_boost_active",
+              "input_boolean.movie_mode",
+              "input_boolean.late_night_mode",
+              "input_boolean.bright_work_mode",
+              "input_boolean.al_disable_next_sonos_wakeup"
+            ]
+          }
+        },
+        {
+          "data": {
+            "option": "Default"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "option": "Scene 1: All Lights"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.zen32_lighting_scene"
+          }
+        },
+        {
+          "service": "timer.cancel",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "service": "switch.turn_off",
+          "target": {
+            "entity_id": [
+              "switch.adaptive_lighting_sleep_mode_main_living",
+              "switch.adaptive_lighting_sleep_mode_kitchen_island",
+              "switch.adaptive_lighting_sleep_mode_bedroom_primary",
+              "switch.adaptive_lighting_sleep_mode_accent_spots",
+              "switch.adaptive_lighting_sleep_mode_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "use_defaults": "configuration"
+          },
+          "service": "adaptive_lighting.change_switch_settings",
+          "target": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "use_defaults": "configuration"
+          },
+          "service": "adaptive_lighting.change_switch_settings",
+          "target": {
+            "entity_id": [
+              "switch.adaptive_lighting_main_living",
+              "switch.adaptive_lighting_kitchen_island",
+              "switch.adaptive_lighting_bedroom_primary",
+              "switch.adaptive_lighting_accent_spots",
+              "switch.adaptive_lighting_recessed_ceiling"
+            ]
+          }
+        },
+        {
+          "delay": "00:00:02"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "transition": 2,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply",
+          "target": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          }
+        },
+        {
+          "data": {
+            "transition": 2
+          },
+          "service": "light.turn_on",
+          "target": {
+            "entity_id": "light.all_adaptive_lights"
+          }
+        },
+        {
+          "data": {
+            "level": "warning",
+            "message": "Nuclear Reset Complete: All manual control cleared, timers cancelled, lights turned on"
+          },
+          "service": "system_log.write"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_accent": {
+      "alias": "Reset Manual Control - Accent",
+      "icon": "mdi:spotlight-beam",
+      "sequence": [
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_accent_spots",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_adjustments": {
+      "alias": "AL Reset Manual Adjustments Only",
+      "icon": "mdi:restore",
+      "mode": "single",
+      "sequence": [
+        {
+          "data": {
+            "value": 0
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": [
+              "input_number.adaptive_lighting_total_brightness_adjustment",
+              "input_number.adaptive_lighting_total_warmth_adjustment"
+            ]
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": [
+              "input_boolean.al_script_brighter_active",
+              "input_boolean.al_script_dimmer_active",
+              "input_boolean.al_script_warmer_active",
+              "input_boolean.al_script_cooler_active"
+            ]
+          }
+        },
+        {
+          "service": "timer.cancel",
+          "target": {
+            "entity_id": "timer.adaptive_lighting_manual_adjustment"
+          }
+        },
+        {
+          "data": {
+            "option": "Default"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        },
+        {
+          "continue_on_error": true,
+          "data": {
+            "transition": 1,
+            "turn_on_lights": false
+          },
+          "service": "adaptive_lighting.apply",
+          "target": {
+            "entity_id": "{{ expand('group.adaptive_lighting_switches') | map(attribute='entity_id') | list }}"
+          }
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_bedroom": {
+      "alias": "Reset Manual Control - Bedroom",
+      "icon": "mdi:bed-king-outline",
+      "sequence": [
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_bedroom_primary",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_kitchen": {
+      "alias": "Reset Manual Control - Kitchen",
+      "icon": "mdi:countertop-outline",
+      "sequence": [
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_kitchen_island",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_living": {
+      "alias": "Reset Manual Control - Living",
+      "icon": "mdi:sofa-outline",
+      "sequence": [
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_main_living",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ]
+    },
+    "adaptive_lighting_reset_manual_recessed": {
+      "alias": "Reset Manual Control - Recessed",
+      "icon": "mdi:ceiling-light-outline",
+      "sequence": [
+        {
+          "data": {
+            "entity_id": "switch.adaptive_lighting_recessed_ceiling",
+            "manual_control": false
+          },
+          "service": "adaptive_lighting.set_manual_control"
+        }
+      ]
+    },
+    "adaptive_lighting_warmer": {
+      "alias": "AL Warmer (Fixed Increment)",
+      "icon": "mdi:thermometer-minus",
+      "mode": "single",
+      "sequence": [
+        {
+          "variables": {
+            "current_adjustment": "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}",
+            "increment": "{{ states('input_number.adaptive_lighting_color_temp_increment') | int(500) }}",
+            "new_adjustment": "{{ [-2500, current_adjustment - increment] | max }}"
+          }
+        },
+        {
+          "data": {
+            "value": "{{ new_adjustment }}"
+          },
+          "service": "input_number.set_value",
+          "target": {
+            "entity_id": "input_number.adaptive_lighting_total_warmth_adjustment"
+          }
+        },
+        {
+          "service": "input_boolean.turn_off",
+          "target": {
+            "entity_id": "input_boolean.al_script_cooler_active"
+          }
+        },
+        {
+          "service": "input_boolean.turn_on",
+          "target": {
+            "entity_id": "input_boolean.al_script_warmer_active"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) > 0 }}"
+        },
+        {
+          "data": {
+            "duration": "{{ (states('input_number.adaptive_lighting_manual_control_timeout_hours') | float(2) * 3600) | int }}"
+          },
+          "service": "timer.start",
+          "target": {
+            "entity_id": [
+              "timer.adaptive_lighting_manual_timer_main_living",
+              "timer.adaptive_lighting_manual_timer_kitchen_island",
+              "timer.adaptive_lighting_manual_timer_bedroom_primary",
+              "timer.adaptive_lighting_manual_timer_accent_spots",
+              "timer.adaptive_lighting_manual_timer_recessed_ceiling"
+            ]
+          }
+        }
+      ]
+    },
+    "apply_lighting_scene": {
+      "alias": "Apply Selected Lighting Scene",
+      "fields": {
+        "scene": {
+          "description": "Scene name to apply",
+          "required": true
+        }
+      },
+      "icon": "mdi:palette",
+      "sequence": [
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ scene == 'Scene 1: All Lights' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "value": 0
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": [
+                      "input_number.al_scene_brightness_offset",
+                      "input_number.al_scene_warmth_offset"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "brightness_pct": 2,
+                    "transition": 2
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "light.accent_spots_lights"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "entity_id": "switch.adaptive_lighting_accent_spots",
+                    "lights": [
+                      "light.dining_room_spot_lights",
+                      "light.living_room_spot_lights"
+                    ],
+                    "manual_control": true
+                  },
+                  "service": "adaptive_lighting.set_manual_control"
+                },
+                {
+                  "data": {
+                    "transition": 2
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "light.recessed_ceiling_lights",
+                      "light.all_adaptive_lights"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ scene == 'Scene 2: No Spotlights' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "value": 15
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_brightness_offset"
+                  }
+                },
+                {
+                  "data": {
+                    "value": 0
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_warmth_offset"
+                  }
+                },
+                {
+                  "data": {
+                    "transition": 2
+                  },
+                  "service": "light.turn_off",
+                  "target": {
+                    "entity_id": [
+                      "light.living_room_spot_lights",
+                      "light.dining_room_spot_lights"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ scene == 'Scene 3: Evening Comfort' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "value": -5
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_brightness_offset"
+                  }
+                },
+                {
+                  "data": {
+                    "value": -500
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_warmth_offset"
+                  }
+                },
+                {
+                  "data": {
+                    "transition": 1
+                  },
+                  "service": "light.turn_off",
+                  "target": {
+                    "entity_id": [
+                      "light.recessed_ceiling_lights",
+                      "light.living_room_hallway_lights"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "transition": 1
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "light.kitchen_island_pendants",
+                      "light.cradenza_accent",
+                      "light.living_room_corner_accent"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "entity_id": "switch.adaptive_lighting_accent_spots",
+                    "lights": [
+                      "light.dining_room_spot_lights"
+                    ]
+                  },
+                  "service": "adaptive_lighting.set_manual_control"
+                },
+                {
+                  "data": {
+                    "brightness_pct": 15,
+                    "manual_control": true,
+                    "transition": 1
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": "light.dining_room_spot_lights"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "template",
+                  "value_template": "{{ scene == 'Scene 4: Ultra Dim' }}"
+                }
+              ],
+              "sequence": [
+                {
+                  "data": {
+                    "transition": 1
+                  },
+                  "service": "light.turn_off",
+                  "target": {
+                    "entity_id": [
+                      "light.dining_room_spot_lights",
+                      "light.living_room_spot_lights",
+                      "light.kitchen_main_lights",
+                      "light.living_room_hallway_lights"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "brightness_pct": 10,
+                    "transition": 2
+                  },
+                  "service": "light.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "light.kitchen_island_lights"
+                    ]
+                  }
+                },
+                {
+                  "data": {
+                    "value": -50
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_brightness_offset"
+                  }
+                },
+                {
+                  "data": {
+                    "value": -1000
+                  },
+                  "service": "input_number.set_value",
+                  "target": {
+                    "entity_id": "input_number.al_scene_warmth_offset"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "reset_to_default_mode": {
+      "alias": "Reset to Default Mode",
+      "icon": "mdi:home",
+      "sequence": [
+        {
+          "data": {
+            "option": "Default"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        }
+      ]
+    },
+    "set_late_night_mode": {
+      "alias": "Set Late Night Mode",
+      "icon": "mdi:sleep",
+      "sequence": [
+        {
+          "data": {
+            "option": "Late Night"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        }
+      ]
+    },
+    "set_movie_mode": {
+      "alias": "Set Movie Mode",
+      "icon": "mdi:movie-roll",
+      "sequence": [
+        {
+          "data": {
+            "option": "Movie"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        }
+      ]
+    },
+    "set_work_mode": {
+      "alias": "Set Work Mode",
+      "icon": "mdi:laptop",
+      "sequence": [
+        {
+          "data": {
+            "option": "Work"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.current_home_mode"
+          }
+        }
+      ]
+    },
+    "toggle_al_global_pause": {
+      "alias": "Toggle Adaptive Lighting Global Pause",
+      "icon": "mdi:pause-circle",
+      "mode": "single",
+      "sequence": [
+        {
+          "service": "input_boolean.toggle",
+          "target": {
+            "entity_id": "input_boolean.al_globally_paused"
+          }
+        },
+        {
+          "choose": [
+            {
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.al_globally_paused",
+                  "state": "on"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "switch.turn_off",
+                  "target": {
+                    "entity_id": "{{ al_switches }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity_id": "input_boolean.al_globally_paused",
+                  "state": "off"
+                }
+              ],
+              "sequence": [
+                {
+                  "service": "switch.turn_on",
+                  "target": {
+                    "entity_id": "{{ al_switches }}"
+                  }
+                },
+                {
+                  "delay": "00:00:02"
+                },
+                {
+                  "data": {
+                    "entity_id": "{{ al_switches }}",
+                    "transition": 1,
+                    "turn_on_lights": false
+                  },
+                  "service": "adaptive_lighting.apply"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": {
+        "al_switches": [
+          "switch.adaptive_lighting_main_living",
+          "switch.adaptive_lighting_kitchen_island",
+          "switch.adaptive_lighting_bedroom_primary",
+          "switch.adaptive_lighting_recessed_ceiling",
+          "switch.adaptive_lighting_accent_spots"
+        ]
+      }
+    },
+    "zen32_cycle_scene": {
+      "alias": "Cycle Through Lighting Scenes",
+      "icon": "mdi:rotate-right",
+      "sequence": [
+        {
+          "variables": {
+            "current_index": "{{ scenes.index(current_scene) if current_scene in scenes else 0 }}",
+            "current_scene": "{{ states('input_select.zen32_lighting_scene') }}",
+            "next_index": "{{ (current_index + 1) % 4 }}",
+            "next_scene": "{{ scenes[next_index] }}",
+            "scenes": [
+              "Scene 1: All Lights",
+              "Scene 2: No Spotlights",
+              "Scene 3: Evening Comfort",
+              "Scene 4: Ultra Dim"
+            ]
+          }
+        },
+        {
+          "data": {
+            "option": "{{ next_scene }}"
+          },
+          "service": "input_select.select_option",
+          "target": {
+            "entity_id": "input_select.zen32_lighting_scene"
+          }
+        },
+        {
+          "data": {
+            "scene": "{{ next_scene }}"
+          },
+          "service": "script.apply_lighting_scene"
+        }
+      ]
+    }
+  },
+  "template": [
+    {
+      "sensor": [
+        {
+          "attributes": {
+            "component_breakdown": "brightness_manual: {{ trigger.event.data.components.brightness_manual | default(0) }}% brightness_environmental: {{ trigger.event.data.components.brightness_environmental | default(0) }}% brightness_sunset_fade: {{ trigger.event.data.components.brightness_sunset_fade | default(0) }}% brightness_scene: {{ trigger.event.data.components.brightness_scene | default(0) }}% brightness_wake: {{ trigger.event.data.components.brightness_wake | default(0) }}% warmth_manual: {{ trigger.event.data.components.warmth_manual | default(0) }}K warmth_scene: {{ trigger.event.data.components.warmth_scene | default(0) }}K\n",
+            "environmental_active": "{{ trigger.event.data.environmental_active | default('false') }}",
+            "final_adjustments": "brightness: {{ trigger.event.data.final_brightness_adjustment | default(0) }}% warmth: {{ trigger.event.data.final_warmth_adjustment | default(0) }}K\n",
+            "last_calculation": "{{ trigger.event.data.timestamp | default('Never') }}",
+            "sun_elevation": "{{ trigger.event.data.sun_elevation | default('N/A') }}\u00b0",
+            "trigger_source": "{{ trigger.event.data.trigger_source | default('Unknown') }}",
+            "zone_details": "{{ trigger.event.data.zones_calculated | default('None') }}",
+            "zones_affected": "{{ trigger.event.data.zones_updated | default([]) | length }}"
+          },
+          "name": "Adaptive Lighting Real-Time Monitor",
+          "state": "{% set b_total = trigger.event.data.final_brightness_adjustment | int(0) %} {% set w_total = trigger.event.data.final_warmth_adjustment | int(0) %} {% if b_total > 0 %}\n  Brightened +{{ b_total }}%\n{% elif b_total < 0 %}\n  Dimmed {{ b_total }}%\n{% elif w_total != 0 %}\n  Warmth {{ w_total }}K\n{% else %}\n  Baseline\n{% endif %}\n",
+          "unique_id": "adaptive_lighting_realtime_monitor"
+        }
+      ],
+      "trigger": [
+        {
+          "event_type": "adaptive_lighting_calculation_complete",
+          "platform": "event"
+        }
+      ]
+    },
+    {
+      "sensor": [
+        {
+          "attributes": {
+            "active_adjustments": "{% set adjustments = [] %} {% if states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) != 0 %}\n  {% set adjustments = adjustments + ['brightness'] %}\n{% endif %} {% if states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) != 0 %}\n  {% set adjustments = adjustments + ['warmth'] %}\n{% endif %} {% if is_state('input_boolean.al_environmental_boost_active', 'on') %}\n  {% set adjustments = adjustments + ['environmental'] %}\n{% endif %} {{ adjustments | join(', ') if adjustments else 'none' }}\n",
+            "active_modifiers": "{% set modifiers = [] %} {% if states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) > 0 %}\n  {% set modifiers = modifiers + ['manual_brighter'] %}\n{% elif states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) < 0 %}\n  {% set modifiers = modifiers + ['manual_dimmer'] %}\n{% endif %} {% if states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) > 0 %}\n  {% set modifiers = modifiers + ['manual_cooler'] %}\n{% elif states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) < 0 %}\n  {% set modifiers = modifiers + ['manual_warmer'] %}\n{% endif %} {% if is_state('input_boolean.al_environmental_boost_active', 'on') %}\n  {% set modifiers = modifiers + ['environmental_boost'] %}\n{% endif %} {% if states('input_number.al_scene_brightness_offset') | int(0) != 0 or states('input_number.al_scene_warmth_offset') | int(0) != 0 %}\n  {% set modifiers = modifiers + ['scene_offset'] %}\n{% endif %} {% if states('input_number.al_sunset_fade_brightness_offset') | int(0) != 0 %}\n  {% set modifiers = modifiers + ['sunset_fade'] %}\n{% endif %} {{ modifiers if modifiers else ['none'] }}\n",
+            "active_scene": "{{ states('input_select.zen32_lighting_scene') }}",
+            "active_switches": "{% set switches = states.switch | selectattr('entity_id', 'search', 'adaptive_lighting_') | selectattr('state', 'eq', 'on') | map(attribute='name') | list %} {{ switches | length }} zones: {{ switches | join(', ') | replace('Adaptive Lighting: ', '') if switches else 'None' }}\n",
+            "computed_brightness_ranges": "{% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% set env_boost = states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) %} {% set sunset_fade = states('input_number.al_sunset_fade_brightness_offset') | int(0) %} {% set scene_b = states('input_number.al_scene_brightness_offset') | int(0) %} {% set wake = states('input_number.al_wake_sequence_offset') | int(0) %} {% set final_b = b_adj + env_boost + sunset_fade + scene_b + wake %} Main Living: {{ [1, 45 + (final_b if final_b > 0 else 0)] | max }}-{{ [100, 100 + (final_b if final_b < 0 else 0)] | min }}% Kitchen: {{ [1, 15 + (final_b if final_b > 0 else 0)] | max }}-{{ [100, 100 + (final_b if final_b < 0 else 0)] | min }}% Bedroom: {{ [1, 20 + (final_b if final_b > 0 else 0)] | max }}-{{ [40, 40 + (final_b if final_b < 0 else 0)] | min }}%\n",
+            "computed_warmth_ranges": "{% set w_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %} {% set scene_w = states('input_number.al_scene_warmth_offset') | int(0) %} {% set final_k = w_adj + scene_w %} Main Living: {{ [1500, 2250 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 2950 + (final_k if final_k < 0 else 0)] | min }}K Kitchen: {{ [1500, 2000 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 4000 + (final_k if final_k < 0 else 0)] | min }}K Bedroom: {{ [1500, 1800 + (final_k if final_k > 0 else 0)] | max }}-{{ [6500, 2250 + (final_k if final_k < 0 else 0)] | min }}K\n",
+            "current_adjustments": "brightness_manual: {{ states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) }}% warmth_manual: {{ states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) }}K brightness_environmental: {{ states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) }}% brightness_sunset_fade: {{ states('input_number.al_sunset_fade_brightness_offset') | int(0) }}% brightness_scene: {{ states('input_number.al_scene_brightness_offset') | int(0) }}% warmth_scene: {{ states('input_number.al_scene_warmth_offset') | int(0) }}K brightness_wake: {{ states('input_number.al_wake_sequence_offset') | int(0) }}%\n",
+            "environmental_boost_active": "{{ is_state('input_boolean.al_environmental_boost_active', 'on') }}",
+            "environmental_calculation": "{% set lux = states('sensor.living_room_presence_light_sensor_light_level') | int(9999) %} {% set weather = states('weather.home') %} {% set hour = now().hour %} {% if 22 <= hour or hour <= 6 %}\n  Disabled (Night: {{ hour }}:00)\n{% else %}\n  Lux: {{ lux }}, Weather: {{ weather }}, Boost: {{ states('input_number.adaptive_lighting_environmental_brightness_offset') }}%\n{% endif %}\n",
+            "final_brightness_adjustment": "{% set b_manual = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% set b_env = states('input_number.adaptive_lighting_environmental_brightness_offset') | int(0) %} {% set b_sunset = states('input_number.al_sunset_fade_brightness_offset') | int(0) %} {% set b_scene = states('input_number.al_scene_brightness_offset') | int(0) %} {% set b_wake = states('input_number.al_wake_sequence_offset') | int(0) %} {% set total = b_manual + b_env + b_sunset + b_scene + b_wake %} {{ total }}%\n",
+            "final_warmth_adjustment": "{% set w_manual = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %} {% set w_scene = states('input_number.al_scene_warmth_offset') | int(0) %} {% set total = w_manual + w_scene %} {{ total }}K\n",
+            "last_action": "{% set last_brighter = state_attr('script.adaptive_lighting_brighter', 'last_triggered') %} {% set last_dimmer = state_attr('script.adaptive_lighting_dimmer', 'last_triggered') %} {% set last_warmer = state_attr('script.adaptive_lighting_warmer', 'last_triggered') %} {% set last_cooler = state_attr('script.adaptive_lighting_cooler', 'last_triggered') %} {% set last_reset = state_attr('script.adaptive_lighting_reset_all_adjustments', 'last_triggered') %} {% set last_mode_change = states.input_select.current_home_mode.last_changed %} {% set actions = [] %} {% if last_brighter is not none %} {% set actions = actions + [(last_brighter, 'Brighter')] %} {% endif %} {% if last_dimmer is not none %} {% set actions = actions + [(last_dimmer, 'Dimmer')] %} {% endif %} {% if last_warmer is not none %} {% set actions = actions + [(last_warmer, 'Warmer')] %} {% endif %} {% if last_cooler is not none %} {% set actions = actions + [(last_cooler, 'Cooler')] %} {% endif %} {% if last_reset is not none %} {% set actions = actions + [(last_reset, 'Reset All')] %} {% endif %} {% if last_mode_change is not none %} {% set actions = actions + [(last_mode_change, 'Mode: ' ~ states('input_select.current_home_mode'))] %} {% endif %} {% if actions %}\n  {% set latest = actions | sort(attribute=0, reverse=true) | first %}\n  {{ latest[1] }}\n{% else %}\n  Unknown\n{% endif %}\n",
+            "last_action_time": "{% set last_brighter = state_attr('script.adaptive_lighting_brighter', 'last_triggered') %} {% set last_dimmer = state_attr('script.adaptive_lighting_dimmer', 'last_triggered') %} {% set last_warmer = state_attr('script.adaptive_lighting_warmer', 'last_triggered') %} {% set last_cooler = state_attr('script.adaptive_lighting_cooler', 'last_triggered') %} {% set last_reset = state_attr('script.adaptive_lighting_reset_all_adjustments', 'last_triggered') %} {% set last_mode_change = states.input_select.current_home_mode.last_changed %} {% set times = [] %} {% if last_brighter is not none %} {% set times = times + [last_brighter | as_timestamp] %} {% endif %} {% if last_dimmer is not none %} {% set times = times + [last_dimmer | as_timestamp] %} {% endif %} {% if last_warmer is not none %} {% set times = times + [last_warmer | as_timestamp] %} {% endif %} {% if last_cooler is not none %} {% set times = times + [last_cooler | as_timestamp] %} {% endif %} {% if last_reset is not none %} {% set times = times + [last_reset | as_timestamp] %} {% endif %} {% if last_mode_change is not none %} {% set times = times + [last_mode_change | as_timestamp] %} {% endif %} {% if times %}\n  {% set latest = times | max %}\n  {{ latest | timestamp_custom('%Y-%m-%d %H:%M:%S') }}\n{% else %}\n  Never\n{% endif %}\n",
+            "managed_zones": 5,
+            "manual_timer_remaining": "{% set active_timers = [\n  'timer.adaptive_lighting_manual_timer_main_living',\n  'timer.adaptive_lighting_manual_timer_kitchen_island',\n  'timer.adaptive_lighting_manual_timer_bedroom_primary',\n  'timer.adaptive_lighting_manual_timer_accent_spots',\n  'timer.adaptive_lighting_manual_timer_recessed_ceiling'\n] | select('is_state', 'active') | list %} {% if active_timers | length > 0 %}\n  {{ active_timers | length }} zone(s) active\n{% else %}\n  Not Active\n{% endif %}\n",
+            "next_timer_expiry": "{% set timers = {\n  'timer.adaptive_lighting_manual_timer_main_living': 'Main Living',\n  'timer.adaptive_lighting_manual_timer_kitchen_island': 'Kitchen',\n  'timer.adaptive_lighting_manual_timer_bedroom_primary': 'Bedroom',\n  'timer.adaptive_lighting_manual_timer_accent_spots': 'Spots',\n  'timer.adaptive_lighting_manual_timer_recessed_ceiling': 'Recessed'\n} %} {% set active = [] %} {% for timer, name in timers.items() %}\n  {% if is_state(timer, 'active') %}\n    {% set finish = state_attr(timer, 'finishes_at') %}\n    {% if finish %}\n      {% set active = active + [(as_timestamp(finish), name)] %}\n    {% endif %}\n  {% endif %}\n{% endfor %} {% if active %}\n  {% set next = active | sort | first %}\n  {{ next[1] }} @ {{ next[0] | timestamp_custom('%H:%M', true) }}\n{% else %}\n  Not set\n{% endif %}\n",
+            "sun_position": "{% set elevation = state_attr('sun.sun', 'elevation') | float(0) %} {% if elevation < -4 %}\n  Night ({{ elevation | round(1) }}\u00b0)\n{% elif -4 <= elevation < 0 %}\n  Sunset/Sunrise ({{ elevation | round(1) }}\u00b0)\n{% elif 0 <= elevation < 10 %}\n  Golden Hour ({{ elevation | round(1) }}\u00b0)\n{% else %}\n  Day ({{ elevation | round(1) }}\u00b0)\n{% endif %}\n",
+            "system_health": "{% set switches = states.switch | selectattr('entity_id', 'search', 'adaptive_lighting_') | list %} {% set available = switches | selectattr('state', 'ne', 'unavailable') | list %} {% if available | length == switches | length %}\n  Normal\n{% elif available | length > 0 %}\n  Degraded ({{ available | length }}/{{ switches | length }} switches)\n{% else %}\n  Offline\n{% endif %}\n"
+          },
+          "icon": "{% set home_mode = states('input_select.current_home_mode') %} {% if is_state('input_boolean.al_globally_paused', 'on') %}\n  mdi:pause-circle-outline\n{% elif home_mode == 'Movie' %}\n  mdi:movie-roll\n{% elif home_mode == 'Work' %}\n  mdi:laptop\n{% elif home_mode == 'Late Night' %}\n  mdi:sleep\n{% elif home_mode == 'Bright Focus' %}\n  mdi:brightness-plus\n{% elif home_mode == 'Dim Relax' %}\n  mdi:brightness-minus\n{% elif home_mode == 'Warm Evening' %}\n  mdi:thermometer-low\n{% elif home_mode == 'Cool Energy' %}\n  mdi:thermometer-high\n{% elif is_state('input_boolean.al_environmental_boost_active', 'on') %}\n  mdi:weather-cloudy-arrow-right\n{% else %}\n  mdi:lightbulb-auto\n{% endif %}\n",
+          "name": "Adaptive Lighting Status",
+          "state": "{% set home_mode = states('input_select.current_home_mode') %} {% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %} {% set env_boost = is_state('input_boolean.al_environmental_boost_active', 'on') %}\n{% if is_state('input_boolean.al_globally_paused', 'on') %}\n  Globally Paused\n{% elif home_mode == 'Movie' %}\n  Movie Mode\n{% elif home_mode == 'Work' %}\n  Work Mode  \n{% elif home_mode == 'Late Night' %}\n  Late Night Mode\n{% elif home_mode == 'Bright Focus' %}\n  Bright Focus{% if b_adj != 0 %} (+{{ b_adj }}%){% endif %}\n{% elif home_mode == 'Dim Relax' %}\n  Dim Relax{% if b_adj != 0 %} ({{ b_adj }}%){% endif %}\n{% elif home_mode == 'Warm Evening' %}\n  Warm Evening{% if k_adj != 0 %} ({{ k_adj }}K){% endif %}\n{% elif home_mode == 'Cool Energy' %}\n  Cool Energy{% if k_adj != 0 %} (+{{ k_adj }}K){% endif %}\n{% elif env_boost %}\n  Environmental Boost (+{{ states('input_number.adaptive_lighting_environmental_brightness_offset') }}%)\n{% elif b_adj != 0 or k_adj != 0 %}\n  Manual Adjusted ({{ b_adj }}%{% if k_adj != 0 %}, {{ k_adj }}K{% endif %})\n{% else %}\n  Adaptive Auto\n{% endif %}\n",
+          "unique_id": "adaptive_lighting_status_v4"
+        },
+        {
+          "attributes": {
+            "has_manual_control": "{% set total = 0 %} {% for switch in states.switch | selectattr('entity_id', 'match', '^switch\\.adaptive_lighting_')\n                             | rejectattr('entity_id', 'search', '_(sleep_mode|adapt_color|adapt_brightness)$') %}\n  {% set manual_control = state_attr(switch.entity_id, 'manual_control') %}\n  {% if manual_control and manual_control is iterable and manual_control is not string %}\n    {% set total = total + (manual_control | length) %}\n  {% endif %}\n{% endfor %} {{ total > 0 }}\n"
+          },
+          "icon": "mdi:hand-wave-outline",
+          "name": "Adaptive Lighting Total Manual Control",
+          "state": "{% set total = 0 %} {% for switch in states.switch | selectattr('entity_id', 'match', '^switch\\.adaptive_lighting_')\n                             | rejectattr('entity_id', 'search', '_(sleep_mode|adapt_color|adapt_brightness)$') %}\n  {% set manual_control = state_attr(switch.entity_id, 'manual_control') %}\n  {% if manual_control and manual_control is iterable and manual_control is not string %}\n    {% set total = total + (manual_control | length) %}\n  {% endif %}\n{% endfor %} {{ total }}\n",
+          "unique_id": "adaptive_lighting_total_manual_control_v4"
+        },
+        {
+          "attributes": {
+            "controlled_lights": "{% set manual = state_attr('switch.adaptive_lighting_main_living', 'manual_control') %} {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}\n"
+          },
+          "icon": "mdi:sofa-outline",
+          "name": "Adaptive Lighting Manual Control Living",
+          "state": "{% set manual = state_attr('switch.adaptive_lighting_main_living', 'manual_control') %} {% if manual and manual is iterable and manual is not string %}\n  {{ manual | length }} lights manually controlled\n{% else %}\n  No manual control\n{% endif %}\n",
+          "unique_id": "al_manual_control_living"
+        },
+        {
+          "attributes": {
+            "controlled_lights": "{% set manual = state_attr('switch.adaptive_lighting_kitchen_island', 'manual_control') %} {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}\n"
+          },
+          "icon": "mdi:countertop-outline",
+          "name": "Adaptive Lighting Manual Control Kitchen",
+          "state": "{% set manual = state_attr('switch.adaptive_lighting_kitchen_island', 'manual_control') %} {% if manual and manual is iterable and manual is not string %}\n  {{ manual | length }} lights manually controlled\n{% else %}\n  No manual control\n{% endif %}\n",
+          "unique_id": "al_manual_control_kitchen"
+        },
+        {
+          "attributes": {
+            "controlled_lights": "{% set manual = state_attr('switch.adaptive_lighting_bedroom_primary', 'manual_control') %} {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}\n"
+          },
+          "icon": "mdi:bed-king-outline",
+          "name": "Adaptive Lighting Manual Control Bedroom",
+          "state": "{% set manual = state_attr('switch.adaptive_lighting_bedroom_primary', 'manual_control') %} {% if manual and manual is iterable and manual is not string %}\n  {{ manual | length }} lights manually controlled\n{% else %}\n  No manual control\n{% endif %}\n",
+          "unique_id": "al_manual_control_bedroom"
+        },
+        {
+          "attributes": {
+            "controlled_lights": "{% set manual = state_attr('switch.adaptive_lighting_recessed_ceiling', 'manual_control') %} {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}\n"
+          },
+          "icon": "mdi:ceiling-light-outline",
+          "name": "Adaptive Lighting Manual Control Recessed",
+          "state": "{% set manual = state_attr('switch.adaptive_lighting_recessed_ceiling', 'manual_control') %} {% if manual and manual is iterable and manual is not string %}\n  {{ manual | length }} lights manually controlled\n{% else %}\n  No manual control\n{% endif %}\n",
+          "unique_id": "al_manual_control_recessed"
+        },
+        {
+          "attributes": {
+            "controlled_lights": "{% set manual = state_attr('switch.adaptive_lighting_accent_spots', 'manual_control') %} {{ manual | join(', ') if manual and manual is iterable and manual is not string else 'None' }}\n"
+          },
+          "icon": "mdi:spotlight-beam",
+          "name": "Adaptive Lighting Manual Control Accent",
+          "state": "{% set manual = state_attr('switch.adaptive_lighting_accent_spots', 'manual_control') %} {% if manual and manual is iterable and manual is not string %}\n  {{ manual | length }} lights manually controlled\n{% else %}\n  No manual control\n{% endif %}\n",
+          "unique_id": "al_manual_control_accent"
+        },
+        {
+          "attributes": {
+            "alarm_rooms": "{% set rooms = state_attr('sensor.sonos_upcoming_alarms', 'rooms') %} {{ rooms | join(', ') if rooms else 'None' }}\n",
+            "alarm_time": "{% set alarm_ts = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %} {{ alarm_ts | timestamp_custom('%H:%M', true) if alarm_ts else 'No alarm' }}\n",
+            "last_processed_alarm": "{{ state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') | default('') }}\n",
+            "natural_sunrise": "{{ state_attr('sun.sun', 'next_rising') | as_timestamp | timestamp_custom('%H:%M', true) }}\n"
+          },
+          "icon": "mdi:sunrise",
+          "name": "Adaptive Lighting Sunrise Times",
+          "state": "{% set alarm_timestamp = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %} {% set natural_sunrise = state_attr('sun.sun', 'next_rising') | as_timestamp(0) %} {% if alarm_timestamp and natural_sunrise > 0 %}\n  {% set earliest = [natural_sunrise, alarm_timestamp] | min %}\n  {{ earliest | timestamp_custom('%H:%M', true) }}\n{% elif alarm_timestamp %}\n  {{ alarm_timestamp | timestamp_custom('%H:%M', true) }}\n{% elif natural_sunrise %}\n  {{ natural_sunrise | timestamp_custom('%H:%M', true) }}\n{% else %}\n  Unknown\n{% endif %}\n",
+          "unique_id": "adaptive_lighting_sunrise_times_v4"
+        },
+        {
+          "attributes": {
+            "brightness_deviation": "{{ states('input_number.adaptive_lighting_total_brightness_adjustment') }}%",
+            "total_deviation_score": "{% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %} {{ (b_adj | abs) + ((k_adj | abs) / 25) }}\n",
+            "warmth_deviation": "{{ states('input_number.adaptive_lighting_total_warmth_adjustment') }}K"
+          },
+          "icon": "mdi:chart-line-variant",
+          "name": "Adaptive Lighting Deviation Tracker",
+          "state": "{% set b_adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% set k_adj = states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) %} {% set total_dev = (b_adj | abs) + ((k_adj | abs) / 25) %} {% if total_dev == 0 %}\n  No deviation\n{% elif total_dev < 10 %}\n  Minor deviation\n{% elif total_dev < 25 %}\n  Moderate deviation\n{% else %}\n  Significant deviation\n{% endif %}\n",
+          "unique_id": "al_deviation_tracker"
+        },
+        {
+          "icon": "mdi:timer-cog-outline",
+          "name": "Adaptive Lighting Manual Adjustment Status",
+          "state": "{% set active_zones = states.timer \n   | selectattr('entity_id', 'match', 'timer.adaptive_lighting_manual_timer_.*')\n   | selectattr('state', 'eq', 'active')\n   | list | length %}\n{% if active_zones > 0 %}\n  {{ active_zones }} zone(s) manual\n{% elif states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) != 0 or states('input_number.adaptive_lighting_total_warmth_adjustment') | int(0) != 0 %}\n  Adjustments applied\n{% else %}\n  No adjustments\n{% endif %}\n",
+          "unique_id": "al_manual_adjustment_status"
+        },
+        {
+          "attributes": {
+            "lights_on": "{{ states.light | selectattr('state','eq','on') | map(attribute='entity_id') | list | join(', ') }}\n"
+          },
+          "icon": "mdi:lightbulb",
+          "name": "Active Lights Count",
+          "state": "{% set lights_on = states.light | selectattr('state','eq','on') | list %} {{ lights_on | count }}\n",
+          "unique_id": "active_lights_count"
+        },
+        {
+          "icon": "mdi:brightness-percent",
+          "name": "Adaptive Lighting Brightness Status",
+          "state": "{% set adj = states('input_number.adaptive_lighting_total_brightness_adjustment') | int(0) %} {% if adj > 0 %}\n  +{{ adj }}% brighter\n{% elif adj < 0 %}\n  {{ adj }}% dimmer\n{% else %}\n  Default brightness\n{% endif %}\n",
+          "unique_id": "al_brightness_status"
+        },
+        {
+          "attributes": {
+            "zones_with_manual_control": "{% set zones = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island', \n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% set manual_zones = [] %} {% for zone in zones %}\n  {% set manual = state_attr(zone, 'manual_control') %}\n  {% if manual and manual is iterable and manual is not string and manual | length > 0 %}\n    {% set manual_zones = manual_zones + [zone.split('.')[-1].replace('adaptive_lighting_', '')] %}\n  {% endif %}\n{% endfor %} {{ manual_zones | join(', ') }}\n"
+          },
+          "icon": "mdi:map-marker-multiple",
+          "name": "Adaptive Lighting Zones with Manual Control",
+          "state": "{% set zones = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island',\n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% set manual_zones = [] %} {% for zone in zones %}\n  {% set manual = state_attr(zone, 'manual_control') %}\n  {% if manual and manual is iterable and manual is not string and manual | length > 0 %}\n    {% set manual_zones = manual_zones + [zone.split('.')[-1].replace('adaptive_lighting_', '')] %}\n  {% endif %}\n{% endfor %} {{ manual_zones | length }} zones with manual control\n",
+          "unique_id": "al_zones_manual_control"
+        },
+        {
+          "attributes": {
+            "avg_lights_per_adjustment": "{% set total_lights = states('sensor.active_lights_count') | int(0) %} {% set manual_lights = states('sensor.adaptive_lighting_total_manual_control') | int(0) %} {{ ((total_lights - manual_lights) / 5) | round(1) if total_lights > 0 else 0 }}\n",
+            "last_adjustment_applied": "{{ state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') }}\n",
+            "total_automations_today": "{% set today = now().date() %} {% set count = 0 %} {% for automation in states.automation | selectattr('entity_id', 'search', 'adaptive_lighting') %}\n  {% set last_triggered = automation.attributes.last_triggered %}\n  {% if last_triggered and (last_triggered | as_datetime).date() == today %}\n    {% set count = count + 1 %}\n  {% endif %}\n{% endfor %} {{ count }}\n"
+          },
+          "icon": "mdi:speedometer",
+          "name": "Adaptive Lighting Performance Metrics",
+          "state": "{% set response_time = state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') %} {{ 'Active' if response_time else 'Idle' }}\n",
+          "unique_id": "al_performance_metrics"
+        },
+        {
+          "attributes": {
+            "current_mode": "{{ states('input_select.current_home_mode') }}",
+            "environmental_boosts_today": "{% set today = now().date() %} {% set last_changed = states.input_boolean.al_environmental_boost_active.last_changed %} {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}\n",
+            "mode_duration_hours": "{{ ((now() - states.input_select.current_home_mode.last_changed).seconds / 3600) | round(1) }}\n",
+            "total_brightness_changes_today": "{% set today = now().date() %} {% set last_changed = states.input_number.adaptive_lighting_total_brightness_adjustment.last_changed %} {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}\n",
+            "total_warmth_changes_today": "{% set today = now().date() %} {% set last_changed = states.input_number.adaptive_lighting_total_warmth_adjustment.last_changed %} {{ 1 if last_changed is not none and (last_changed | as_datetime).date() == today else 0 }}\n"
+          },
+          "icon": "mdi:chart-timeline-variant",
+          "name": "Adaptive Lighting Usage Statistics",
+          "state": "{% set mode = states('input_select.current_home_mode') %} {% set hours_in_mode = ((now() - states.input_select.current_home_mode.last_changed).seconds / 3600) | round(1) %} {{ hours_in_mode }} hours in {{ mode }}\n",
+          "unique_id": "al_usage_statistics"
+        },
+        {
+          "attributes": {
+            "environmental_sensors_status": "{% set lux_ok = states('sensor.living_room_presence_light_sensor_light_level') not in ['unknown', 'unavailable'] %} {% set weather_ok = states('weather.home') not in ['unknown', 'unavailable'] %} {% if lux_ok and weather_ok %}\n  All Online\n{% elif lux_ok or weather_ok %}\n  Partial\n{% else %}\n  Offline\n{% endif %}\n",
+            "last_successful_adjustment": "{% set recent = state_attr('automation.al_core_adjustment_engine_manual_safe', 'last_triggered') %} {% if recent %}\n  {{ recent }}\n{% else %}\n  Never\n{% endif %}\n",
+            "sensors_responding": "{% set sensors = [\n  'sensor.adaptive_lighting_status',\n  'sensor.adaptive_lighting_total_manual_control',\n  'sensor.active_lights_count'\n] %} {% set responding = 0 %} {% for sensor in sensors %}\n  {% if states(sensor) not in ['unknown', 'unavailable'] %}\n    {% set responding = responding + 1 %}\n  {% endif %}\n{% endfor %} {{ responding }}/{{ sensors | length }}\n",
+            "switches_online": "{% set online = 0 %} {% set al_switches = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island',\n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% for switch in al_switches %}\n  {% if states(switch) not in ['unknown', 'unavailable'] %}\n    {% set online = online + 1 %}\n  {% endif %}\n{% endfor %} {{ online }}/{{ al_switches | length }}\n"
+          },
+          "icon": "mdi:heart-pulse",
+          "name": "Adaptive Lighting System Health",
+          "state": "{% set errors = 0 %} {% set al_switches = [\n  'switch.adaptive_lighting_main_living',\n  'switch.adaptive_lighting_kitchen_island',\n  'switch.adaptive_lighting_bedroom_primary',\n  'switch.adaptive_lighting_accent_spots',\n  'switch.adaptive_lighting_recessed_ceiling'\n] %} {% for switch in al_switches %}\n  {% if states(switch) == 'unknown' or states(switch) == 'unavailable' %}\n    {% set errors = errors + 1 %}\n  {% endif %}\n{% endfor %} {% if errors == 0 %}\n  Excellent\n{% elif errors <= 1 %}\n  Good\n{% elif errors <= 2 %}\n  Fair\n{% else %}\n  Poor\n{% endif %}\n",
+          "unique_id": "al_system_health"
+        },
+        {
+          "attributes": {
+            "mode_changes_today": "{% set today = now().date() %} {% set last_changed = states.input_select.current_home_mode.last_changed %} {{ 1 if last_changed and (last_changed | as_datetime).date() == today else 0 }}\n",
+            "mode_timeline": "{% set current_mode = states('input_select.current_home_mode') %} {% set timestamp = now().isoformat() %} [{\"mode\": \"{{ current_mode }}\", \"timestamp\": \"{{ timestamp }}\"}]\n",
+            "most_used_mode_today": "{{ states('input_select.current_home_mode') }}\n",
+            "previous_mode": "{% set history = state_attr('sensor.adaptive_lighting_mode_history', 'mode_timeline') %} {% if history and history | length > 1 %}\n  {{ history[-2].mode if history[-2] is defined else 'Unknown' }}\n{% else %}\n  Unknown\n{% endif %}\n",
+            "time_in_current_mode": "{{ relative_time(states.input_select.current_home_mode.last_changed) }}\n"
+          },
+          "icon": "mdi:history",
+          "name": "Adaptive Lighting Mode History",
+          "state": "{{ states('input_select.current_home_mode') }}\n",
+          "unique_id": "al_mode_history"
+        }
+      ]
+    }
+  ],
+  "timer": {
+    "adaptive_lighting_manual_timer_accent_spots": {
+      "icon": "mdi:timer",
+      "name": "AL Manual Timer - Accent Spots"
+    },
+    "adaptive_lighting_manual_timer_bedroom_primary": {
+      "icon": "mdi:timer",
+      "name": "AL Manual Timer - Bedroom Primary"
+    },
+    "adaptive_lighting_manual_timer_kitchen_island": {
+      "icon": "mdi:timer",
+      "name": "AL Manual Timer - Kitchen Island"
+    },
+    "adaptive_lighting_manual_timer_main_living": {
+      "icon": "mdi:timer",
+      "name": "AL Manual Timer - Main Living"
+    },
+    "adaptive_lighting_manual_timer_recessed_ceiling": {
+      "icon": "mdi:timer",
+      "name": "AL Manual Timer - Recessed Ceiling"
+    }
+  }
+}
