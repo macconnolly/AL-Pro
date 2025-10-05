@@ -40,57 +40,50 @@ light:
     entities:
       - light.entryway_lamp
       - light.living_room_floor_lamp
-      # Add your specific lights here
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
 
   # Kitchen Island - Task lighting for cooking/dining
   - platform: group
     name: "Kitchen Island Lights"
     unique_id: alp_kitchen_island_lights
     entities:
-      - light.kitchen_island_pendant_1
-      - light.kitchen_island_pendant_2
-      - light.kitchen_island_pendant_3
-      # Add your specific lights here
+      - light.kitchen_island_pendants
 
   # Primary Bedroom - Ambient lighting for sleep routine
   - platform: group
     name: "Bedroom Primary Lights"
     unique_id: alp_bedroom_primary_lights
     entities:
-      - light.bedroom_bedside_lamp_left
-      - light.bedroom_bedside_lamp_right
-      - light.bedroom_ceiling_fan_light
-      # Add your specific lights here
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
 
   # Recessed Ceiling - Overhead lighting (often turned off for comfort)
   - platform: group
     name: "Recessed Ceiling Lights"
     unique_id: alp_recessed_ceiling_lights
     entities:
-      - light.living_room_recessed_1
-      - light.living_room_recessed_2
-      - light.living_room_recessed_3
-      - light.living_room_recessed_4
-      # Add your specific lights here
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
 
   # Accent Spots - Decorative/highlight lighting
   - platform: group
     name: "Accent Spots"
     unique_id: alp_accent_spots
     entities:
-      - light.bookshelf_spotlight
-      - light.artwork_spotlight_1
-      - light.artwork_spotlight_2
-      # Add your specific lights here
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
 
-  # Bathroom - High CRI task lighting
+  # Bathroom - High CRI task lighting (keeping placeholder as not in your setup)
   - platform: group
     name: "Bathroom Lights"
     unique_id: alp_bathroom_lights
     entities:
       - light.bathroom_vanity
       - light.bathroom_shower
-      # Add your specific lights here
+      # Add your specific bathroom lights here
 
 # -----------------------------------------------------------------------------
 # Scene Choreography Scripts
@@ -294,12 +287,11 @@ script:
           entity_id: button.alp_reset
 
 ###############################################################################
-# TIER 2: RECOMMENDED AUTOMATION (Commented - Opt-in)
+# TIER 2: RECOMMENDED AUTOMATION (Enabled)
 # ~200 lines - Time-based routines, weather notifications
 ###############################################################################
-# Uncomment sections below to enable automated lighting routines based on
-# daily schedules and environmental conditions. These align with claude.md
-# daily life scenarios.
+# Automated lighting routines based on daily schedules and environmental
+# conditions. These align with claude.md daily life scenarios.
 
 # -----------------------------------------------------------------------------
 # Time-Based Automation - Daily Lighting Routines
@@ -315,41 +307,41 @@ automation:
   # Action: Cool, bright lighting to support circadian rhythm
   # Source: claude.md "Morning (6:00 AM - 9:00 AM)" scenario
 
-  # - id: alp_morning_routine
-  #   alias: "ALP: Morning Routine"
-  #   description: "Gradually brighten lights before alarm for gentle wake-up"
-  #   trigger:
-  #     # Integration provides sensor.alp_next_alarm with wake time
-  #     - platform: template
-  #       value_template: >-
-  #         {% set alarm_time = states('sensor.alp_next_alarm') %}
-  #         {% if alarm_time not in ['unknown', 'unavailable', 'none'] %}
-  #           {% set alarm_dt = as_datetime(alarm_time) %}
-  #           {% set wake_start = alarm_dt - timedelta(minutes=30) %}
-  #           {{ now() >= wake_start and now() < alarm_dt }}
-  #         {% else %}
-  #           false
-  #         {% endif %}
-  #   condition:
-  #     # Only run on weekdays (customize as needed)
-  #     - condition: time
-  #       weekday:
-  #         - mon
-  #         - tue
-  #         - wed
-  #         - thu
-  #         - fri
-  #   action:
-  #     # Apply All Lights scene for maximum alertness
-  #     - service: script.apply_scene_all_lights
-  #     # Add extra brightness boost for morning energy
-  #     - service: adaptive_lighting_pro.adjust_brightness
-  #       data:
-  #         value: 15
-  #     # Optional: TTS announcement
-  #     # - service: tts.google_say
-  #     #   data:
-  #     #     message: "Good morning! Lights are gradually brightening."
+  - id: alp_morning_routine
+    alias: "ALP: Morning Routine"
+    description: "Gradually brighten lights before alarm for gentle wake-up"
+    trigger:
+      # Integration provides sensor.alp_next_alarm with wake time
+      - platform: template
+        value_template: >-
+          {% set alarm_time = states('sensor.alp_next_alarm') %}
+          {% if alarm_time not in ['unknown', 'unavailable', 'none'] %}
+            {% set alarm_dt = as_datetime(alarm_time) %}
+            {% set wake_start = alarm_dt - timedelta(minutes=30) %}
+            {{ now() >= wake_start and now() < alarm_dt }}
+          {% else %}
+            false
+          {% endif %}
+    condition:
+      # Only run on weekdays (customize as needed)
+      - condition: time
+        weekday:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+    action:
+      # Apply All Lights scene for maximum alertness
+      - service: script.apply_scene_all_lights
+      # Add extra brightness boost for morning energy
+      - service: adaptive_lighting_pro.adjust_brightness
+        data:
+          value: 15
+      # Optional: TTS announcement
+      # - service: tts.google_say
+      #   data:
+      #     message: "Good morning! Lights are gradually brightening."
 
   # ---------------------------------------------------------------------------
   # Evening Transition - Automatic shift to relaxation
@@ -358,26 +350,26 @@ automation:
   # Action: Switch to Evening Comfort scene
   # Source: claude.md "Evening (6:00 PM - 9:00 PM)" scenario
 
-  # - id: alp_evening_transition
-  #   alias: "ALP: Evening Transition"
-  #   description: "Automatically switch to cozy evening lighting after sunset"
-  #   trigger:
-  #     - platform: numeric_state
-  #       entity_id: sun.sun
-  #       attribute: elevation
-  #       below: -3  # Civil twilight end
-  #   condition:
-  #     # Don't override if user manually selected a scene recently
-  #     - condition: template
-  #       value_template: >-
-  #         {% set last_scene_change = states.select.alp_scene.last_changed %}
-  #         {{ (now() - last_scene_change).total_seconds() > 3600 }}
-  #   action:
-  #     - service: script.apply_scene_evening_comfort
-  #     # Optional: Notification
-  #     # - service: notify.mobile_app
-  #     #   data:
-  #     #     message: "Evening mode activated - lights are now warmer and dimmer"
+  - id: alp_evening_transition
+    alias: "ALP: Evening Transition"
+    description: "Automatically switch to cozy evening lighting after sunset"
+    trigger:
+      - platform: numeric_state
+        entity_id: sun.sun
+        attribute: elevation
+        below: -3  # Civil twilight end
+    condition:
+      # Don't override if user manually selected a scene recently
+      - condition: template
+        value_template: >-
+          {% set last_scene_change = states.select.alp_scene.last_changed %}
+          {{ (now() - last_scene_change).total_seconds() > 3600 }}
+    action:
+      - service: script.apply_scene_evening_comfort
+      # Optional: Notification
+      # - service: notify.mobile_app
+      #   data:
+      #     message: "Evening mode activated - lights are now warmer and dimmer"
 
   # ---------------------------------------------------------------------------
   # Bedtime Routine - Ultra dim for sleep preparation
@@ -386,45 +378,45 @@ automation:
   # Action: Switch to Ultra Dim scene
   # Source: claude.md "Night (9:00 PM - 11:00 PM)" scenario
 
-  # - id: alp_bedtime_routine
-  #   alias: "ALP: Bedtime Routine"
-  #   description: "Dim lights to ultra-low for sleep preparation"
-  #   trigger:
-  #     - platform: time
-  #       at: "22:30:00"  # 10:30 PM weeknights
-  #     - platform: time
-  #       at: "23:30:00"  # 11:30 PM weekends
-  #   condition:
-  #     # Weeknight bedtime
-  #     - condition: or
-  #       conditions:
-  #         - condition: and
-  #           conditions:
-  #             - condition: time
-  #               after: "22:30:00"
-  #               before: "22:31:00"
-  #             - condition: time
-  #               weekday:
-  #                 - mon
-  #                 - tue
-  #                 - wed
-  #                 - thu
-  #         # Weekend bedtime
-  #         - condition: and
-  #           conditions:
-  #             - condition: time
-  #               after: "23:30:00"
-  #               before: "23:31:00"
-  #             - condition: time
-  #               weekday:
-  #                 - fri
-  #                 - sat
-  #   action:
-  #     - service: script.apply_scene_ultra_dim
-  #     # Optional: Enable sleep mode on devices
-  #     # - service: switch.turn_on
-  #     #   target:
-  #     #     entity_id: switch.sleep_mode
+  - id: alp_bedtime_routine
+    alias: "ALP: Bedtime Routine"
+    description: "Dim lights to ultra-low for sleep preparation"
+    trigger:
+      - platform: time
+        at: "22:30:00"  # 10:30 PM weeknights
+      - platform: time
+        at: "23:30:00"  # 11:30 PM weekends
+    condition:
+      # Weeknight bedtime
+      - condition: or
+        conditions:
+          - condition: and
+            conditions:
+              - condition: time
+                after: "22:30:00"
+                before: "22:31:00"
+              - condition: time
+                weekday:
+                  - mon
+                  - tue
+                  - wed
+                  - thu
+          # Weekend bedtime
+          - condition: and
+            conditions:
+              - condition: time
+                after: "23:30:00"
+                before: "23:31:00"
+              - condition: time
+                weekday:
+                  - fri
+                  - sat
+    action:
+      - service: script.apply_scene_ultra_dim
+      # Optional: Enable sleep mode on devices
+      # - service: switch.turn_on
+      #   target:
+      #     entity_id: switch.sleep_mode
 
   # ---------------------------------------------------------------------------
   # Work From Home Detection - Automatic bright lighting
@@ -433,35 +425,35 @@ automation:
   # Action: All Lights scene for productivity
   # Source: claude.md "Work (9:00 AM - 5:00 PM)" scenario
 
-  # - id: alp_work_mode_auto
-  #   alias: "ALP: Work Mode Auto"
-  #   description: "Detect work-from-home and apply bright lighting"
-  #   trigger:
-  #     # Example: Computer activity sensor (customize to your setup)
-  #     - platform: state
-  #       entity_id: binary_sensor.office_computer_active
-  #       to: "on"
-  #       for:
-  #         minutes: 5
-  #   condition:
-  #     # Only during work hours
-  #     - condition: time
-  #       after: "08:00:00"
-  #       before: "18:00:00"
-  #     # Only on weekdays
-  #     - condition: time
-  #       weekday:
-  #         - mon
-  #         - tue
-  #         - wed
-  #         - thu
-  #         - fri
-  #   action:
-  #     - service: script.apply_scene_all_lights
-  #     # Optional: Cool color temp for focus
-  #     # - service: adaptive_lighting_pro.adjust_color_temp
-  #     #   data:
-  #     #     value: -500  # Cooler (more blue)
+  - id: alp_work_mode_auto
+    alias: "ALP: Work Mode Auto"
+    description: "Detect work-from-home and apply bright lighting"
+    trigger:
+      # Example: Computer activity sensor (customize to your setup)
+      - platform: state
+        entity_id: binary_sensor.office_computer_active
+        to: "on"
+        for:
+          minutes: 5
+    condition:
+      # Only during work hours
+      - condition: time
+        after: "08:00:00"
+        before: "18:00:00"
+      # Only on weekdays
+      - condition: time
+        weekday:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+    action:
+      - service: script.apply_scene_all_lights
+      # Optional: Cool color temp for focus
+      # - service: adaptive_lighting_pro.adjust_color_temp
+      #   data:
+      #     value: -500  # Cooler (more blue)
 
 # -----------------------------------------------------------------------------
 # Weather-Responsive Notifications
@@ -475,25 +467,25 @@ automation:
   # Trigger: sensor.alp_environmental_boost goes above threshold
   # Action: Notify user that lights are auto-boosted
 
-  # - id: alp_dark_day_alert
-  #   alias: "ALP: Dark Day Alert"
-  #   description: "Notify when environmental boost activates on dark days"
-  #   trigger:
-  #     - platform: numeric_state
-  #       entity_id: sensor.alp_environmental_boost
-  #       above: 20  # Significant boost threshold
-  #   condition:
-  #     # Only during daytime (environmental boost is for dark days)
-  #     - condition: sun
-  #       after: sunrise
-  #       before: sunset
-  #   action:
-  #     - service: notify.mobile_app
-  #       data:
-  #         message: >-
-  #           Dark day detected - lights boosted by {{ states('sensor.alp_environmental_boost') }}%
-  #           (Lux: {{ states('sensor.living_room_lux') }}, Weather: {{ states('weather.home') }})
-  #         title: "Adaptive Lighting: Environmental Boost Active"
+  - id: alp_dark_day_alert
+    alias: "ALP: Dark Day Alert"
+    description: "Notify when environmental boost activates on dark days"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_environmental_boost
+        above: 20  # Significant boost threshold
+    condition:
+      # Only during daytime (environmental boost is for dark days)
+      - condition: sun
+        after: sunrise
+        before: sunset
+    action:
+      - service: notify.mobile_app
+        data:
+          message: >-
+            Dark day detected - lights boosted by {{ states('sensor.alp_environmental_boost') }}%
+            (Lux: {{ states('sensor.living_room_lux') }}, Weather: {{ states('weather.home') }})
+          title: "Adaptive Lighting: Environmental Boost Active"
 
   # ---------------------------------------------------------------------------
   # Sunset Boost Alert - Fade starting early
@@ -501,20 +493,20 @@ automation:
   # Trigger: sensor.alp_sunset_boost activates
   # Action: Notify user that sunset fade started
 
-  # - id: alp_sunset_alert
-  #   alias: "ALP: Sunset Boost Alert"
-  #   description: "Notify when sunset fade activates"
-  #   trigger:
-  #     - platform: numeric_state
-  #       entity_id: sensor.alp_sunset_boost
-  #       above: 5  # Any sunset boost
-  #   action:
-  #     - service: notify.mobile_app
-  #       data:
-  #         message: >-
-  #           Sunset fade active - lights warming and dimming gradually
-  #           (Boost: {{ states('sensor.alp_sunset_boost') }}%)
-  #         title: "Adaptive Lighting: Sunset Mode"
+  - id: alp_sunset_alert
+    alias: "ALP: Sunset Boost Alert"
+    description: "Notify when sunset fade activates"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_sunset_boost
+        above: 5  # Any sunset boost
+    action:
+      - service: notify.mobile_app
+        data:
+          message: >-
+            Sunset fade active - lights warming and dimming gradually
+            (Boost: {{ states('sensor.alp_sunset_boost') }}%)
+          title: "Adaptive Lighting: Sunset Mode"
 
 ###############################################################################
 # TIER 3: ADVANCED CONFIGURATION (Commented - Power Users)
