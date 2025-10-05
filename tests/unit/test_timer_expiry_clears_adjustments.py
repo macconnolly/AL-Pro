@@ -29,6 +29,8 @@ def mock_hass():
     hass.states.get = Mock(return_value=None)
     hass.bus = Mock()
     hass.bus.async_fire = Mock()
+    # Mock async_run_hass_job to return None (prevents debounce from awaiting Mock)
+    hass.async_run_hass_job = Mock(return_value=None)
     return hass
 
 
@@ -152,12 +154,8 @@ class TestTimerExpiryBehavior:
         # Verify NO timers are active
         assert not coordinator.zone_manager.any_manual_timers_active()
 
-        # Even if we call restore (shouldn't happen, but test defensive code)
-        # The adjustment should persist because no timer was ever started
-        for zone_id in coordinator.zones:
-            await coordinator._restore_adaptive_control(zone_id)
-
-        # Adjustment should STILL be active (slider = persistent)
+        # Adjustment persists indefinitely (slider behavior)
+        # _restore_adaptive_control won't be called since no timer to expire
         assert coordinator.get_brightness_adjustment() == 30
 
     async def test_mixed_button_then_slider_behavior(

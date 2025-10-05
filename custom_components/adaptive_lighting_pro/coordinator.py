@@ -247,9 +247,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._restore_adaptive_control(zone_id)
 
             # Calculate environmental features
-            env_boost, _ = self._env_adapter.calculate_boost()
+            # Note: calculate_boost() returns BoostResult (int subclass), usable directly as int
+            env_boost = self._env_adapter.calculate_boost()
             lux = self._get_current_lux()
-            sunset_boost, _ = self._sunset_boost.calculate_boost(lux)
+            sunset_boost = self._sunset_boost.calculate_boost(lux)
 
             # Initialize state structure
             state: dict[str, Any] = {
@@ -422,11 +423,11 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Phase 2.5: Calculate environmental boost
         if zone_config.get("environmental_enabled", True):
-            env_boost, _ = self._env_adapter.calculate_boost()
+            env_boost = self._env_adapter.calculate_boost()
 
         if zone_config.get("sunset_enabled", True):
             lux = self._get_current_lux()
-            sunset_boost, _ = self._sunset_boost.calculate_boost(lux)
+            sunset_boost = self._sunset_boost.calculate_boost(lux)
 
         # Phase 2.1: Calculate wake sequence boost (per-zone, only affects target zone)
         if zone_config.get("wake_sequence_enabled", True):
@@ -1262,7 +1263,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sun_elevation = sun_state.attributes.get("elevation")
 
             # Get current environmental boost
-            env_boost, _ = self._env_adapter.calculate_boost()
+            env_boost = self._env_adapter.calculate_boost()
 
         # Step 1: Mark lights as manually controlled in AL
         await self._mark_zone_lights_as_manual(zone_id)

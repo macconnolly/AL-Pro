@@ -58,7 +58,7 @@ class TestSonosAlarmDetection:
         BUG WOULD CAUSE: No wake sequence, jarring alarm at 6:30 AM
         """
         # Mock sensor state with alarm set for tomorrow 6:30 AM
-        tomorrow_6am = (datetime.now(UTC) + timedelta(hours=10)).replace(
+        tomorrow_6am = (datetime.now(UTC) + timedelta(days=1)).replace(
             hour=6, minute=30, second=0, microsecond=0
         )
         alarm_iso = tomorrow_6am.isoformat()
@@ -480,7 +480,7 @@ class TestSonosRealWorldScenarios:
         WHY: Weekend mornings - snooze alarm + actual wake alarm
         """
         # First alarm at 6:30 AM
-        alarm_1 = (datetime.now(UTC) + timedelta(hours=8)).replace(
+        alarm_1 = (datetime.now(UTC) + timedelta(days=1)).replace(
             hour=6, minute=30, second=0, microsecond=0
         )
 

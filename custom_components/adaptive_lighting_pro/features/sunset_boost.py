@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
+from .environmental import BoostResult
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -58,7 +60,7 @@ class SunsetBoostCalculator:
         self._enabled = enabled
         _LOGGER.info("Sunset boost calculator configured: enabled=%s", enabled)
 
-    def calculate_boost(self, current_lux: float | None = None) -> tuple[int, dict[str, Any]]:
+    def calculate_boost(self, current_lux: float | None = None) -> int:
         """Calculate brightness boost for dark days during sunset with detailed breakdown.
 
         Logic (CORRECTED from original YAML):
@@ -76,16 +78,16 @@ class SunsetBoostCalculator:
             current_lux: Current outdoor lux reading (REQUIRED)
 
         Returns:
-            Tuple of (boost_percentage, breakdown_dict)
+            BoostResult (int subclass) with breakdown accessible via unpacking
 
         Examples:
             >>> # Clear day (lux=8000), sun at 0° (sunset)
-            >>> boost, breakdown = calculator.calculate_boost(current_lux=8000)
+            >>> boost = calculator.calculate_boost(current_lux=8000)
             >>> boost
             0
 
             >>> # Cloudy/stormy day (lux=500), sun at 0° (sunset)
-            >>> boost, breakdown = calculator.calculate_boost(current_lux=500)
+            >>> boost = calculator.calculate_boost(current_lux=500)
             >>> boost
             12
         """
@@ -102,7 +104,7 @@ class SunsetBoostCalculator:
         if not self.is_available():
             breakdown["reason_skipped"] = "disabled"
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         # CRITICAL: Only apply on dark/cloudy days
         # Clear days don't need sunset boost - AL handles them fine
@@ -114,21 +116,21 @@ class SunsetBoostCalculator:
                 current_lux if current_lux else 0,
             )
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         sun_state = self.hass.states.get("sun.sun")
         if not sun_state:
             breakdown["reason_skipped"] = "sun_unavailable"
             _LOGGER.warning("sun.sun entity not found")
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         elevation = sun_state.attributes.get("elevation")
         if elevation is None:
             breakdown["reason_skipped"] = "elevation_unavailable"
             _LOGGER.warning("Sun elevation not available")
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         try:
             elevation = float(elevation)
@@ -137,7 +139,7 @@ class SunsetBoostCalculator:
             breakdown["reason_skipped"] = "invalid_elevation"
             _LOGGER.warning("Invalid sun elevation: %s", elevation)
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         # Only active in sunset window (-4° to 4°)
         in_window = -4 <= elevation <= 4
@@ -146,7 +148,7 @@ class SunsetBoostCalculator:
         if not in_window:
             breakdown["reason_skipped"] = "outside_window"
             self._last_breakdown = breakdown
-            return 0, breakdown
+            return BoostResult(0, breakdown)
 
         # Calculate boost - LINEAR SCALE
         # elevation 4° = 0%, elevation 0° = +12.5%, elevation -4° = +25%
@@ -165,7 +167,7 @@ class SunsetBoostCalculator:
             )
 
         self._last_breakdown = breakdown
-        return boost, breakdown
+        return BoostResult(boost, breakdown)
 
     def get_breakdown(self) -> dict[str, Any]:
         """Get detailed breakdown of last boost calculation.
