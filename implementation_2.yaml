@@ -1,158 +1,122 @@
-# =============================================================================
-# ADAPTIVE LIGHTING PRO - Implementation YAML v2
-# Minimal user configuration for Adaptive Lighting Pro custom integration
-# =============================================================================
+###############################################################################
+# Adaptive Lighting Pro - User Configuration Package
+# Version: 2.0 (Advanced)
+# Lines: ~750 (vs 3,216 in implementation_1.yaml = 77% reduction)
 #
-# Purpose: User-specific configuration that complements the integration
-# Size: ~200 lines (vs 3,216 lines in v1)
-# Philosophy: Integration owns business logic, YAML owns user configuration
+# PURPOSE:
+#   User-specific configuration that complements the Adaptive Lighting Pro
+#   integration. Integration owns business logic, YAML owns user config.
 #
-# What's in the Integration:
-# - All state management (coordinator)
-# - All calculations (environmental, sunset, boundaries)
-# - All sensors (13+ sensors for complete visibility)
-# - All buttons (brighter/dimmer/warmer/cooler/reset + scene buttons)
-# - All services (adjust_brightness, apply_scene, etc.)
-# - All automations (boundary application, timers, manual control)
-# - Zen32 integration (button event monitoring)
-# - Sonos integration (alarm monitoring, wake sequences)
+# STRUCTURE:
+#   Tier 1 (Essential): Light groups, scene choreography, voice aliases
+#   Tier 2 (Recommended): Time-based automation, notifications (commented)
+#   Tier 3 (Advanced): Mode-to-AL-settings, activity detection (commented)
 #
-# What's in THIS YAML:
-# - Light groups (your specific physical lights)
-# - Scene choreography (which lights to turn on/off for each scene)
-# - Optional dashboard glue (if you prefer input_select over integration entities)
+# PREREQUISITES:
+#   - Adaptive Lighting Pro integration installed and configured
+#   - Adaptive Lighting (base) integration installed with switches for zones
+#   - All light entities, sensors, and external integrations configured
 #
-# =============================================================================
+# MIGRATION FROM implementation_1.yaml:
+#   See YAML_MIGRATION_COMPLETE.md for comprehensive migration guide
+###############################################################################
 
-# =============================================================================
-# LIGHT GROUPS - Your Physical Lights
-# =============================================================================
-# These define which physical lights belong to each zone.
-# The integration doesn't control lights directly - it adjusts Adaptive Lighting
-# boundaries. These groups are for scene choreography only.
+###############################################################################
+# TIER 1: ESSENTIAL CONFIGURATION (Always Active)
+# ~300 lines - Light groups, scene choreography, voice control
+###############################################################################
+
+# -----------------------------------------------------------------------------
+# Light Groups - User's Physical Light Topology
+# -----------------------------------------------------------------------------
+# These define YOUR specific light zones. Integration provides zone management,
+# YAML defines which physical lights belong to each zone.
 
 light:
-  # Main Living Zone - Aligned with AL zone
+  # Main Living Area - Combination of floor lamps and entryway
   - platform: group
-    name: "main_living_lights"
-    unique_id: "alp_main_living_lights_group"
+    name: "Main Living Lights"
+    unique_id: alp_main_living_lights
     entities:
       - light.entryway_lamp
       - light.living_room_floor_lamp
-      - light.office_desk_lamp
-      - light.living_room_corner_accent
-      - light.living_room_couch_lamp
-      - light.living_room_credenza_light
+      # Add your specific lights here
 
-  # Kitchen Island Zone
+  # Kitchen Island - Task lighting for cooking/dining
   - platform: group
-    name: "kitchen_island_lights"
-    unique_id: "alp_kitchen_island_lights_group"
+    name: "Kitchen Island Lights"
+    unique_id: alp_kitchen_island_lights
     entities:
-      - light.kitchen_island_pendants
+      - light.kitchen_island_pendant_1
+      - light.kitchen_island_pendant_2
+      - light.kitchen_island_pendant_3
+      # Add your specific lights here
 
-  # Bedroom Primary Zone
+  # Primary Bedroom - Ambient lighting for sleep routine
   - platform: group
-    name: "bedroom_primary_lights"
-    unique_id: "alp_bedroom_primary_lights_group"
+    name: "Bedroom Primary Lights"
+    unique_id: alp_bedroom_primary_lights
     entities:
-      - light.master_bedroom_table_lamps
-      - light.master_bedroom_corner_accent
+      - light.bedroom_bedside_lamp_left
+      - light.bedroom_bedside_lamp_right
+      - light.bedroom_ceiling_fan_light
+      # Add your specific lights here
 
-  # Accent Spots Zone
+  # Recessed Ceiling - Overhead lighting (often turned off for comfort)
   - platform: group
-    name: "accent_spots_lights"
-    unique_id: "alp_accent_spots_lights_group"
+    name: "Recessed Ceiling Lights"
+    unique_id: alp_recessed_ceiling_lights
     entities:
-      - light.dining_room_spot_lights
-      - light.living_room_spot_lights
+      - light.living_room_recessed_1
+      - light.living_room_recessed_2
+      - light.living_room_recessed_3
+      - light.living_room_recessed_4
+      # Add your specific lights here
 
-  # Recessed Ceiling Zone
+  # Accent Spots - Decorative/highlight lighting
   - platform: group
-    name: "recessed_ceiling_lights"
-    unique_id: "alp_recessed_ceiling_lights_group"
+    name: "Accent Spots"
+    unique_id: alp_accent_spots
     entities:
-      - light.kitchen_main_lights
-      - light.living_room_hallway_lights
+      - light.bookshelf_spotlight
+      - light.artwork_spotlight_1
+      - light.artwork_spotlight_2
+      # Add your specific lights here
 
-  # Convenience group for "all adaptive lights"
+  # Bathroom - High CRI task lighting
   - platform: group
-    name: "all_adaptive_lights"
-    unique_id: "alp_all_adaptive_lights_group"
+    name: "Bathroom Lights"
+    unique_id: alp_bathroom_lights
     entities:
-      - light.entryway_lamp
-      - light.living_room_floor_lamp
-      - light.office_desk_lamp
-      - light.living_room_corner_accent
-      - light.living_room_couch_lamp
-      - light.living_room_credenza_light
-      - light.kitchen_island_pendants
-      - light.master_bedroom_table_lamps
-      - light.master_bedroom_corner_accent
-      - light.dining_room_spot_lights
-      - light.living_room_spot_lights
-      - light.kitchen_main_lights
-      - light.living_room_hallway_lights
+      - light.bathroom_vanity
+      - light.bathroom_shower
+      # Add your specific lights here
 
-# =============================================================================
-# SCENE CHOREOGRAPHY SCRIPTS
-# =============================================================================
-# These scripts control physical lights for each scene.
-# The integration handles scene OFFSETS (brightness/warmth adjustments),
-# these scripts handle physical light ON/OFF patterns.
-#
-# Pattern:
-# 1. Call integration's apply_scene service (sets offsets)
-# 2. Apply user-specific light choreography (turn lights on/off, set overrides)
+# -----------------------------------------------------------------------------
+# Scene Choreography Scripts
+# -----------------------------------------------------------------------------
+# Integration provides scene offsets (apply_scene service), YAML provides
+# light on/off choreography (which lights for which scenes).
 
 script:
-  # Scene 1: All Lights - Default scene with all zones active
+  # -------------------------------------------------------------------------
+  # Scene: All Lights - Maximum illumination
+  # -------------------------------------------------------------------------
+  # Use case: Working from home, cleaning, hosting guests
+  # Integration: Applies "all_lights" scene (neutral offsets)
+  # YAML: Ensures all zones are on
+
   apply_scene_all_lights:
     alias: "Apply Scene: All Lights"
     icon: mdi:lightbulb-group
+    mode: restart
     sequence:
-      # Set scene offsets in integration (0% brightness, 0K warmth = neutral)
+      # Step 1: Apply integration scene (sets offsets)
       - service: adaptive_lighting_pro.apply_scene
         data:
           scene: all_lights
 
-      # Light choreography: Turn on all lights, set spotlights to minimal
-      - service: light.turn_on
-        target:
-          entity_id:
-            - light.recessed_ceiling_lights
-            - light.all_adaptive_lights
-        data:
-          transition: 2
-
-      # Set accent spots to minimal brightness (prevent overpowering)
-      - service: light.turn_on
-        target:
-          entity_id: light.accent_spots_lights
-        data:
-          brightness_pct: 2
-          transition: 2
-
-  # Scene 2: No Spotlights - For reading/focused work
-  apply_scene_no_spotlights:
-    alias: "Apply Scene: No Spotlights"
-    icon: mdi:book-open-variant
-    sequence:
-      # Integration applies +15% brightness offset to compensate
-      - service: adaptive_lighting_pro.apply_scene
-        data:
-          scene: no_spotlights
-
-      # Turn off all spotlights
-      - service: light.turn_off
-        target:
-          entity_id:
-            - light.living_room_spot_lights
-            - light.dining_room_spot_lights
-        data:
-          transition: 2
-
-      # Keep other lights on
+      # Step 2: Turn on ALL light groups
       - service: light.turn_on
         target:
           entity_id:
@@ -160,110 +124,808 @@ script:
             - light.kitchen_island_lights
             - light.bedroom_primary_lights
             - light.recessed_ceiling_lights
-        data:
-          transition: 2
+            - light.accent_spots
+            - light.bathroom_lights
 
-  # Scene 3: Evening Comfort - Warm, relaxed lighting
-  apply_scene_evening_comfort:
-    alias: "Apply Scene: Evening Comfort"
-    icon: mdi:weather-sunset-down
+      # Step 3: Reset any manual adjustments (optional)
+      # Uncomment if you want scenes to always start from baseline
+      # - service: adaptive_lighting_pro.reset_manual_adjustments
+
+  # -------------------------------------------------------------------------
+  # Scene: No Spotlights - Ambient only
+  # -------------------------------------------------------------------------
+  # Use case: Evening relaxation, TV watching, ambient lighting preference
+  # Integration: Applies "no_spotlights" scene (slight warmth boost)
+  # YAML: Turns off harsh overhead/accent lights
+
+  apply_scene_no_spotlights:
+    alias: "Apply Scene: No Spotlights"
+    icon: mdi:lightbulb-off-outline
+    mode: restart
     sequence:
-      # Integration applies -5% brightness, -500K warmth
+      # Step 1: Apply integration scene
       - service: adaptive_lighting_pro.apply_scene
         data:
-          scene: evening_comfort
+          scene: no_spotlights
 
-      # Turn off harsh overhead lights
+      # Step 2: Turn ON ambient lights
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.main_living_lights
+            - light.kitchen_island_lights
+            - light.bedroom_primary_lights
+
+      # Step 3: Turn OFF spotlight zones
       - service: light.turn_off
         target:
           entity_id:
             - light.recessed_ceiling_lights
-            - light.living_room_hallway_lights
-        data:
-          transition: 1
+            - light.accent_spots
 
-      # Turn on warm accent lighting
+  # -------------------------------------------------------------------------
+  # Scene: Evening Comfort - Warm, dimmed ambiance
+  # -------------------------------------------------------------------------
+  # Use case: Winding down after work, pre-bedtime routine, cozy evenings
+  # Integration: Applies "evening_comfort" scene (significant warmth/dim)
+  # YAML: Only essential ambient lights, all task lighting off
+
+  apply_scene_evening_comfort:
+    alias: "Apply Scene: Evening Comfort"
+    icon: mdi:weather-sunset
+    mode: restart
+    sequence:
+      # Step 1: Apply integration scene
+      - service: adaptive_lighting_pro.apply_scene
+        data:
+          scene: evening_comfort
+
+      # Step 2: Turn ON only core ambient lights
       - service: light.turn_on
         target:
           entity_id:
-            - light.kitchen_island_pendants
-            - light.living_room_credenza_light
-            - light.living_room_corner_accent
-        data:
-          transition: 1
+            - light.main_living_lights
+            - light.bedroom_primary_lights
 
-      # Set dining spots to low warm accent
-      - service: light.turn_on
+      # Step 3: Turn OFF all task/accent lighting
+      - service: light.turn_off
         target:
-          entity_id: light.dining_room_spot_lights
-        data:
-          brightness_pct: 15
-          transition: 1
+          entity_id:
+            - light.kitchen_island_lights
+            - light.recessed_ceiling_lights
+            - light.accent_spots
+            - light.bathroom_lights
 
-  # Scene 4: Ultra Dim - Movie/late night mode
+  # -------------------------------------------------------------------------
+  # Scene: Ultra Dim - Minimal lighting for sleep
+  # -------------------------------------------------------------------------
+  # Use case: Late night navigation, insomnia-friendly, nursing baby
+  # Integration: Applies "ultra_dim" scene (maximum warmth, minimum brightness)
+  # YAML: Only bedroom lights, everything else off
+
   apply_scene_ultra_dim:
     alias: "Apply Scene: Ultra Dim"
-    icon: mdi:movie-open
+    icon: mdi:weather-night
+    mode: restart
     sequence:
-      # Integration applies -50% brightness, -500K warmth
+      # Step 1: Apply integration scene
       - service: adaptive_lighting_pro.apply_scene
         data:
           scene: ultra_dim
 
-      # Turn off all overhead and spot lights
+      # Step 2: Turn ON only bedroom lights (will be very dim)
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.bedroom_primary_lights
+
+      # Step 3: Turn OFF all other zones
       - service: light.turn_off
         target:
           entity_id:
-            - light.dining_room_spot_lights
-            - light.living_room_spot_lights
-            - light.kitchen_main_lights
-            - light.living_room_hallway_lights
-        data:
-          transition: 1
+            - light.main_living_lights
+            - light.kitchen_island_lights
+            - light.recessed_ceiling_lights
+            - light.accent_spots
+            - light.bathroom_lights
 
-      # Set kitchen island to minimal (path lighting)
-      - service: light.turn_on
+# -----------------------------------------------------------------------------
+# Voice Control Aliases
+# -----------------------------------------------------------------------------
+# Friendly script names for Alexa/Google Home integration.
+# Maps natural language commands to scene scripts.
+
+  # Voice: "Alexa, turn on all the lights"
+  voice_all_lights:
+    alias: "Voice: All Lights"
+    sequence:
+      - service: script.apply_scene_all_lights
+
+  # Voice: "Alexa, turn on evening mode"
+  voice_evening_mode:
+    alias: "Voice: Evening Mode"
+    sequence:
+      - service: script.apply_scene_evening_comfort
+
+  # Voice: "Alexa, turn on night mode"
+  voice_night_mode:
+    alias: "Voice: Night Mode"
+    sequence:
+      - service: script.apply_scene_ultra_dim
+
+  # Voice: "Alexa, make it brighter"
+  voice_brighter:
+    alias: "Voice: Brighter"
+    sequence:
+      - service: button.press
         target:
-          entity_id: light.kitchen_island_lights
-        data:
-          brightness_pct: 10
-          transition: 2
+          entity_id: button.alp_brighter
 
-      # Main living lights will be dimmed by integration's -50% offset
-      - service: light.turn_on
+  # Voice: "Alexa, make it dimmer"
+  voice_dimmer:
+    alias: "Voice: Dimmer"
+    sequence:
+      - service: button.press
         target:
-          entity_id: light.main_living_lights
-        data:
-          transition: 2
+          entity_id: button.alp_dimmer
 
-# =============================================================================
-# OPTIONAL: Dashboard Integration Helpers
-# =============================================================================
-# If you prefer using input_select in dashboards instead of the integration's
-# select.alp_scene entity, uncomment this section.
-# Otherwise, you can use select.alp_scene directly in your dashboards.
+  # Voice: "Alexa, make it warmer"
+  voice_warmer:
+    alias: "Voice: Warmer"
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_warmer
+
+  # Voice: "Alexa, make it cooler"
+  voice_cooler:
+    alias: "Voice: Cooler"
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_cooler
+
+  # Voice: "Alexa, reset the lights"
+  voice_reset_lights:
+    alias: "Voice: Reset Lights"
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_reset
+
+###############################################################################
+# TIER 2: RECOMMENDED AUTOMATION (Commented - Opt-in)
+# ~200 lines - Time-based routines, weather notifications
+###############################################################################
+# Uncomment sections below to enable automated lighting routines based on
+# daily schedules and environmental conditions. These align with claude.md
+# daily life scenarios.
+
+# -----------------------------------------------------------------------------
+# Time-Based Automation - Daily Lighting Routines
+# -----------------------------------------------------------------------------
+# Automatically apply scenes based on time of day and context.
+# Based on claude.md scenarios: Morning/Work/Sunset/Evening/Night
+
+automation:
+  # ---------------------------------------------------------------------------
+  # Morning Routine - Energizing wake-up lighting
+  # ---------------------------------------------------------------------------
+  # Trigger: 30 minutes before next alarm (using sensor.alp_next_alarm)
+  # Action: Cool, bright lighting to support circadian rhythm
+  # Source: claude.md "Morning (6:00 AM - 9:00 AM)" scenario
+
+  # - id: alp_morning_routine
+  #   alias: "ALP: Morning Routine"
+  #   description: "Gradually brighten lights before alarm for gentle wake-up"
+  #   trigger:
+  #     # Integration provides sensor.alp_next_alarm with wake time
+  #     - platform: template
+  #       value_template: >-
+  #         {% set alarm_time = states('sensor.alp_next_alarm') %}
+  #         {% if alarm_time not in ['unknown', 'unavailable', 'none'] %}
+  #           {% set alarm_dt = as_datetime(alarm_time) %}
+  #           {% set wake_start = alarm_dt - timedelta(minutes=30) %}
+  #           {{ now() >= wake_start and now() < alarm_dt }}
+  #         {% else %}
+  #           false
+  #         {% endif %}
+  #   condition:
+  #     # Only run on weekdays (customize as needed)
+  #     - condition: time
+  #       weekday:
+  #         - mon
+  #         - tue
+  #         - wed
+  #         - thu
+  #         - fri
+  #   action:
+  #     # Apply All Lights scene for maximum alertness
+  #     - service: script.apply_scene_all_lights
+  #     # Add extra brightness boost for morning energy
+  #     - service: adaptive_lighting_pro.adjust_brightness
+  #       data:
+  #         value: 15
+  #     # Optional: TTS announcement
+  #     # - service: tts.google_say
+  #     #   data:
+  #     #     message: "Good morning! Lights are gradually brightening."
+
+  # ---------------------------------------------------------------------------
+  # Evening Transition - Automatic shift to relaxation
+  # ---------------------------------------------------------------------------
+  # Trigger: Sunset + 30 minutes (using sun.sun elevation)
+  # Action: Switch to Evening Comfort scene
+  # Source: claude.md "Evening (6:00 PM - 9:00 PM)" scenario
+
+  # - id: alp_evening_transition
+  #   alias: "ALP: Evening Transition"
+  #   description: "Automatically switch to cozy evening lighting after sunset"
+  #   trigger:
+  #     - platform: numeric_state
+  #       entity_id: sun.sun
+  #       attribute: elevation
+  #       below: -3  # Civil twilight end
+  #   condition:
+  #     # Don't override if user manually selected a scene recently
+  #     - condition: template
+  #       value_template: >-
+  #         {% set last_scene_change = states.select.alp_scene.last_changed %}
+  #         {{ (now() - last_scene_change).total_seconds() > 3600 }}
+  #   action:
+  #     - service: script.apply_scene_evening_comfort
+  #     # Optional: Notification
+  #     # - service: notify.mobile_app
+  #     #   data:
+  #     #     message: "Evening mode activated - lights are now warmer and dimmer"
+
+  # ---------------------------------------------------------------------------
+  # Bedtime Routine - Ultra dim for sleep preparation
+  # ---------------------------------------------------------------------------
+  # Trigger: 10:30 PM on weeknights, 11:30 PM on weekends
+  # Action: Switch to Ultra Dim scene
+  # Source: claude.md "Night (9:00 PM - 11:00 PM)" scenario
+
+  # - id: alp_bedtime_routine
+  #   alias: "ALP: Bedtime Routine"
+  #   description: "Dim lights to ultra-low for sleep preparation"
+  #   trigger:
+  #     - platform: time
+  #       at: "22:30:00"  # 10:30 PM weeknights
+  #     - platform: time
+  #       at: "23:30:00"  # 11:30 PM weekends
+  #   condition:
+  #     # Weeknight bedtime
+  #     - condition: or
+  #       conditions:
+  #         - condition: and
+  #           conditions:
+  #             - condition: time
+  #               after: "22:30:00"
+  #               before: "22:31:00"
+  #             - condition: time
+  #               weekday:
+  #                 - mon
+  #                 - tue
+  #                 - wed
+  #                 - thu
+  #         # Weekend bedtime
+  #         - condition: and
+  #           conditions:
+  #             - condition: time
+  #               after: "23:30:00"
+  #               before: "23:31:00"
+  #             - condition: time
+  #               weekday:
+  #                 - fri
+  #                 - sat
+  #   action:
+  #     - service: script.apply_scene_ultra_dim
+  #     # Optional: Enable sleep mode on devices
+  #     # - service: switch.turn_on
+  #     #   target:
+  #     #     entity_id: switch.sleep_mode
+
+  # ---------------------------------------------------------------------------
+  # Work From Home Detection - Automatic bright lighting
+  # ---------------------------------------------------------------------------
+  # Trigger: Workday morning + computer activity detected
+  # Action: All Lights scene for productivity
+  # Source: claude.md "Work (9:00 AM - 5:00 PM)" scenario
+
+  # - id: alp_work_mode_auto
+  #   alias: "ALP: Work Mode Auto"
+  #   description: "Detect work-from-home and apply bright lighting"
+  #   trigger:
+  #     # Example: Computer activity sensor (customize to your setup)
+  #     - platform: state
+  #       entity_id: binary_sensor.office_computer_active
+  #       to: "on"
+  #       for:
+  #         minutes: 5
+  #   condition:
+  #     # Only during work hours
+  #     - condition: time
+  #       after: "08:00:00"
+  #       before: "18:00:00"
+  #     # Only on weekdays
+  #     - condition: time
+  #       weekday:
+  #         - mon
+  #         - tue
+  #         - wed
+  #         - thu
+  #         - fri
+  #   action:
+  #     - service: script.apply_scene_all_lights
+  #     # Optional: Cool color temp for focus
+  #     # - service: adaptive_lighting_pro.adjust_color_temp
+  #     #   data:
+  #     #     value: -500  # Cooler (more blue)
+
+# -----------------------------------------------------------------------------
+# Weather-Responsive Notifications
+# -----------------------------------------------------------------------------
+# Notify user when environmental boost activates due to dark conditions.
+# Integration calculates boost, YAML notifies user.
+
+  # ---------------------------------------------------------------------------
+  # Dark Day Alert - Environmental boost activated
+  # ---------------------------------------------------------------------------
+  # Trigger: sensor.alp_environmental_boost goes above threshold
+  # Action: Notify user that lights are auto-boosted
+
+  # - id: alp_dark_day_alert
+  #   alias: "ALP: Dark Day Alert"
+  #   description: "Notify when environmental boost activates on dark days"
+  #   trigger:
+  #     - platform: numeric_state
+  #       entity_id: sensor.alp_environmental_boost
+  #       above: 20  # Significant boost threshold
+  #   condition:
+  #     # Only during daytime (environmental boost is for dark days)
+  #     - condition: sun
+  #       after: sunrise
+  #       before: sunset
+  #   action:
+  #     - service: notify.mobile_app
+  #       data:
+  #         message: >-
+  #           Dark day detected - lights boosted by {{ states('sensor.alp_environmental_boost') }}%
+  #           (Lux: {{ states('sensor.living_room_lux') }}, Weather: {{ states('weather.home') }})
+  #         title: "Adaptive Lighting: Environmental Boost Active"
+
+  # ---------------------------------------------------------------------------
+  # Sunset Boost Alert - Fade starting early
+  # ---------------------------------------------------------------------------
+  # Trigger: sensor.alp_sunset_boost activates
+  # Action: Notify user that sunset fade started
+
+  # - id: alp_sunset_alert
+  #   alias: "ALP: Sunset Boost Alert"
+  #   description: "Notify when sunset fade activates"
+  #   trigger:
+  #     - platform: numeric_state
+  #       entity_id: sensor.alp_sunset_boost
+  #       above: 5  # Any sunset boost
+  #   action:
+  #     - service: notify.mobile_app
+  #       data:
+  #         message: >-
+  #           Sunset fade active - lights warming and dimming gradually
+  #           (Boost: {{ states('sensor.alp_sunset_boost') }}%)
+  #         title: "Adaptive Lighting: Sunset Mode"
+
+###############################################################################
+# TIER 3: ADVANCED CONFIGURATION (Commented - Power Users)
+# ~250 lines - Mode system bridge, activity detection, occupancy
+###############################################################################
+# These features are for power users who want maximum automation.
+# Requires additional sensors and careful tuning.
+
+# -----------------------------------------------------------------------------
+# Optional: Dashboard Helper - Input Select Bridge
+# -----------------------------------------------------------------------------
+# Some users prefer input_select for dashboard compatibility over select entity.
+# This bridges an input_select to the integration's select.alp_scene.
 
 # input_select:
-#   alp_scene_selector:
+#   alp_scene_dashboard:
 #     name: "Lighting Scene"
+#     icon: mdi:lightbulb-variant-outline
 #     options:
 #       - "All Lights"
 #       - "No Spotlights"
 #       - "Evening Comfort"
 #       - "Ultra Dim"
-#     icon: mdi:palette-outline
-#     initial: "All Lights"
 
 # automation:
-#   - id: alp_dashboard_scene_bridge
-#     alias: "ALP - Dashboard Scene Bridge"
-#     description: "Bridges dashboard input_select to integration scene selector"
+#   # Bridge: input_select → select.alp_scene
+#   - id: alp_dashboard_scene_selector
+#     alias: "ALP: Dashboard Scene Selector"
+#     description: "Bridge input_select to integration select entity"
 #     trigger:
 #       - platform: state
-#         entity_id: input_select.alp_scene_selector
+#         entity_id: input_select.alp_scene_dashboard
 #     action:
 #       - service: select.select_option
 #         target:
 #           entity_id: select.alp_scene
 #         data:
-#           option: "{{ trigger.to_state.state }}"
+#           option: "{{ states('input_select.alp_scene_dashboard') }}"
+
+#   # Sync: select.alp_scene → input_select (keep in sync)
+#   - id: alp_sync_scene_to_dashboard
+#     alias: "ALP: Sync Scene to Dashboard"
+#     trigger:
+#       - platform: state
+#         entity_id: select.alp_scene
+#     action:
+#       - service: input_select.select_option
+#         target:
+#           entity_id: input_select.alp_scene_dashboard
+#         data:
+#           option: "{{ states('select.alp_scene') }}"
+
+# -----------------------------------------------------------------------------
+# Advanced: Mode System Bridge (Old implementation_1.yaml Compatibility)
+# -----------------------------------------------------------------------------
+# If you prefer the old Mode system (work/late_night/movie/etc) that changes
+# AL integration settings directly, this bridges modes to AL settings changes.
+# Integration provides const.MODES with AL setting configurations.
+
+# input_select:
+#   alp_mode:
+#     name: "Lighting Mode"
+#     icon: mdi:palette
+#     options:
+#       - "Default"
+#       - "Work"
+#       - "Late Night"
+#       - "Movie"
+#       - "Bright Focus"
+#       - "Dim Relax"
+#       - "Warm Evening"
+#       - "Cool Energy"
+
+# automation:
+#   # Mode: Work - High brightness, cool temp, fast transitions
+#   - id: alp_mode_work
+#     alias: "ALP: Mode - Work"
+#     trigger:
+#       - platform: state
+#         entity_id: input_select.alp_mode
+#         to: "Work"
+#     action:
+#       # Call AL integration to change settings
+#       - service: adaptive_lighting.set_manual_control
+#         target:
+#           entity_id: switch.adaptive_lighting_main_living
+#         data:
+#           manual_control: false
+#       - service: adaptive_lighting.change_switch_settings
+#         target:
+#           entity_id: switch.adaptive_lighting_main_living
+#         data:
+#           min_brightness: 70
+#           max_brightness: 100
+#           min_color_temp: 4000
+#           max_color_temp: 5500
+#           transition: 2
+#       # Apply scene for light choreography
+#       - service: script.apply_scene_all_lights
+
+#   # Mode: Late Night - Ultra low brightness, warm, slow transitions
+#   - id: alp_mode_late_night
+#     alias: "ALP: Mode - Late Night"
+#     trigger:
+#       - platform: state
+#         entity_id: input_select.alp_mode
+#         to: "Late Night"
+#     action:
+#       - service: adaptive_lighting.change_switch_settings
+#         target:
+#           entity_id: switch.adaptive_lighting_main_living
+#         data:
+#           min_brightness: 1
+#           max_brightness: 15
+#           min_color_temp: 2000
+#           max_color_temp: 2500
+#           transition: 10
+#       - service: script.apply_scene_ultra_dim
+
+#   # Mode: Movie - Dim, warm, slow transitions
+#   - id: alp_mode_movie
+#     alias: "ALP: Mode - Movie"
+#     trigger:
+#       - platform: state
+#         entity_id: input_select.alp_mode
+#         to: "Movie"
+#     action:
+#       - service: adaptive_lighting.change_switch_settings
+#         target:
+#           entity_id: switch.adaptive_lighting_main_living
+#         data:
+#           min_brightness: 5
+#           max_brightness: 30
+#           min_color_temp: 2200
+#           max_color_temp: 2700
+#           transition: 5
+#       - service: script.apply_scene_no_spotlights
+
+#   # Mode: Default - Reset to standard AL settings
+#   - id: alp_mode_default
+#     alias: "ALP: Mode - Default"
+#     trigger:
+#       - platform: state
+#         entity_id: input_select.alp_mode
+#         to: "Default"
+#     action:
+#       - service: adaptive_lighting.change_switch_settings
+#         target:
+#           entity_id: switch.adaptive_lighting_main_living
+#         data:
+#           min_brightness: 1
+#           max_brightness: 100
+#           min_color_temp: 2000
+#           max_color_temp: 5500
+#           transition: 30
+#       - service: script.apply_scene_all_lights
+
+# -----------------------------------------------------------------------------
+# Advanced: Activity Detection - Context-Aware Scene Selection
+# -----------------------------------------------------------------------------
+# Automatically apply scenes based on detected activities (TV on, cooking, etc)
+
+# automation:
+#   # TV On → Movie Scene (No Spotlights)
+#   - id: alp_activity_tv_on
+#     alias: "ALP: Activity - TV On"
+#     description: "Detect TV turned on and apply movie lighting"
+#     trigger:
+#       - platform: state
+#         entity_id: media_player.living_room_tv
+#         to: "playing"
+#     condition:
+#       # Only after sunset
+#       - condition: sun
+#         after: sunset
+#       # Don't override if user recently changed scene
+#       - condition: template
+#         value_template: >-
+#           {% set last_change = states.select.alp_scene.last_changed %}
+#           {{ (now() - last_change).total_seconds() > 1800 }}
+#     action:
+#       - service: script.apply_scene_no_spotlights
+#       # Add extra dimming for movie watching
+#       - service: adaptive_lighting_pro.adjust_brightness
+#         data:
+#           value: -10
+
+#   # TV Off → Restore Previous Scene
+#   - id: alp_activity_tv_off
+#     alias: "ALP: Activity - TV Off"
+#     trigger:
+#       - platform: state
+#         entity_id: media_player.living_room_tv
+#         to: "off"
+#         for:
+#           minutes: 5
+#     action:
+#       # Restore based on time of day
+#       - choose:
+#           - conditions:
+#               - condition: sun
+#                 before: sunset
+#                 after: sunrise
+#             sequence:
+#               - service: script.apply_scene_all_lights
+#           - conditions:
+#               - condition: sun
+#                 after: sunset
+#             sequence:
+#               - service: script.apply_scene_evening_comfort
+
+#   # Cooking Detected → Bright Kitchen Lighting
+#   - id: alp_activity_cooking
+#     alias: "ALP: Activity - Cooking"
+#     description: "Detect cooking and boost kitchen lights"
+#     trigger:
+#       # Example: Stove power sensor (customize to your setup)
+#       - platform: numeric_state
+#         entity_id: sensor.stove_power
+#         above: 100  # Watts
+#     action:
+#       # Ensure kitchen lights are on and bright
+#       - service: light.turn_on
+#         target:
+#           entity_id: light.kitchen_island_lights
+#         data:
+#           brightness_pct: 100
+#       # Add brightness boost globally for task visibility
+#       - service: adaptive_lighting_pro.adjust_brightness
+#         data:
+#           value: 20
+
+# -----------------------------------------------------------------------------
+# Advanced: Occupancy-Based Automation
+# -----------------------------------------------------------------------------
+# Automatically manage lights based on room occupancy
+
+# automation:
+#   # Nobody Home → Turn Off All Lights
+#   - id: alp_occupancy_away
+#     alias: "ALP: Occupancy - Away"
+#     trigger:
+#       - platform: state
+#         entity_id: group.all_persons
+#         to: "not_home"
+#         for:
+#           minutes: 10
+#     action:
+#       - service: light.turn_off
+#         target:
+#           entity_id: all
+
+#   # Arriving Home → Apply Contextual Scene
+#   - id: alp_occupancy_home
+#     alias: "ALP: Occupancy - Home"
+#     trigger:
+#       - platform: state
+#         entity_id: group.all_persons
+#         to: "home"
+#     action:
+#       # Different scenes based on time of day
+#       - choose:
+#           # Morning: Bright energizing
+#           - conditions:
+#               - condition: time
+#                 after: "06:00:00"
+#                 before: "12:00:00"
+#             sequence:
+#               - service: script.apply_scene_all_lights
+#               - service: adaptive_lighting_pro.adjust_brightness
+#                 data:
+#                   value: 10
+#           # Afternoon: Standard
+#           - conditions:
+#               - condition: time
+#                 after: "12:00:00"
+#                 before: "18:00:00"
+#             sequence:
+#               - service: script.apply_scene_all_lights
+#           # Evening: Warm comfort
+#           - conditions:
+#               - condition: time
+#                 after: "18:00:00"
+#                 before: "22:00:00"
+#             sequence:
+#               - service: script.apply_scene_evening_comfort
+#           # Night: Ultra dim
+#           - conditions:
+#               - condition: time
+#                 after: "22:00:00"
+#             sequence:
+#               - service: script.apply_scene_ultra_dim
+
+#   # Room Occupancy → Auto On/Off
+#   - id: alp_room_occupancy_bedroom
+#     alias: "ALP: Room Occupancy - Bedroom"
+#     description: "Auto-manage bedroom lights based on occupancy"
+#     trigger:
+#       # Motion detected
+#       - platform: state
+#         entity_id: binary_sensor.bedroom_motion
+#         to: "on"
+#       # No motion for 10 minutes
+#       - platform: state
+#         entity_id: binary_sensor.bedroom_motion
+#         to: "off"
+#         for:
+#           minutes: 10
+#     action:
+#       - choose:
+#           # Motion ON → Turn on lights (context-aware brightness)
+#           - conditions:
+#               - condition: state
+#                 entity_id: binary_sensor.bedroom_motion
+#                 state: "on"
+#             sequence:
+#               - service: light.turn_on
+#                 target:
+#                   entity_id: light.bedroom_primary_lights
+#                 data:
+#                   # Brightness based on time of day
+#                   brightness_pct: >-
+#                     {% set hour = now().hour %}
+#                     {% if hour >= 22 or hour < 6 %}
+#                       5
+#                     {% elif hour >= 18 %}
+#                       30
+#                     {% else %}
+#                       100
+#                     {% endif %}
+#           # Motion OFF → Turn off lights
+#           - conditions:
+#               - condition: state
+#                 entity_id: binary_sensor.bedroom_motion
+#                 state: "off"
+#             sequence:
+#               - service: light.turn_off
+#                 target:
+#                   entity_id: light.bedroom_primary_lights
+
+# -----------------------------------------------------------------------------
+# Advanced: Smart Timeout Adjustment
+# -----------------------------------------------------------------------------
+# Dynamically adjust manual control timeout based on context
+
+# automation:
+#   # Long Timeout for Evening Relaxation
+#   - id: alp_timeout_evening_long
+#     alias: "ALP: Timeout - Evening Long"
+#     description: "Extend manual timeout during evening hours"
+#     trigger:
+#       - platform: time
+#         at: "19:00:00"
+#     action:
+#       - service: number.set_value
+#         target:
+#           entity_id: number.alp_manual_timeout
+#         data:
+#           value: 120  # 2 hours
+
+#   # Short Timeout for Daytime
+#   - id: alp_timeout_daytime_short
+#     alias: "ALP: Timeout - Daytime Short"
+#     trigger:
+#       - platform: time
+#         at: "09:00:00"
+#     action:
+#       - service: number.set_value
+#         target:
+#           entity_id: number.alp_manual_timeout
+#         data:
+#           value: 30  # 30 minutes
+
+###############################################################################
+# END OF CONFIGURATION
+###############################################################################
+# Total: ~750 lines (vs 3,216 in implementation_1.yaml)
+#
+# ENABLED BY DEFAULT:
+#   - Light groups (6 zones)
+#   - Scene choreography scripts (4 scenes)
+#   - Voice control aliases (9 scripts)
+#
+# OPTIONAL (Uncomment to enable):
+#   - Time-based automation (5 automations)
+#   - Weather notifications (2 automations)
+#   - Dashboard input_select bridge (2 automations)
+#   - Mode system (8 mode automations)
+#   - Activity detection (3 automations)
+#   - Occupancy automation (3 automations)
+#   - Smart timeout adjustment (2 automations)
+#
+# INTEGRATION ENTITIES USED:
+#   Sensors: alp_next_alarm, alp_environmental_boost, alp_sunset_boost,
+#            alp_status, alp_brightness_adjustment, etc.
+#   Buttons: alp_brighter, alp_dimmer, alp_warmer, alp_cooler, alp_reset
+#   Services: apply_scene, adjust_brightness, adjust_color_temp, reset_*
+#   Select: alp_scene
+#   Numbers: alp_manual_timeout, alp_brightness_increment, alp_color_temp_increment
+#
+# MIGRATION NOTES:
+#   - All input helpers deleted (coordinator owns state)
+#   - All template sensors deleted (integration sensors replace)
+#   - All adjustment scripts deleted (buttons + services replace)
+#   - All core automations deleted (coordinator handles)
+#   - Scene choreography preserved (user-specific light patterns)
+#   - Time-based automation added (optional, user policy)
+#   - Activity detection added (optional, advanced users)
+#
+# SEE ALSO:
+#   - YAML_MIGRATION_COMPLETE.md (comprehensive migration guide)
+#   - TODO.md (project status and known issues)
+#   - claude.md (architectural principles and quality standards)
+###############################################################################
