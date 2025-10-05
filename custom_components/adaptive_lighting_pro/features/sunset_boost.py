@@ -60,40 +60,42 @@ class SunsetBoostCalculator:
         self._enabled = enabled
         _LOGGER.info("Sunset boost calculator configured: enabled=%s", enabled)
 
-    def calculate_boost(self, current_lux: float | None = None) -> int:
-        """Calculate brightness boost for dark days during sunset with detailed breakdown.
+    def calculate_boost(self, current_lux: float | None = None) -> tuple[int, int]:
+        """Calculate brightness AND warmth boost for dark days during sunset.
 
         Logic (CORRECTED from original YAML):
         - Active only when -4° <= elevation <= 4° (sunset window)
         - ONLY applies on dark/cloudy days (lux < 3000)
-        - Returns POSITIVE offset (0 to +25%) to boost brightness
-        - Formula: boost = ((4 - elevation) / 8 * 25)
+        - Returns POSITIVE brightness offset (0 to +25%) AND warmth offset (0 to -500K)
+        - Brightness formula: boost = ((4 - elevation) / 8 * 25)
+        - Warmth formula: warmth = -((4 - elevation) / 8 * 500) [negative = warmer]
 
         Why this is needed:
         - Dark cloudy day already has environmental boost active
-        - But at sunset, it gets EVEN DARKER rapidly
-        - Need extra boost to compensate for combined effect
+        - But at sunset, it gets EVEN DARKER rapidly AND needs golden warmth
+        - Need extra brightness boost + warmth shift for sunset ambiance
 
         Args:
             current_lux: Current outdoor lux reading (REQUIRED)
 
         Returns:
-            BoostResult (int subclass) with breakdown accessible via unpacking
+            Tuple of (brightness_boost_pct, warmth_offset_kelvin)
 
         Examples:
             >>> # Clear day (lux=8000), sun at 0° (sunset)
-            >>> boost = calculator.calculate_boost(current_lux=8000)
-            >>> boost
-            0
+            >>> brightness, warmth = calculator.calculate_boost(current_lux=8000)
+            >>> (brightness, warmth)
+            (0, 0)
 
             >>> # Cloudy/stormy day (lux=500), sun at 0° (sunset)
-            >>> boost = calculator.calculate_boost(current_lux=500)
-            >>> boost
-            12
+            >>> brightness, warmth = calculator.calculate_boost(current_lux=500)
+            >>> (brightness, warmth)
+            (12, -250)  # 12% brighter, 250K warmer
         """
         # Build initial breakdown
         breakdown = {
             "boost_pct": 0,
+            "warmth_offset_k": 0,
             "lux_value": int(current_lux) if current_lux else 0,
             "sun_elevation": 0.0,
             "in_sunset_window": False,
@@ -104,7 +106,7 @@ class SunsetBoostCalculator:
         if not self.is_available():
             breakdown["reason_skipped"] = "disabled"
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
         # CRITICAL: Only apply on dark/cloudy days
         # Clear days don't need sunset boost - AL handles them fine
@@ -116,21 +118,21 @@ class SunsetBoostCalculator:
                 current_lux if current_lux else 0,
             )
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
         sun_state = self.hass.states.get("sun.sun")
         if not sun_state:
             breakdown["reason_skipped"] = "sun_unavailable"
             _LOGGER.warning("sun.sun entity not found")
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
         elevation = sun_state.attributes.get("elevation")
         if elevation is None:
             breakdown["reason_skipped"] = "elevation_unavailable"
             _LOGGER.warning("Sun elevation not available")
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
         try:
             elevation = float(elevation)
@@ -139,7 +141,7 @@ class SunsetBoostCalculator:
             breakdown["reason_skipped"] = "invalid_elevation"
             _LOGGER.warning("Invalid sun elevation: %s", elevation)
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
         # Only active in sunset window (-4° to 4°)
         in_window = -4 <= elevation <= 4
@@ -148,26 +150,31 @@ class SunsetBoostCalculator:
         if not in_window:
             breakdown["reason_skipped"] = "outside_window"
             self._last_breakdown = breakdown
-            return BoostResult(0, breakdown)
+            return (0, 0)
 
-        # Calculate boost - LINEAR SCALE
+        # Calculate brightness boost - LINEAR SCALE
         # elevation 4° = 0%, elevation 0° = +12.5%, elevation -4° = +25%
-        # CORRECTED: Positive offset (boost) instead of negative (dim)
-        boost = int(((4 - elevation) / 8 * 25))
+        brightness_boost = int(((4 - elevation) / 8 * 25))
 
-        breakdown["boost_pct"] = boost
-        breakdown["active"] = boost > 0
+        # Calculate warmth offset - LINEAR SCALE (negative = warmer)
+        # elevation 4° = 0K, elevation 0° = -250K, elevation -4° = -500K
+        warmth_offset = -int(((4 - elevation) / 8 * 500))
 
-        if boost > 0:
+        breakdown["boost_pct"] = brightness_boost
+        breakdown["warmth_offset_k"] = warmth_offset
+        breakdown["active"] = brightness_boost > 0
+
+        if brightness_boost > 0:
             _LOGGER.info(
-                "Sunset boost: +%d%% (dark day during sunset - sun=%.1f°, lux=%.0f)",
-                boost,
+                "Sunset boost: +%d%% brightness, %+dK warmth (dark day during sunset - sun=%.1f°, lux=%.0f)",
+                brightness_boost,
+                warmth_offset,
                 elevation,
                 current_lux,
             )
 
         self._last_breakdown = breakdown
-        return BoostResult(boost, breakdown)
+        return (brightness_boost, warmth_offset)
 
     def get_breakdown(self) -> dict[str, Any]:
         """Get detailed breakdown of last boost calculation.

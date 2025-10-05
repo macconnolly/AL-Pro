@@ -154,7 +154,7 @@ class TestSceneBehavior:
                 coordinator._env_adapter, "calculate_boost", return_value=0
             ):
                 with patch.object(
-                    coordinator._sunset_boost, "calculate_boost", return_value=0
+                    coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
                 ):
                     with patch.object(
                         coordinator._wake_sequence, "calculate_boost", return_value=0
@@ -215,7 +215,7 @@ class TestSceneBehavior:
                 coordinator._env_adapter, "calculate_boost", return_value=0
             ):
                 with patch.object(
-                    coordinator._sunset_boost, "calculate_boost", return_value=0
+                    coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
                 ):
                     with patch.object(
                         coordinator._wake_sequence, "calculate_boost", return_value=0
@@ -276,7 +276,7 @@ class TestSceneBehavior:
                 coordinator._env_adapter, "calculate_boost", return_value=0
             ):
                 with patch.object(
-                    coordinator._sunset_boost, "calculate_boost", return_value=0
+                    coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
                 ):
                     with patch.object(
                         coordinator._wake_sequence, "calculate_boost", return_value=0

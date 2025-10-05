@@ -88,15 +88,16 @@ class TestCombinedBoostsRealWorld:
             mock_dt.now.return_value = datetime(2025, 1, 15, 17, 30, 0, tzinfo=UTC)
             env_boost = env_adapter.calculate_boost()
         
-        sunset_boost = sunset_calc.calculate_boost(600)
-        
-        combined = env_boost + sunset_boost
-        
+        sunset_brightness, sunset_warmth = sunset_calc.calculate_boost(600)
+
+        combined = env_boost + sunset_brightness
+
         # Document what actually happens
         assert env_boost == 25, f"Environmental boost should be clamped at 25%, got {env_boost}%"
-        assert sunset_boost == 12, f"Sunset boost should be 12%, got {sunset_boost}%"
+        assert sunset_brightness == 12, f"Sunset boost should be 12%, got {sunset_brightness}%"
+        assert sunset_warmth == -250, f"Sunset warmth should be -250K, got {sunset_warmth}K"
         assert combined == 37, (
-            f"Combined boost is {combined}% (env {env_boost}% + sunset {sunset_boost}%). "
+            f"Combined boost is {combined}% (env {env_boost}% + sunset {sunset_brightness}%). "
             f"THIS IS THE REAL VALUE that will be applied. "
             f"Zones must have at least 40% range to avoid collapse in this scenario. "
             f"This is ACCEPTABLE - extreme conditions require extreme compensation."
@@ -146,11 +147,11 @@ class TestCombinedBoostsRealWorld:
             mock_dt.now.return_value = datetime(2025, 1, 15, 17, 30, 0, tzinfo=UTC)
             env_boost = env_adapter.calculate_boost()
         
-        sunset_boost = sunset_calc.calculate_boost(600)
+        sunset_brightness, sunset_warmth = sunset_calc.calculate_boost(600)
         manual_adjustment = 5  # User pressed "brighter"
-        
-        total = env_boost + sunset_boost + manual_adjustment
-        
+
+        total = env_boost + sunset_brightness + manual_adjustment
+
         assert total == 42, (
             f"Total with manual is {total}%. "
             f"This is extreme but ACCEPTABLE - user explicitly requested MORE. "
@@ -194,10 +195,10 @@ class TestCombinedBoostsRealWorld:
             mock_dt.now.return_value = datetime(2025, 7, 15, 18, 0, 0, tzinfo=UTC)
             env_boost = env_adapter.calculate_boost()
         
-        sunset_boost = sunset_calc.calculate_boost(5000)
-        
-        combined = env_boost + sunset_boost
-        
+        sunset_brightness, sunset_warmth = sunset_calc.calculate_boost(5000)
+
+        combined = env_boost + sunset_brightness
+
         assert combined == 0, (
             f"Clear day at sunset should produce 0% combined boost, got {combined}%. "
             f"System must not compensate when conditions are already good."
@@ -242,17 +243,17 @@ class TestCombinedBoostsRealWorld:
             mock_dt.now.return_value = datetime(2025, 1, 15, 6, 30, 0, tzinfo=UTC)
             env_boost = env_adapter.calculate_boost()
         
-        sunset_boost = sunset_calc.calculate_boost(100)
-        
+        sunset_brightness, sunset_warmth = sunset_calc.calculate_boost(100)
+
         # BUG EXPOSED: Sunset boost probably triggers at dawn too!
         # This might be acceptable (extra help during sunrise) or a bug
         # Document the behavior
-        if sunset_boost > 0:
+        if sunset_brightness > 0:
             pytest.skip(
-                f"DESIGN DECISION NEEDED: Sunset boost triggers at dawn (elevation 0°, boost {sunset_boost}%). "
+                f"DESIGN DECISION NEEDED: Sunset boost triggers at dawn (elevation 0°, boost {sunset_brightness}%). "
                 f"Should we check sun.sun 'rising' attribute to skip dawn? "
                 f"Or is this acceptable (helps with dark mornings)?"
             )
         else:
             # If it doesn't trigger, that's good
-            assert sunset_boost == 0
+            assert sunset_brightness == 0

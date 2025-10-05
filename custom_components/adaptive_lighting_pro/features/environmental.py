@@ -316,23 +316,42 @@ class EnvironmentalAdapter:
             return 0
 
     def _calculate_time_multiplier(self) -> float:
-        """Calculate time-of-day multiplier.
+        """Calculate time-of-day multiplier using sun elevation.
 
-        From YAML:1550-1555:
-        - Night (10PM-6AM): 0.0 (disable boost entirely)
-        - Dawn (6-8AM) or Dusk (6PM-10PM): 0.7x
-        - Day (8AM-6PM): 1.0x
+        Uses sun position instead of clock time to handle seasonal variations:
+        - Night (sun < -6°): 0.0 (civil twilight, disable boost)
+        - Twilight (-6° to 0°): 0.7x (dawn/dusk transition)
+        - Day (sun > 0°): 1.0x (full boost)
+
+        Fallback to clock time if sun.sun unavailable.
 
         Returns:
             Time multiplier (0.0, 0.7, or 1.0)
         """
+        # Try sun elevation first (more accurate across seasons)
+        sun_state = self.hass.states.get("sun.sun")
+        if sun_state:
+            elevation = sun_state.attributes.get("elevation")
+            if elevation is not None:
+                try:
+                    elevation = float(elevation)
+                    if elevation < -6:
+                        return 0.0  # Night (civil twilight)
+                    elif -6 <= elevation < 0:
+                        return 0.7  # Dawn/dusk
+                    else:
+                        return 1.0  # Day
+                except (ValueError, TypeError):
+                    pass
+
+        # Fallback to clock time if sun unavailable
         hour = datetime.now().hour
 
-        # From YAML:1550-1552 - Night: zero boost
+        # Night: zero boost
         if 22 <= hour or hour <= 6:
             return 0.0
 
-        # From YAML:1553-1554 - Dawn/Dusk: 70% multiplier
+        # Dawn/Dusk: 70% multiplier
         elif (6 < hour <= 8) or (18 <= hour < 22):
             return 0.7
 

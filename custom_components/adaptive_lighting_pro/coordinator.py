@@ -250,7 +250,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Note: calculate_boost() returns BoostResult (int subclass), usable directly as int
             env_boost = self._env_adapter.calculate_boost()
             lux = self._get_current_lux()
-            sunset_boost = self._sunset_boost.calculate_boost(lux)
+            sunset_brightness, sunset_warmth = self._sunset_boost.calculate_boost(lux)
 
             # Initialize state structure
             state: dict[str, Any] = {
@@ -271,8 +271,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "environmental": {
                     "boost_active": env_boost > 0,
                     "current_boost_pct": env_boost,
-                    "sunset_boost_active": sunset_boost > 0,
-                    "sunset_boost_offset": sunset_boost,
+                    "sunset_boost_active": sunset_brightness > 0,
+                    "sunset_boost_offset": sunset_brightness,
                     "current_lux": lux,
                     # Phase 1.8: Store last calculated boosts
                     "last_env_boost": self._last_env_boost,
@@ -346,9 +346,20 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "computed_brightness_range": self._computed_boundaries.get(zone_id, {}) if hasattr(self, '_computed_boundaries') else {},
                 }
 
-                # Step 4: Apply asymmetric boundary adjustments if NOT in manual control
-                if not self.zone_manager.is_manual_control_active(zone_id):
+                # Step 4: Apply asymmetric boundary adjustments
+                # Wake sequence OVERRIDES manual control during its active window
+                wake_in_progress = (
+                    zone_config.get("wake_sequence_enabled", True)
+                    and self._wake_sequence.calculate_boost(zone_id) > 0
+                )
+
+                if wake_in_progress or not self.zone_manager.is_manual_control_active(zone_id):
                     await self._apply_adjustments_to_zone(zone_id, zone_config)
+                    if wake_in_progress:
+                        _LOGGER.debug(
+                            "Applying adjustments to zone %s (wake sequence active, overriding manual control)",
+                            zone_id,
+                        )
                 else:
                     _LOGGER.debug(
                         "Skipping adjustment for zone %s (manual control active)",
@@ -376,13 +387,14 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "timestamp": dt_util.now().isoformat(),
                     "trigger_source": "coordinator_update",
                     "zones": list(state["zones"].keys()),
-                    "final_brightness_adjustment": self._brightness_adjustment + env_boost + sunset_boost,
-                    "final_warmth_adjustment": self._warmth_adjustment,
+                    "final_brightness_adjustment": self._brightness_adjustment + env_boost + sunset_brightness,
+                    "final_warmth_adjustment": self._warmth_adjustment + sunset_warmth,
                     "components": {
                         "brightness_manual": self._brightness_adjustment,
                         "brightness_environmental": env_boost,
-                        "brightness_sunset": sunset_boost,
+                        "brightness_sunset": sunset_brightness,
                         "warmth_manual": self._warmth_adjustment,
+                        "warmth_sunset": sunset_warmth,
                     },
                     "sun_elevation": self.hass.states.get("sun.sun").attributes.get("elevation", 0) if self.hass.states.get("sun.sun") else 0,
                     "environmental_active": env_boost > 0,
@@ -418,7 +430,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Calculate environmental features (check per-zone flags)
         env_boost = 0
-        sunset_boost = 0
+        sunset_brightness_boost = 0
+        sunset_warmth_offset = 0
         wake_boost = 0
 
         # Phase 2.5: Calculate environmental boost
@@ -427,7 +440,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         if zone_config.get("sunset_enabled", True):
             lux = self._get_current_lux()
-            sunset_boost = self._sunset_boost.calculate_boost(lux)
+            sunset_brightness_boost, sunset_warmth_offset = self._sunset_boost.calculate_boost(lux)
 
         # Phase 2.1: Calculate wake sequence boost (per-zone, only affects target zone)
         if zone_config.get("wake_sequence_enabled", True):
@@ -435,12 +448,12 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Phase 1.8: Track last calculated boosts for sensor access
         self._last_env_boost = env_boost
-        self._last_sunset_boost = sunset_boost
+        self._last_sunset_boost = sunset_brightness_boost
         self._last_wake_boost = wake_boost
 
         # Combine all offsets with intelligent capping
         # Layer all 5 brightness components: env + sunset + wake + manual + scene
-        raw_brightness_boost = (env_boost + sunset_boost + wake_boost +
+        raw_brightness_boost = (env_boost + sunset_brightness_boost + wake_boost +
                                 self._brightness_adjustment + self._scene_brightness_offset)
 
         # Calculate zone range for intelligent capping
@@ -461,8 +474,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Apply cap
         total_brightness = min(raw_brightness_boost, max_allowed)
-        # Layer warmth components: manual + scene
-        total_warmth = self._warmth_adjustment + self._scene_warmth_offset
+        # Layer warmth components: manual + scene + sunset
+        total_warmth = self._warmth_adjustment + self._scene_warmth_offset + sunset_warmth_offset
 
         # Log warning if capping occurred
         capping_occurred = raw_brightness_boost > total_brightness
@@ -510,7 +523,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "Zone %s offsets: env=%d%%, sunset=%d%%, manual_b=%d%%, manual_w=%dK → total_b=%d%%, total_w=%dK",
                 zone_id,
                 env_boost,
-                sunset_boost,
+                sunset_brightness_boost,
                 self._brightness_adjustment,
                 total_warmth,
                 total_brightness,

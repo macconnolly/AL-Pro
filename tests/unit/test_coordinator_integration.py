@@ -57,7 +57,7 @@ class TestEnvironmentalBoostPerZone:
             coordinator._env_adapter, "calculate_boost", return_value=25
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 # Mock AL switch state
                 kitchen_state = MagicMock()
@@ -120,7 +120,7 @@ class TestEnvironmentalBoostPerZone:
             coordinator._env_adapter, "calculate_boost", return_value=25
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 living_state = MagicMock()
                 living_state.state = "on"
@@ -225,7 +225,7 @@ class TestCombinedBoostOverflow:
             with patch.object(
                 coordinator_narrow_zones._sunset_boost,
                 "calculate_boost",
-                return_value=12,
+                return_value=(12, -250),
             ):
                 narrow_state = MagicMock()
                 narrow_state.state = "on"
@@ -310,7 +310,7 @@ class TestManualControlSkipsAdjustments:
             coordinator._env_adapter, "calculate_boost", return_value=20
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=10
+                coordinator._sunset_boost, "calculate_boost", return_value=(10, -300)
             ):
                 living_state = MagicMock()
                 living_state.state = "on"
@@ -362,7 +362,7 @@ class TestManualControlSkipsAdjustments:
             coordinator._env_adapter, "calculate_boost", return_value=15
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
 
                 def get_state(entity_id):
@@ -468,7 +468,7 @@ class TestDisabledZones:
             with patch.object(
                 coordinator_with_disabled_zone._sunset_boost,
                 "calculate_boost",
-                return_value=0,
+                return_value=(0, 0),
             ):
 
                 def get_state(entity_id):
@@ -556,7 +556,7 @@ class TestTimerExpiration:
                 coordinator._env_adapter, "calculate_boost", return_value=15
             ):
                 with patch.object(
-                    coordinator._sunset_boost, "calculate_boost", return_value=0
+                    coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
                 ):
                     living_state = MagicMock()
                     living_state.state = "on"
@@ -645,7 +645,7 @@ class TestStartupInitialization:
             coordinator._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 def get_state(entity_id):
                     state = MagicMock()
@@ -696,7 +696,7 @@ class TestStartupInitialization:
             coordinator._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 def get_state(entity_id):
                     state = MagicMock()
@@ -737,7 +737,7 @@ class TestStartupInitialization:
             coordinator._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 def get_state(entity_id):
                     state = MagicMock()
@@ -778,7 +778,7 @@ class TestStartupInitialization:
             coordinator._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator._sunset_boost, "calculate_boost", return_value=0
+                coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 def get_state(entity_id):
                     state = MagicMock()
@@ -901,7 +901,7 @@ class TestALSwitchValidation:
             coordinator_with_missing_switch._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=0
+                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 coordinator_with_missing_switch.data = (
                     await coordinator_with_missing_switch._async_update_data()
@@ -967,7 +967,7 @@ class TestALSwitchValidation:
             coordinator_with_missing_switch._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=0
+                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 coordinator_with_missing_switch.data = (
                     await coordinator_with_missing_switch._async_update_data()
@@ -982,7 +982,7 @@ class TestALSwitchValidation:
             coordinator_with_missing_switch._env_adapter, "calculate_boost", return_value=20
         ):
             with patch.object(
-                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=0
+                coordinator_with_missing_switch._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 await coordinator_with_missing_switch._async_update_data()
 
@@ -1058,7 +1058,7 @@ class TestALSwitchValidation:
 
         # Do first refresh and initialize
         with patch.object(coordinator._env_adapter, "calculate_boost", return_value=0):
-            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=0):
+            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)):
                 coordinator.data = await coordinator._async_update_data()
                 await coordinator.async_initialize()
 
@@ -1174,7 +1174,7 @@ class TestLightGroupValidation:
             coordinator_with_lights._env_adapter, "calculate_boost", return_value=0
         ):
             with patch.object(
-                coordinator_with_lights._sunset_boost, "calculate_boost", return_value=0
+                coordinator_with_lights._sunset_boost, "calculate_boost", return_value=(0, 0)
             ):
                 coordinator_with_lights.data = (
                     await coordinator_with_lights._async_update_data()
@@ -1251,7 +1251,7 @@ class TestLightGroupValidation:
 
         # Do first refresh and initialize
         with patch.object(coordinator._env_adapter, "calculate_boost", return_value=0):
-            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=0):
+            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)):
                 coordinator.data = await coordinator._async_update_data()
                 await coordinator.async_initialize()
 
@@ -1325,7 +1325,7 @@ class TestLightGroupValidation:
 
         # Do first refresh and initialize
         with patch.object(coordinator._env_adapter, "calculate_boost", return_value=0):
-            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=0):
+            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)):
                 coordinator.data = await coordinator._async_update_data()
                 await coordinator.async_initialize()
 
@@ -1389,7 +1389,7 @@ class TestLightGroupValidation:
 
         # Do first refresh and initialize
         with patch.object(coordinator._env_adapter, "calculate_boost", return_value=0):
-            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=0):
+            with patch.object(coordinator._sunset_boost, "calculate_boost", return_value=(0, 0)):
                 coordinator.data = await coordinator._async_update_data()
                 await coordinator.async_initialize()
 

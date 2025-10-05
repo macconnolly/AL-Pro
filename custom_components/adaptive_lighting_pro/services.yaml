@@ -15,6 +15,14 @@ adjust_brightness:
           max: 100
           step: 5
           unit_of_measurement: "%"
+    temporary:
+      name: Temporary Adjustment
+      description: If true, starts smart timeout (expires after context-aware duration). If false, adjustment persists indefinitely.
+      required: false
+      default: true
+      example: false
+      selector:
+        boolean:
 
 adjust_color_temp:
   name: Adjust Color Temperature
@@ -31,6 +39,14 @@ adjust_color_temp:
           max: 2500
           step: 100
           unit_of_measurement: "K"
+    temporary:
+      name: Temporary Adjustment
+      description: If true, starts smart timeout (expires after context-aware duration). If false, adjustment persists indefinitely.
+      required: false
+      default: true
+      example: false
+      selector:
+        boolean:
 
 apply_scene:
   name: Apply Lighting Scene

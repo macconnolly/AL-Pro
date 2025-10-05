@@ -47,10 +47,12 @@ _LOGGER = logging.getLogger(__name__)
 # Service parameter schemas
 ADJUST_BRIGHTNESS_SCHEMA = vol.Schema({
     vol.Required("value"): vol.All(vol.Coerce(int), vol.Range(min=-100, max=100)),
+    vol.Optional("temporary", default=True): cv.boolean,
 })
 
 ADJUST_COLOR_TEMP_SCHEMA = vol.Schema({
     vol.Required("value"): vol.All(vol.Coerce(int), vol.Range(min=-2500, max=2500)),
+    vol.Optional("temporary", default=True): cv.boolean,
 })
 
 APPLY_SCENE_SCHEMA = vol.Schema({
@@ -116,6 +118,7 @@ def async_register_services(hass: HomeAssistant) -> None:
 
         Parameters:
             value: Brightness adjustment (-100 to +100 percent)
+            temporary: If True, start timers (default True for backward compatibility)
         """
         coordinator = _get_coordinator(hass)
         if not coordinator:
@@ -124,10 +127,11 @@ def async_register_services(hass: HomeAssistant) -> None:
 
         try:
             value = call.data["value"]
-            _LOGGER.info("Adjusting brightness by %+d%%", value)
+            temporary = call.data.get("temporary", True)
+            _LOGGER.info("Adjusting brightness by %+d%% (temporary=%s)", value, temporary)
 
-            # Services are temporary overrides - start manual timers
-            await coordinator.set_brightness_adjustment(value, start_timers=True)
+            # Start timers based on temporary flag
+            await coordinator.set_brightness_adjustment(value, start_timers=temporary)
 
             _LOGGER.info("Brightness adjustment complete: %+d%%", value)
         except Exception as err:
@@ -149,10 +153,11 @@ def async_register_services(hass: HomeAssistant) -> None:
 
         try:
             value = call.data["value"]
-            _LOGGER.info("Adjusting color temp by %+dK", value)
+            temporary = call.data.get("temporary", True)
+            _LOGGER.info("Adjusting color temp by %+dK (temporary=%s)", value, temporary)
 
-            # Services are temporary overrides - start manual timers
-            await coordinator.set_warmth_adjustment(value, start_timers=True)
+            # Start timers based on temporary flag
+            await coordinator.set_warmth_adjustment(value, start_timers=temporary)
 
             _LOGGER.info("Color temp adjustment complete: %+dK", value)
         except Exception as err:

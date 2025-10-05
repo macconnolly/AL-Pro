@@ -48,12 +48,16 @@ class TestSunsetBoostRealWorld:
         clean_mock_hass.states.get.return_value = sun_state
         
         lux = 800  # Dark day (< 3000 threshold)
-        boost = sunset_calc.calculate_boost(lux)
-        
-        # Expected: (4 - 0) / 8 * 25 = 12.5 → 12 (int)
-        assert boost == 12, (
-            f"Expected 12% boost for dark day at sunset (elevation 0°), got {boost}%. "
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
+        # Expected: brightness (4 - 0) / 8 * 25 = 12.5 → 12 (int)
+        # Expected: warmth -(4 - 0) / 8 * 500 = -250K (warmer)
+        assert brightness == 12, (
+            f"Expected 12% boost for dark day at sunset (elevation 0°), got {brightness}%. "
             f"This is the CORRECTED logic - YAML was backwards and dimmed instead."
+        )
+        assert warmth == -250, (
+            f"Expected -250K warmth offset for sunset (golden hour), got {warmth}K."
         )
 
     def test_clear_bright_day_at_sunset_should_skip_boost(
@@ -72,12 +76,13 @@ class TestSunsetBoostRealWorld:
         clean_mock_hass.states.get.return_value = sun_state
         
         lux = 8000  # Bright day (> 3000 threshold)
-        boost = sunset_calc.calculate_boost(lux)
-        
-        assert boost == 0, (
-            f"Expected 0% boost for bright day at sunset, got {boost}%. "
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
+        assert brightness == 0, (
+            f"Expected 0% boost for bright day at sunset, got {brightness}%. "
             f"Lux gating (>3000) should prevent boost when not needed."
         )
+        assert warmth == 0, f"Expected 0K warmth offset when skipped, got {warmth}K."
 
     def test_dark_day_outside_sunset_window_should_skip(
         self, sunset_calc, clean_mock_hass
@@ -95,12 +100,13 @@ class TestSunsetBoostRealWorld:
         clean_mock_hass.states.get.return_value = sun_state
         
         lux = 600  # Dark (< 3000)
-        boost = sunset_calc.calculate_boost(lux)
-        
-        assert boost == 0, (
-            f"Expected 0% boost outside sunset window (10° elevation), got {boost}%. "
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
+        assert brightness == 0, (
+            f"Expected 0% boost outside sunset window (10° elevation), got {brightness}%. "
             f"Sunset boost should only activate between -4° and 4° elevation."
         )
+        assert warmth == 0, f"Expected 0K warmth when outside window, got {warmth}K."
 
     def test_sunset_window_linear_interpolation(
         self, sunset_calc, clean_mock_hass
@@ -129,12 +135,17 @@ class TestSunsetBoostRealWorld:
             sun_state.state = "above_horizon" if elevation >= 0 else "below_horizon"
             sun_state.attributes = {"elevation": elevation}
             clean_mock_hass.states.get.return_value = sun_state
-            
-            boost = sunset_calc.calculate_boost(lux)
-            
-            assert boost == expected_boost, (
-                f"At {elevation}° elevation, expected {expected_boost}% boost, got {boost}%. "
+
+            brightness, warmth = sunset_calc.calculate_boost(lux)
+
+            assert brightness == expected_boost, (
+                f"At {elevation}° elevation, expected {expected_boost}% boost, got {brightness}%. "
                 f"Linear interpolation across sunset window is broken."
+            )
+            # Warmth scales the same way: -(4 - elevation) / 8 * 500
+            expected_warmth = -int(((4 - elevation) / 8 * 500))
+            assert warmth == expected_warmth, (
+                f"At {elevation}° elevation, expected {expected_warmth}K warmth, got {warmth}K."
             )
 
     def test_lux_threshold_exactly_3000_should_not_boost(
@@ -152,12 +163,13 @@ class TestSunsetBoostRealWorld:
         mock_hass.states.get.return_value = sun_state
         
         lux = 3000  # Exactly at threshold
-        boost = sunset_calc.calculate_boost(lux)
-        
-        assert boost == 0, (
-            f"Expected 0% boost at exactly 3000 lux, got {boost}%. "
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
+        assert brightness == 0, (
+            f"Expected 0% boost at exactly 3000 lux, got {brightness}%. "
             f"Threshold check (< 3000) should exclude boundary value."
         )
+        assert warmth == 0, f"Expected 0K warmth at threshold, got {warmth}K."
 
     def test_sun_entity_unavailable_should_safely_degrade(
         self, sunset_calc, clean_mock_hass
@@ -170,14 +182,15 @@ class TestSunsetBoostRealWorld:
         BUG WOULD CAUSE: Exception crash, integration fails to load
         """
         clean_mock_hass.states.get.return_value = None  # Entity not found
-        
+
         lux = 500  # Would normally trigger boost
-        boost = sunset_calc.calculate_boost(lux)
-        
-        assert boost == 0, (
-            f"Expected 0% boost when sun.sun unavailable, got {boost}%. "
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
+        assert brightness == 0, (
+            f"Expected 0% boost when sun.sun unavailable, got {brightness}%. "
             f"Must gracefully degrade when sun entity missing."
         )
+        assert warmth == 0, f"Expected 0K warmth when unavailable, got {warmth}K."
 
     def test_negative_lux_should_be_treated_as_zero(
         self, sunset_calc, clean_mock_hass
@@ -195,10 +208,13 @@ class TestSunsetBoostRealWorld:
         clean_mock_hass.states.get.return_value = sun_state
         
         lux = -10  # Invalid but possible sensor value
-        boost = sunset_calc.calculate_boost(lux)
-        
+        brightness, warmth = sunset_calc.calculate_boost(lux)
+
         # Should treat as dark (< 3000) and apply boost
-        assert boost == 12, (
-            f"Expected 12% boost for negative lux (sensor error), got {boost}%. "
+        assert brightness == 12, (
+            f"Expected 12% boost for negative lux (sensor error), got {brightness}%. "
             f"Negative lux should be treated as very dark condition."
+        )
+        assert warmth == -250, (
+            f"Expected -250K warmth for negative lux at sunset, got {warmth}K."
         )
