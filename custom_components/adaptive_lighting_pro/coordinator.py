@@ -1401,6 +1401,70 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._scene_warmth_offset,
         )
 
+        # Immediately update AL boundaries for all zones with scene offsets
+        # This ensures AL adapts lights within the scene's dim/bright range
+        # BEFORE manual timers freeze further updates
+        for zone_id, zone_config in self.zones.items():
+            try:
+                # Calculate boundaries with ONLY scene offsets (no env/sunset/manual yet)
+                adjusted_config = apply_adjustment_to_zone(
+                    zone_config,
+                    self._scene_brightness_offset,
+                    self._scene_warmth_offset,
+                )
+
+                # Prepare service data for AL
+                al_switch = zone_config.get("adaptive_lighting_switch")
+                if not al_switch:
+                    continue
+
+                service_data = {
+                    "entity_id": al_switch,
+                    "min_brightness": adjusted_config["brightness_min"],
+                    "max_brightness": adjusted_config["brightness_max"],
+                }
+
+                # Add color temp if zone supports it
+                if adjusted_config.get("color_temp_min") is not None:
+                    service_data["min_color_temp"] = adjusted_config["color_temp_min"]
+                    service_data["max_color_temp"] = adjusted_config["color_temp_max"]
+
+                # Push scene boundaries to AL immediately
+                await self.hass.services.async_call(
+                    ADAPTIVE_LIGHTING_DOMAIN,
+                    "change_switch_settings",
+                    service_data,
+                    blocking=False,
+                )
+
+                _LOGGER.debug(
+                    "Updated AL boundaries for zone %s with scene offsets: min=%d%%, max=%d%%",
+                    zone_id,
+                    adjusted_config["brightness_min"],
+                    adjusted_config["brightness_max"],
+                )
+
+            except Exception as err:
+                _LOGGER.error(
+                    "Failed to update AL boundaries for zone %s with scene offsets: %s",
+                    zone_id,
+                    err,
+                    exc_info=True,
+                )
+
+        # Start manual timers for all zones (scenes are temporary like buttons)
+        # This matches YAML behavior where scene/button actions were temporary,
+        # while slider preferences were persistent
+        # Manual timers FREEZE the scene boundaries - env/sunset/manual adjustments
+        # won't layer on until timers expire
+        for zone_id in self.zones:
+            await self.start_manual_timer(zone_id)
+        _LOGGER.info(
+            "Started manual timers for %d zones (scene '%s' is temporary override)",
+            len(self.zones),
+            config["name"]
+        )
+
         return True
 
     def get_current_scene(self) -> Scene:
