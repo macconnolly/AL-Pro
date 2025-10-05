@@ -62,6 +62,9 @@ async def async_setup_entry(
     # Add global pause switch
     entities.append(ALPGlobalPauseSwitch(coordinator, entry))
 
+    # Add wake sequence enable/disable switch
+    entities.append(ALPWakeSequenceSwitch(coordinator, entry))
+
     # Phase 2 will add per-zone switches here:
     # for zone_id in coordinator.zone_ids:
     #     entities.append(ALPZoneSwitch(coordinator, entry, zone_id))
@@ -171,4 +174,87 @@ class ALPGlobalPauseSwitch(ALPEntity, SwitchEntity):
             "current_mode": global_data.get("current_mode", "default"),
             "zones_count": len(self.coordinator.zones),
             "paused": global_data.get("paused", False),
+        }
+
+
+class ALPWakeSequenceSwitch(ALPEntity, SwitchEntity):
+    """Switch to enable/disable wake sequence feature.
+
+    This switch allows users to temporarily disable wake sequences
+    for weekends or vacation without losing alarm configuration.
+
+    Entity ID: switch.alp_wake_sequence_enabled
+    Display Name: "Wake Sequence"
+
+    State:
+    - ON: Wake sequences will activate before alarms
+    - OFF: Wake sequences disabled (alarms still tracked)
+
+    Behavior:
+    - turn_on: Calls coordinator.set_wake_sequence_enabled(True)
+    - turn_off: Calls coordinator.set_wake_sequence_enabled(False)
+    - is_on: Reads from coordinator.get_wake_sequence_enabled()
+    """
+
+    _attr_icon = "mdi:alarm-light"
+
+    def __init__(
+        self,
+        coordinator: ALPDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize wake sequence enable switch.
+
+        Args:
+            coordinator: Data update coordinator
+            entry: Config entry
+        """
+        super().__init__(
+            coordinator,
+            entry,
+            "switch",
+            "wake_sequence_enabled",
+            "Wake Sequence",
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if wake sequence is enabled.
+
+        Returns:
+            True if wake sequence enabled, False if disabled, None if unknown
+        """
+        return self.coordinator.get_wake_sequence_enabled()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable wake sequence feature.
+
+        Args:
+            **kwargs: Additional arguments (not used)
+        """
+        _LOGGER.info("Enabling wake sequence feature")
+        await self.coordinator.set_wake_sequence_enabled(True)
+        _LOGGER.debug("Wake sequence enabled successfully")
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable wake sequence feature.
+
+        Args:
+            **kwargs: Additional arguments (not used)
+        """
+        _LOGGER.info("Disabling wake sequence feature")
+        await self.coordinator.set_wake_sequence_enabled(False)
+        _LOGGER.debug("Wake sequence disabled successfully")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        wake_alarm = self.coordinator._wake_sequence._next_alarm
+        wake_start = self.coordinator.get_wake_start_time()
+
+        return {
+            "next_alarm": wake_alarm.isoformat() if wake_alarm else None,
+            "wake_start_time": wake_start.isoformat() if wake_start else None,
+            "duration_minutes": self.coordinator._wake_sequence._duration.total_seconds() / 60,
+            "active_now": self.coordinator._wake_sequence.calculate_boost("") > 0,
         }

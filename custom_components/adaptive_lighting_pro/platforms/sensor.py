@@ -585,12 +585,29 @@ class ZoneManualControlSensor(ALPEntity, SensorEntity):
         zone_data = zones.get(self._zone_id, {})
         zone_config = self.coordinator.zones.get(self._zone_id, {})
 
+        timer_remaining = zone_data.get("timer_remaining", 0)
+        timer_remaining_display = self._format_time_remaining(timer_remaining)
+
         return {
             "manual_control_active": zone_data.get("manual_control_active", False),
-            "timer_remaining_seconds": zone_data.get("timer_remaining", 0),
+            "timer_remaining_seconds": timer_remaining,
+            "timer_remaining": timer_remaining_display,
             "timer_finishes_at": zone_data.get("timer_finishes_at"),
             "controlled_lights": zone_config.get("lights", []),
         }
+
+    def _format_time_remaining(self, seconds: float) -> str:
+        """Format seconds into human-readable time."""
+        if seconds <= 0:
+            return "Expired"
+        elif seconds < 60:
+            return f"{int(seconds)} seconds"
+        elif seconds < 3600:
+            minutes = seconds / 60
+            return f"{minutes:.1f} minutes"
+        else:
+            hours = seconds / 3600
+            return f"{hours:.1f} hours"
 
 
 class TotalManualControlSensor(ALPEntity, SensorEntity):

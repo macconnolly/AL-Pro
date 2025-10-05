@@ -54,6 +54,7 @@ from .features.sunset_boost import SunsetBoostCalculator
 from .features.wake_sequence import WakeSequenceCalculator
 from .features.zone_manager import ZoneManager
 from .features.manual_control import ManualControlDetector
+from .integrations.sonos import SonosIntegration
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -118,6 +119,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._env_adapter = EnvironmentalAdapter(hass)
         self._sunset_boost = SunsetBoostCalculator(hass)
         self._wake_sequence = WakeSequenceCalculator(hass)
+
+        # Initialize Sonos integration for wake sequence alarm detection
+        self._sonos_integration = SonosIntegration(hass, self._wake_sequence)
 
         # Extract zone configuration from config entry
         zones_config = config_entry.data.get("zones", [])
@@ -349,7 +353,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Step 4: Apply asymmetric boundary adjustments
                 # Wake sequence OVERRIDES manual control during its active window
                 wake_in_progress = (
-                    zone_config.get("wake_sequence_enabled", True)
+                    self.get_wake_sequence_enabled()  # Check global enabled state
+                    and zone_config.get("wake_sequence_enabled", True)  # Check zone-level
                     and self._wake_sequence.calculate_boost(zone_id) > 0
                 )
 
@@ -443,7 +448,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sunset_brightness_boost, sunset_warmth_offset = self._sunset_boost.calculate_boost(lux)
 
         # Phase 2.1: Calculate wake sequence boost (per-zone, only affects target zone)
-        if zone_config.get("wake_sequence_enabled", True):
+        if self.get_wake_sequence_enabled() and zone_config.get("wake_sequence_enabled", True):
             wake_boost = self._wake_sequence.calculate_boost(zone_id)
 
         # Phase 1.8: Track last calculated boosts for sensor access
@@ -550,6 +555,27 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 service_data,
                 blocking=False,
             )
+
+            # Clear manual control if wake sequence is active
+            if wake_boost > 0:
+                # Wake sequence must override manual control to work properly
+                zone_lights = zone_config.get("lights", [])
+                if zone_lights:
+                    await self.hass.services.async_call(
+                        ADAPTIVE_LIGHTING_DOMAIN,
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": zone_lights,
+                            "manual_control": False,
+                        },
+                        blocking=False,
+                    )
+                    _LOGGER.info(
+                        "Cleared manual control for zone %s during wake sequence (boost=%d%%)",
+                        zone_id,
+                        wake_boost,
+                    )
 
             _LOGGER.debug(
                 "Applied adjustments to zone %s: %s",
@@ -764,6 +790,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._env_adapter.calculate_boost()
             _LOGGER.debug("Environmental adapter initialized with initial boost calculation")
 
+        # Initialize Sonos integration for wake sequence
+        await self._sonos_integration.async_setup()
+        _LOGGER.info("Sonos integration initialized for wake sequence monitoring")
+
         # Validate AL switch availability for all zones (Phase 1.11)
         unavailable_switches = []
         available_switch_ids = []
@@ -931,6 +961,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Persist zone timer state
             await self.zone_manager.async_persist_state()
             _LOGGER.debug("Zone timer state persisted")
+
+            # Shutdown Sonos integration
+            await self._sonos_integration.async_shutdown()
+            _LOGGER.debug("Sonos integration shutdown complete")
         except Exception as err:
             _LOGGER.error("Error persisting state during shutdown: %s", err)
 
@@ -1607,6 +1641,42 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return None
 
         return self._wake_sequence._next_alarm - self._wake_sequence._duration
+
+    def get_wake_sequence_enabled(self) -> bool:
+        """Get wake sequence enabled state.
+
+        Returns:
+            True if wake sequence is enabled globally
+        """
+        if not self.data:
+            return True  # Default to enabled if no data yet
+        return self.data.get("global", {}).get("wake_sequence_enabled", True)
+
+    async def set_wake_sequence_enabled(self, enabled: bool) -> None:
+        """Set wake sequence enabled state.
+
+        Args:
+            enabled: True to enable wake sequence, False to disable
+        """
+        if not self.data:
+            _LOGGER.warning("Cannot set wake sequence enabled - coordinator has no data")
+            return
+
+        old_value = self.data.get("global", {}).get("wake_sequence_enabled", True)
+        self.data["global"]["wake_sequence_enabled"] = enabled
+
+        _LOGGER.info(
+            "Wake sequence state changed: %s → %s",
+            "enabled" if old_value else "disabled",
+            "enabled" if enabled else "disabled",
+        )
+
+        # Update listeners (switches, sensors)
+        await self.async_update_listeners()
+
+        # If disabling and wake sequence is active, clear the alarm
+        if not enabled and self._wake_sequence._next_alarm:
+            await self.clear_wake_alarm()
 
     def _calculate_health_score(self, state: dict[str, Any]) -> tuple[int, str]:
         """Calculate system health score based on current state.

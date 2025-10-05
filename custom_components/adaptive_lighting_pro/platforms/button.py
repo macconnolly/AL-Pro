@@ -17,6 +17,7 @@ Design Philosophy:
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
@@ -33,6 +34,8 @@ from .entity import ALPEntity
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from ..coordinator import ALPDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -140,6 +143,25 @@ class ALPBrighterButton(ALPButton):
         # Buttons are temporary overrides - start manual timers
         await self.coordinator.set_brightness_adjustment(new_value, start_timers=True)
 
+        # Set manual control on all active zones to prevent AL from fighting back
+        for zone_id in self.coordinator.zone_ids:
+            zone_config = self.coordinator.zones.get(zone_id, {})
+            if zone_config.get("enabled", True):
+                al_switch = zone_config.get("adaptive_lighting_switch")
+                zone_lights = zone_config.get("lights", [])
+                if al_switch and zone_lights:
+                    await self.hass.services.async_call(
+                        "adaptive_lighting",
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": zone_lights,
+                            "manual_control": True,
+                        },
+                        blocking=False,
+                    )
+        _LOGGER.debug("Set manual control for all zones after brightness adjustment")
+
 
 class ALPDimmerButton(ALPButton):
     """Decrease brightness by configured increment.
@@ -166,6 +188,25 @@ class ALPDimmerButton(ALPButton):
 
         # Buttons are temporary overrides - start manual timers
         await self.coordinator.set_brightness_adjustment(new_value, start_timers=True)
+
+        # Set manual control on all active zones to prevent AL from fighting back
+        for zone_id in self.coordinator.zone_ids:
+            zone_config = self.coordinator.zones.get(zone_id, {})
+            if zone_config.get("enabled", True):
+                al_switch = zone_config.get("adaptive_lighting_switch")
+                zone_lights = zone_config.get("lights", [])
+                if al_switch and zone_lights:
+                    await self.hass.services.async_call(
+                        "adaptive_lighting",
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": zone_lights,
+                            "manual_control": True,
+                        },
+                        blocking=False,
+                    )
+        _LOGGER.debug("Set manual control for all zones after brightness adjustment")
 
 
 class ALPWarmerButton(ALPButton):
@@ -194,6 +235,25 @@ class ALPWarmerButton(ALPButton):
         # Buttons are temporary overrides - start manual timers
         await self.coordinator.set_warmth_adjustment(new_value, start_timers=True)
 
+        # Set manual control on all active zones to prevent AL from fighting back
+        for zone_id in self.coordinator.zone_ids:
+            zone_config = self.coordinator.zones.get(zone_id, {})
+            if zone_config.get("enabled", True):
+                al_switch = zone_config.get("adaptive_lighting_switch")
+                zone_lights = zone_config.get("lights", [])
+                if al_switch and zone_lights:
+                    await self.hass.services.async_call(
+                        "adaptive_lighting",
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": zone_lights,
+                            "manual_control": True,
+                        },
+                        blocking=False,
+                    )
+        _LOGGER.debug("Set manual control for all zones after warmth adjustment")
+
 
 class ALPCoolerButton(ALPButton):
     """Increase color temperature by configured increment (cooler).
@@ -220,6 +280,25 @@ class ALPCoolerButton(ALPButton):
 
         # Buttons are temporary overrides - start manual timers
         await self.coordinator.set_warmth_adjustment(new_value, start_timers=True)
+
+        # Set manual control on all active zones to prevent AL from fighting back
+        for zone_id in self.coordinator.zone_ids:
+            zone_config = self.coordinator.zones.get(zone_id, {})
+            if zone_config.get("enabled", True):
+                al_switch = zone_config.get("adaptive_lighting_switch")
+                zone_lights = zone_config.get("lights", [])
+                if al_switch and zone_lights:
+                    await self.hass.services.async_call(
+                        "adaptive_lighting",
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": zone_lights,
+                            "manual_control": True,
+                        },
+                        blocking=False,
+                    )
+        _LOGGER.debug("Set manual control for all zones after warmth adjustment")
 
 
 class ALPResetButton(ALPButton):
