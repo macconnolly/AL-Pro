@@ -249,12 +249,14 @@ class ALPWakeSequenceSwitch(ALPEntity, SwitchEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
-        wake_alarm = self.coordinator._wake_sequence._next_alarm
+        # ARCHITECTURAL FIX: Use coordinator API instead of accessing internals
+        wake_alarm = self.coordinator.get_next_alarm_time()
         wake_start = self.coordinator.get_wake_start_time()
+        wake_state = self.coordinator.get_wake_sequence_state()
 
         return {
             "next_alarm": wake_alarm.isoformat() if wake_alarm else None,
             "wake_start_time": wake_start.isoformat() if wake_start else None,
-            "duration_minutes": self.coordinator._wake_sequence._duration.total_seconds() / 60,
-            "active_now": self.coordinator._wake_sequence.calculate_boost("") > 0,
+            "duration_minutes": wake_state.get("duration_seconds", 0) / 60,
+            "active_now": wake_state.get("active", False),
         }

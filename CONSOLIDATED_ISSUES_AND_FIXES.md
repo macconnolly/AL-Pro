@@ -5,6 +5,87 @@
 
 ---
 
+## 🏗️ CRITICAL ARCHITECTURAL ANALYSIS: Separation of Responsibilities
+
+### The Fundamental Rule (from claude.md)
+**Integration Provides MECHANISM** (How things work):
+- ✅ Zone state management and calculations
+- ✅ Boost calculations (environmental, sunset, wake)
+- ✅ Offset application to AL boundaries
+- ✅ Timer management and expiry
+- ✅ Service handlers for adjustments
+- ❌ **NEVER** specific entity IDs (light.kitchen_island)
+- ❌ **NEVER** user choreography (which lights turn on/off)
+
+**YAML Provides POLICY** (What specific things to control):
+- ✅ Light entity definitions (user's actual lights)
+- ✅ Scene choreography scripts (turn on/off patterns)
+- ✅ Automation triggers (when to apply scenes)
+- ✅ Dashboard configuration
+- ❌ **NEVER** business logic (calculations)
+- ❌ **NEVER** state management (coordinator owns state)
+
+### The Core Violation - THIS BREAKS EVERYTHING
+
+**Current WRONG Implementation**:
+```python
+# const.py:594 - Integration contains USER'S SPECIFIC LIGHTS!
+SCENE_CONFIGS = {
+    Scene.ALL_LIGHTS: {
+        "actions": [
+            {"entity_id": ["light.accent_spots_lights"]},  # ❌ MY lights!
+            {"entity_id": ["light.kitchen_island_pendants"]},  # ❌ MY kitchen!
+        ]
+    }
+}
+
+# coordinator.py:1399-1410 - Integration EXECUTES user choreography!
+for action in config.get("actions", []):
+    await self.hass.services.async_call(  # ❌ Integration running user policy!
+        domain, service, action_copy
+    )
+```
+
+**Why This is CATASTROPHIC**:
+1. **Alice installs integration** → Tries to control MY lights that don't exist in her home
+2. **Bob adds scene** → Has to MODIFY INTEGRATION CODE (const.py) instead of his YAML
+3. **Updates break** → Every integration update overwrites user's light customizations
+4. **Violates HA Guidelines** → Integrations must be entity-agnostic
+
+**Correct Pattern (ALREADY in implementation_2.yaml:101-231)**:
+```yaml
+# User's YAML script - Each user defines their OWN choreography
+script:
+  apply_scene_all_lights:
+    sequence:
+      # Step 1: Integration sets offsets (MECHANISM)
+      - service: adaptive_lighting_pro.apply_scene
+        data:
+          scene: all_lights  # Just says "apply ALL_LIGHTS offsets"
+
+      # Step 2: User choreographs THEIR lights (POLICY)
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.alice_living_room  # Alice's lights
+            - light.alice_kitchen      # Alice's kitchen
+```
+
+**This separation is MANDATORY** - Not optional, not "nice to have", but architecturally required.
+
+### Validation Against claude.md Principles
+
+✅ **"API Layer First"** - Coordinator methods exist (apply_scene)
+✅ **"Consumer Layer Second"** - YAML scripts consume the API
+❌ **"NEVER access internals"** - But integration IS the internal violating itself!
+✅ **"Layer Ownership"** - Clear except for scene choreography violation
+
+### The Fix is Simple Because the Design is Already Correct
+
+The beautiful irony: implementation_2.yaml ALREADY has the right pattern! The integration just needs to stop doing what YAML is already doing correctly. This is a deletion fix, not an addition.
+
+---
+
 ## 🚨 PRIORITY 1: BLOCKING ISSUES (Must Fix Before ANY Deployment)
 
 ### Issue #1: Hardcoded User-Specific Entities in Scene Configs
@@ -132,12 +213,67 @@ await self.hass.services.async_call(
 
 ---
 
-### Issue #4: Buttons Don't Set Manual Control on AL Switches
-**Severity**: HIGH - User actions ignored
-**Verified**: ❌ FALSE - Manual control IS being set
-**Location**: Already implemented in const.py scene configs
+### Issue #4: Manual Control Must Be Set When Users Press Buttons
+**Severity**: HIGH - User actions get overridden by AL
+**Verified**: ⚠️ COMPLEX - Currently in hardcoded actions we're DELETING!
+**Location**:
+- `const.py:599,655` - Has manual control BUT these actions are being removed (Issue #1)
+- `platforms/button.py` - NO manual control calls found (verified with grep)
 
-**Status**: ✅ ALREADY FIXED - Scene configs include manual control service calls at const.py:599,655
+**Problem**:
+1. Button presses (brightness/warmth) don't notify AL → AL fights back 30s later
+2. Scene actions include manual control but we're deleting those actions (Issue #1)
+3. After fixing Issue #1, manual control will be completely broken
+
+**Solution**: Coordinator must handle manual control transparently
+```python
+# coordinator.py - Add to apply_scene() after offset application:
+if scene != Scene.NONE:
+    # Scene application = manual control
+    for zone_id in self.data["zones"]:
+        zone_config = self.data["zones"][zone_id]
+        if zone_config.get("enabled", True):
+            await self.hass.services.async_call(
+                "adaptive_lighting",
+                "set_manual_control",
+                {
+                    "entity_id": f"switch.adaptive_lighting_{zone_id}",
+                    "manual_control": True
+                },
+                blocking=False
+            )
+```
+
+**Also Required for Buttons**:
+```python
+# platforms/button.py - Add to each button's async_press():
+# After coordinator.set_brightness_adjustment() call
+zone_id = self._get_zone_id()  # Need to add this method
+await self.hass.services.async_call(
+    "adaptive_lighting",
+    "set_manual_control",
+    {
+        "entity_id": f"switch.adaptive_lighting_{zone_id}",
+        "manual_control": True
+    },
+    blocking=False
+)
+```
+
+**Tactical Tasks**:
+```yaml
+- file: custom_components/adaptive_lighting_pro/coordinator.py
+  line: ~1420 (after offset application in apply_scene)
+  action: Add manual control loop for all enabled zones
+  time: 20 min
+
+- file: custom_components/adaptive_lighting_pro/platforms/button.py
+  lines: 140, 168, 195, 222 (in each adjustment button's async_press)
+  action: Add manual control service call after adjustment
+  time: 30 min
+```
+
+**Status**: ❌ NEEDS FIX - Will be completely broken after Issue #1 fix
 
 ---
 
@@ -361,3 +497,40 @@ Following claude.md principles (API first, consumers second):
 ---
 
 **Remember claude.md**: "This is MY lighting system. I will build it like I live here (because I do)"
+
+---
+
+## ✅ ARCHITECTURAL VALIDATION RESULTS
+
+### Separation of Responsibilities Assessment
+
+**✅ PASSES** (After Fixes):
+- Coordinator provides clean API methods (mechanism)
+- Platforms consume coordinator API, never access internals
+- State management centralized in coordinator
+- Business logic isolated from user configuration
+- YAML handles user-specific entity choreography
+
+**❌ CURRENTLY FAILS**:
+- Integration contains hardcoded user entity IDs (const.py)
+- Coordinator executes user-specific choreography (coordinator.py)
+- Manual control not properly set on user actions (buttons)
+
+**🎯 AFTER PROPOSED FIXES**:
+1. **Issue #1 Fix**: Remove entity IDs → Integration becomes entity-agnostic ✅
+2. **Issue #2 Fix**: Wire Sonos → Wake sequence functional ✅
+3. **Issue #4 Fix**: Add manual control → User actions respected ✅
+
+**Architecture Score**:
+- **Current**: 40/100 (Critical violations present)
+- **After Fixes**: 95/100 (Clean separation achieved)
+
+The 5-point deduction after fixes is for:
+- Scene timer behavior still undefined (minor)
+- Some UX improvements pending (sensors, switches)
+
+### Bottom Line
+
+The integration architecture is **fundamentally sound**. The violations are **superficial** (hardcoded config) not **structural** (wrong patterns). This is a **2-3 hour fix** to achieve Home Assistant best practices compliance and claude.md architectural excellence.
+
+**The irony**: Your implementation_2.yaml ALREADY demonstrates perfect separation. The integration just needs to stop doing what YAML is already doing correctly.
