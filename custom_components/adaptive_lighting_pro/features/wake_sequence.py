@@ -156,6 +156,7 @@ class WakeSequenceCalculator:
             - Current time before wake start
             - Current time after alarm
             - zone_id != target_zone
+            - Skip toggle is enabled
 
         Examples:
             >>> # 6:15 AM (alarm at 6:30 AM, just started)
@@ -176,6 +177,14 @@ class WakeSequenceCalculator:
         """
         if not self.is_available():
             return 0
+
+        # Check if skip toggle is enabled (user requested to skip this alarm)
+        skip_entity = "input_boolean.alp_disable_next_sonos_wakeup"
+        if self.hass:
+            skip_state = self.hass.states.get(skip_entity)
+            if skip_state and skip_state.state == "on":
+                _LOGGER.info("Wake sequence skipped by user request (skip toggle enabled)")
+                return 0
 
         # Only apply to target zone
         if zone_id != self._target_zone:
