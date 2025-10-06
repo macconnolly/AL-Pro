@@ -95,6 +95,13 @@ async def async_setup_entry(
     # Wake sequence status with progress tracking
     sensors.append(WakeSequenceStatusSensor(coordinator, config_entry))
 
+    # Phase 7: Additional diagnostic sensors for troubleshooting
+    sensors.extend([
+        ALPLastActionSensor(coordinator, config_entry),
+        ALPTimerStatusSensor(coordinator, config_entry),
+        ALPZoneHealthSensor(coordinator, config_entry),
+    ])
+
     _LOGGER.info("Setting up %d sensors for complete system visibility", len(sensors))
     async_add_entities(sensors)
 
@@ -1008,3 +1015,205 @@ class WakeSequenceStatusSensor(ALPEntity, SensorEntity):
             attrs["elapsed_minutes"] = (dt.datetime.now() - wake_data["start_time"]).total_seconds() / 60
 
         return attrs
+
+
+# ==================== PHASE 7: ADDITIONAL DIAGNOSTIC SENSORS ====================
+
+
+class ALPLastActionSensor(ALPEntity, SensorEntity):
+    """Sensor tracking the last action taken by the system.
+
+    Critical for debugging: "Why did my lights just change?"
+    """
+
+    _attr_icon = "mdi:history"
+
+    def __init__(self, coordinator, config_entry):
+        """Initialize last action sensor."""
+        super().__init__(coordinator, config_entry, "sensor", "last_action", "ALP Last Action")
+        self._last_action = "System initialized"
+        self._last_action_time = dt.datetime.now()
+
+    @property
+    def native_value(self) -> str:
+        """Return last action taken."""
+        # Get last action from coordinator data if available
+        if self.coordinator.data:
+            global_data = self.coordinator.data.get("global", {})
+            last_action = global_data.get("last_action", self._last_action)
+            if last_action != self._last_action:
+                self._last_action = last_action
+                self._last_action_time = dt.datetime.now()
+
+        return self._last_action
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return last action details."""
+        time_since = (dt.datetime.now() - self._last_action_time).total_seconds()
+
+        return {
+            "action": self._last_action,
+            "timestamp": self._last_action_time.isoformat(),
+            "seconds_ago": int(time_since),
+            "time_ago_human": self._format_time_ago(time_since),
+        }
+
+    def _format_time_ago(self, seconds: float) -> str:
+        """Format seconds into human-readable time ago."""
+        if seconds < 60:
+            return f"{int(seconds)} seconds ago"
+        elif seconds < 3600:
+            minutes = seconds / 60
+            return f"{int(minutes)} minutes ago"
+        elif seconds < 86400:
+            hours = seconds / 3600
+            return f"{int(hours)} hours ago"
+        else:
+            days = seconds / 86400
+            return f"{int(days)} days ago"
+
+
+class ALPTimerStatusSensor(ALPEntity, SensorEntity):
+    """Sensor showing summary of all active manual timers.
+
+    Dashboard visibility: "Which zones have active timers?"
+    """
+
+    _attr_icon = "mdi:timer-sand"
+
+    def __init__(self, coordinator, config_entry):
+        """Initialize timer status sensor."""
+        super().__init__(coordinator, config_entry, "sensor", "timer_status", "ALP Manual Timer Status")
+
+    @property
+    def native_value(self) -> str:
+        """Return count of active timers."""
+        if not self.coordinator.data:
+            return "No Active Timers"
+
+        zones = self.coordinator.data.get("zones", {})
+        active_count = sum(
+            1 for zone in zones.values()
+            if zone.get("manual_control_active", False) and zone.get("timer_remaining", 0) > 0
+        )
+
+        if active_count == 0:
+            return "No Active Timers"
+        elif active_count == 1:
+            return "1 Active Timer"
+        else:
+            return f"{active_count} Active Timers"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return per-zone timer details."""
+        if not self.coordinator.data:
+            return {}
+
+        zones = self.coordinator.data.get("zones", {})
+        timers = {}
+
+        for zone_id, zone_data in zones.items():
+            if zone_data.get("manual_control_active", False):
+                remaining = zone_data.get("timer_remaining", 0)
+                if remaining and remaining > 0:
+                    minutes = remaining / 60
+                    timers[zone_id] = {
+                        "remaining_seconds": int(remaining),
+                        "remaining_minutes": round(minutes, 1),
+                        "remaining_human": self._format_time_remaining(remaining),
+                        "finishes_at": zone_data.get("timer_finishes_at"),
+                    }
+
+        return {
+            "active_zones": list(timers.keys()),
+            "timer_details": timers,
+            "total_active": len(timers),
+        }
+
+    def _format_time_remaining(self, seconds: float) -> str:
+        """Format seconds into human-readable time remaining."""
+        if seconds <= 0:
+            return "Expired"
+        elif seconds < 60:
+            return f"{int(seconds)}s"
+        elif seconds < 3600:
+            minutes = seconds / 60
+            return f"{minutes:.1f} min"
+        else:
+            hours = seconds / 3600
+            return f"{hours:.1f} hr"
+
+
+class ALPZoneHealthSensor(ALPEntity, SensorEntity):
+    """Sensor showing health status of all zones.
+
+    System health: "Are all zones configured correctly?"
+    """
+
+    _attr_icon = "mdi:heart-pulse"
+
+    def __init__(self, coordinator, config_entry):
+        """Initialize zone health sensor."""
+        super().__init__(coordinator, config_entry, "sensor", "zone_health", "ALP Zone Health")
+
+    @property
+    def native_value(self) -> str:
+        """Return overall health status."""
+        if not self.coordinator.data:
+            return "Unknown"
+
+        zones = self.coordinator.data.get("zones", {})
+
+        # Count healthy zones (AL switch online and responding)
+        healthy = sum(
+            1 for zone in zones.values()
+            if zone.get("adaptive_lighting_active", False)
+        )
+        total = len(zones)
+
+        if healthy == total:
+            return "All Zones Healthy"
+        elif healthy == 0:
+            return "All Zones Unavailable"
+        else:
+            return f"{healthy}/{total} Zones Healthy"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return per-zone health details."""
+        if not self.coordinator.data:
+            return {}
+
+        zones = self.coordinator.data.get("zones", {})
+        health = {}
+
+        for zone_id, zone_data in zones.items():
+            zone_config = self.coordinator.zones.get(zone_id, {})
+
+            # Check health criteria
+            al_switch = zone_config.get("adaptive_lighting_switch")
+            al_active = zone_data.get("adaptive_lighting_active", False)
+            lights = zone_config.get("lights", [])
+            brightness_min = zone_config.get("brightness_min", 0)
+            brightness_max = zone_config.get("brightness_max", 100)
+
+            health[zone_id] = {
+                "available": al_active,
+                "al_switch": al_switch,
+                "al_switch_online": al_active,
+                "lights_configured": len(lights),
+                "light_entities": lights,
+                "boundary_valid": brightness_min < brightness_max,
+                "brightness_range": f"{brightness_min}% - {brightness_max}%",
+            }
+
+        healthy_count = sum(1 for h in health.values() if h["available"])
+
+        return {
+            "zones": health,
+            "healthy_count": healthy_count,
+            "total_zones": len(health),
+            "unhealthy_zones": [zone_id for zone_id, h in health.items() if not h["available"]],
+        }

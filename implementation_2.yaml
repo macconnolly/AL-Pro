@@ -386,6 +386,372 @@ script:
           title: "ALP: Auto Mode"
           notification_id: "alp_auto_mode"
 
+  # -------------------------------------------------------------------------
+  # Everyday Control Scripts - Essential User Controls
+  # -------------------------------------------------------------------------
+  # All the controls you need for daily operation, accessible from dashboard
+
+  # === QUICK ADJUSTMENTS ===
+  alp_brighter:
+    alias: "ALP: Brighter (+increment)"
+    description: "Increase brightness by configured increment"
+    icon: mdi:brightness-7
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_brighter
+      - service: notify.persistent_notification
+        data:
+          message: "Brightness increased to {{ states('number.alp_brightness_adjustment') }}%"
+          title: "ALP: Brighter"
+
+  alp_dimmer:
+    alias: "ALP: Dimmer (-increment)"
+    description: "Decrease brightness by configured increment"
+    icon: mdi:brightness-4
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_dimmer
+      - service: notify.persistent_notification
+        data:
+          message: "Brightness decreased to {{ states('number.alp_brightness_adjustment') }}%"
+          title: "ALP: Dimmer"
+
+  alp_warmer:
+    alias: "ALP: Warmer (-increment K)"
+    description: "Make lights warmer (more orange/red)"
+    icon: mdi:fire
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_warmer
+      - service: notify.persistent_notification
+        data:
+          message: "Warmth adjusted to {{ states('number.alp_warmth_adjustment') }}K"
+          title: "ALP: Warmer"
+
+  alp_cooler:
+    alias: "ALP: Cooler (+increment K)"
+    description: "Make lights cooler (more blue/white)"
+    icon: mdi:snowflake
+    sequence:
+      - service: button.press
+        target:
+          entity_id: button.alp_cooler
+      - service: notify.persistent_notification
+        data:
+          message: "Warmth adjusted to {{ states('number.alp_warmth_adjustment') }}K"
+          title: "ALP: Cooler"
+
+  # === CUSTOM ADJUSTMENTS ===
+  alp_set_brightness:
+    alias: "ALP: Set Brightness"
+    description: "Set exact brightness adjustment"
+    icon: mdi:brightness-6
+    fields:
+      brightness:
+        description: "Brightness adjustment (-100 to 100)"
+        example: 25
+        selector:
+          number:
+            min: -100
+            max: 100
+            step: 5
+            mode: slider
+    sequence:
+      - service: adaptive_lighting_pro.adjust_brightness
+        data:
+          value: "{{ brightness }}"
+          temporary: true
+      - service: notify.persistent_notification
+        data:
+          message: "Brightness set to {{ brightness }}%"
+          title: "ALP: Brightness Set"
+
+  alp_set_warmth:
+    alias: "ALP: Set Warmth"
+    description: "Set exact warmth adjustment"
+    icon: mdi:thermometer
+    fields:
+      warmth:
+        description: "Warmth adjustment in Kelvin (-2000 to 2000)"
+        example: -500
+        selector:
+          number:
+            min: -2000
+            max: 2000
+            step: 100
+            mode: slider
+    sequence:
+      - service: adaptive_lighting_pro.adjust_color_temp
+        data:
+          value: "{{ warmth }}"
+          temporary: true
+      - service: notify.persistent_notification
+        data:
+          message: "Warmth set to {{ warmth }}K"
+          title: "ALP: Warmth Set"
+
+  # === SCENE CONTROLS ===
+  alp_apply_scene:
+    alias: "ALP: Apply Scene"
+    description: "Apply any available scene"
+    icon: mdi:palette
+    fields:
+      scene:
+        description: "Scene to apply"
+        example: "evening_comfort"
+        selector:
+          select:
+            options:
+              - auto
+              - all_lights
+              - no_spotlights
+              - evening_comfort
+              - ultra_dim
+    sequence:
+      - service: adaptive_lighting_pro.apply_scene
+        data:
+          scene: "{{ scene }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Applied scene: {{ scene | replace('_', ' ') | title }}"
+          title: "ALP: Scene Applied"
+
+  alp_cycle_scene:
+    alias: "ALP: Cycle Scene"
+    description: "Cycle to next scene in sequence"
+    icon: mdi:rotate-right
+    sequence:
+      - service: adaptive_lighting_pro.cycle_scene
+      - service: notify.persistent_notification
+        data:
+          message: "Cycled to: {{ states('sensor.alp_current_scene') | title }}"
+          title: "ALP: Scene Cycled"
+
+  # === PAUSE/RESUME CONTROL ===
+  alp_pause:
+    alias: "ALP: Pause Adaptive"
+    description: "Pause all adaptive lighting control"
+    icon: mdi:pause
+    sequence:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.alp_pause_adaptive_control
+      - service: notify.persistent_notification
+        data:
+          message: "Adaptive lighting paused - manual control only"
+          title: "ALP: Paused"
+
+  alp_resume:
+    alias: "ALP: Resume Adaptive"
+    description: "Resume adaptive lighting control"
+    icon: mdi:play
+    sequence:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.alp_pause_adaptive_control
+      - service: notify.persistent_notification
+        data:
+          message: "Adaptive lighting resumed"
+          title: "ALP: Resumed"
+
+  alp_toggle_pause:
+    alias: "ALP: Toggle Pause"
+    description: "Toggle adaptive lighting pause state"
+    icon: mdi:pause-circle
+    sequence:
+      - service: switch.toggle
+        target:
+          entity_id: switch.alp_pause_adaptive_control
+      - service: notify.persistent_notification
+        data:
+          message: >
+            Adaptive lighting {% if is_state('switch.alp_pause_adaptive_control', 'on') %}paused{% else %}resumed{% endif %}
+          title: "ALP: Toggle Pause"
+
+  # === PER-ZONE MANUAL CONTROL RESET ===
+  alp_reset_zone:
+    alias: "ALP: Reset Zone Manual Control"
+    description: "Clear manual control for a specific zone"
+    icon: mdi:refresh
+    fields:
+      zone:
+        description: "Zone to reset"
+        example: "kitchen_island"
+        selector:
+          select:
+            options:
+              - main_living
+              - kitchen_island
+              - bedroom_primary
+              - accent_spots
+              - recessed_ceiling
+    sequence:
+      - service: adaptive_lighting_pro.clear_manual_control
+        data:
+          zone_id: "{{ zone }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Manual control cleared for {{ zone | replace('_', ' ') | title }}"
+          title: "ALP: Zone Reset"
+
+  alp_reset_all_zones:
+    alias: "ALP: Reset All Zones"
+    description: "Clear manual control for all zones"
+    icon: mdi:refresh-circle
+    sequence:
+      - service: adaptive_lighting_pro.clear_manual_control
+        data: {}
+      - service: notify.persistent_notification
+        data:
+          message: "Manual control cleared for all zones"
+          title: "ALP: All Zones Reset"
+
+  # === WAKE SEQUENCE CONTROL ===
+  alp_set_wake_alarm:
+    alias: "ALP: Set Wake Alarm"
+    description: "Manually set wake alarm time"
+    icon: mdi:alarm
+    fields:
+      alarm_time:
+        description: "Alarm time (HH:MM)"
+        example: "06:30"
+        selector:
+          time:
+    sequence:
+      - service: adaptive_lighting_pro.set_wake_alarm
+        data:
+          alarm_time: "{{ today_at(alarm_time).isoformat() }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Wake alarm set for {{ alarm_time }}"
+          title: "ALP: Wake Alarm Set"
+
+  alp_clear_wake_alarm:
+    alias: "ALP: Clear Wake Alarm"
+    description: "Clear the wake alarm"
+    icon: mdi:alarm-off
+    sequence:
+      - service: adaptive_lighting_pro.clear_wake_alarm
+      - service: notify.persistent_notification
+        data:
+          message: "Wake alarm cleared"
+          title: "ALP: Wake Alarm Cleared"
+
+  alp_toggle_skip_alarm:
+    alias: "ALP: Toggle Skip Next Alarm"
+    description: "Toggle skip for next morning's alarm"
+    icon: mdi:alarm-snooze
+    sequence:
+      - service: input_boolean.toggle
+        target:
+          entity_id: input_boolean.alp_disable_next_sonos_wakeup
+      - service: notify.persistent_notification
+        data:
+          message: >
+            Next alarm will be {% if is_state('input_boolean.alp_disable_next_sonos_wakeup', 'on') %}skipped{% else %}active{% endif %}
+          title: "ALP: Skip Alarm"
+
+  # === CONFIGURATION ADJUSTMENTS ===
+  alp_set_brightness_increment:
+    alias: "ALP: Set Brightness Increment"
+    description: "Set how much brightness changes with each adjustment"
+    icon: mdi:stairs
+    fields:
+      increment:
+        description: "Brightness increment (5-50%)"
+        example: 20
+        selector:
+          number:
+            min: 5
+            max: 50
+            step: 5
+    sequence:
+      - service: number.set_value
+        target:
+          entity_id: number.alp_brightness_increment
+        data:
+          value: "{{ increment }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Brightness increment set to {{ increment }}%"
+          title: "ALP: Increment Set"
+
+  alp_set_warmth_increment:
+    alias: "ALP: Set Warmth Increment"
+    description: "Set how much warmth changes with each adjustment"
+    icon: mdi:stairs
+    fields:
+      increment:
+        description: "Warmth increment (100-1000K)"
+        example: 500
+        selector:
+          number:
+            min: 100
+            max: 1000
+            step: 100
+    sequence:
+      - service: number.set_value
+        target:
+          entity_id: number.alp_color_temp_increment
+        data:
+          value: "{{ increment }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Warmth increment set to {{ increment }}K"
+          title: "ALP: Increment Set"
+
+  alp_set_manual_timeout:
+    alias: "ALP: Set Manual Control Timeout"
+    description: "Set how long manual control persists"
+    icon: mdi:timer
+    fields:
+      timeout:
+        description: "Timeout in minutes (15-480)"
+        example: 120
+        selector:
+          number:
+            min: 15
+            max: 480
+            step: 15
+    sequence:
+      - service: number.set_value
+        target:
+          entity_id: number.alp_manual_control_timeout
+        data:
+          value: "{{ timeout }}"
+      - service: notify.persistent_notification
+        data:
+          message: "Manual control timeout set to {{ timeout }} minutes"
+          title: "ALP: Timeout Set"
+
+  # === RESET CONTROLS ===
+  alp_reset_adjustments:
+    alias: "ALP: Reset Adjustments Only"
+    description: "Reset brightness/warmth adjustments but keep scene"
+    icon: mdi:backup-restore
+    sequence:
+      - service: adaptive_lighting_pro.reset_manual_adjustments
+      - service: notify.persistent_notification
+        data:
+          message: "Manual adjustments reset to 0"
+          title: "ALP: Adjustments Reset"
+
+  alp_force_refresh:
+    alias: "ALP: Force Refresh"
+    description: "Force immediate coordinator update"
+    icon: mdi:refresh-auto
+    sequence:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.alp_status
+      - service: notify.persistent_notification
+        data:
+          message: "Forced coordinator refresh"
+          title: "ALP: Refreshed"
+
 # -----------------------------------------------------------------------------
 # Voice Control Aliases
 # -----------------------------------------------------------------------------

@@ -1,0 +1,314 @@
+# ALP DIAGNOSTIC DASHBOARD CARD
+# Copy this into your Lovelace dashboard configuration
+#
+# This card provides complete visibility into the Adaptive Lighting Pro system
+# with all new Phase 7 diagnostic sensors.
+
+type: vertical-stack
+cards:
+  # ============================================================================
+  # SYSTEM STATUS - Quick Overview
+  # ============================================================================
+  - type: entities
+    title: 🔍 ALP System Status
+    show_header_toggle: false
+    state_color: true
+    entities:
+      # New Phase 7 Sensors
+      - entity: sensor.alp_last_action
+        name: Last Action
+        icon: mdi:history
+
+      - entity: sensor.alp_timer_status
+        name: Manual Timers
+        icon: mdi:timer-sand
+
+      - entity: sensor.alp_zone_health
+        name: Zone Health
+        icon: mdi:heart-pulse
+
+      # Phase 6 Sensor
+      - entity: sensor.alp_wake_sequence_status
+        name: Wake Sequence
+        icon: mdi:alarm
+
+      # Existing Sensors
+      - entity: sensor.alp_current_scene
+        name: Current Scene
+        icon: mdi:palette
+
+  # ============================================================================
+  # ACTIVE MODIFIERS - What's Currently Affecting Lights
+  # ============================================================================
+  - type: entities
+    title: ⚡ Active Modifiers
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_brightness_adjustment
+        name: Brightness Adjustment
+        icon: mdi:brightness-6
+
+      - entity: sensor.alp_warmth_adjustment
+        name: Warmth Adjustment
+        icon: mdi:thermometer
+
+      - entity: sensor.alp_environmental_boost
+        name: Environmental Boost
+        icon: mdi:weather-cloudy
+
+      - entity: sensor.alp_sunset_boost
+        name: Sunset Boost
+        icon: mdi:weather-sunset
+
+  # ============================================================================
+  # DIAGNOSTIC ACTIONS - Quick Status Checks
+  # ============================================================================
+  - type: entities
+    title: 🔧 Diagnostic Actions
+    show_header_toggle: false
+    entities:
+      - entity: script.alp_show_status
+        name: Show System Status
+        icon: mdi:information-outline
+        tap_action:
+          action: call-service
+          service: script.alp_show_status
+
+      - entity: script.alp_show_zone_details
+        name: Show Zone Details
+        icon: mdi:home-group
+        tap_action:
+          action: call-service
+          service: script.alp_show_zone_details
+
+      - entity: script.alp_show_manual_control
+        name: Show Manual Control
+        icon: mdi:timer-cog
+        tap_action:
+          action: call-service
+          service: script.alp_show_manual_control
+
+      - entity: script.alp_show_environmental_status
+        name: Show Environmental Status
+        icon: mdi:weather-partly-cloudy
+        tap_action:
+          action: call-service
+          service: script.alp_show_environmental_status
+
+  # ============================================================================
+  # SCENE CONTROLS - Quick Scene Switching
+  # ============================================================================
+  - type: entities
+    title: 🎨 Scene Controls
+    show_header_toggle: false
+    entities:
+      - entity: script.alp_scene_auto
+        name: 🔄 Return to Auto
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.alp_scene_auto
+
+      - entity: script.apply_scene_all_lights
+        name: 💡 All Lights On
+        icon: mdi:lightbulb-group
+        tap_action:
+          action: call-service
+          service: script.apply_scene_all_lights
+
+      - entity: script.apply_scene_evening_comfort
+        name: 🌅 Evening Comfort
+        icon: mdi:weather-sunset
+        tap_action:
+          action: call-service
+          service: script.apply_scene_evening_comfort
+
+      - entity: script.apply_scene_ultra_dim
+        name: 🌙 Ultra Dim
+        icon: mdi:weather-night
+        tap_action:
+          action: call-service
+          service: script.apply_scene_ultra_dim
+
+  # ============================================================================
+  # QUICK ADJUSTMENTS - Button Presses
+  # ============================================================================
+  - type: horizontal-stack
+    cards:
+      - type: button
+        entity: button.alp_brighter
+        name: Brighter
+        icon: mdi:brightness-plus
+        tap_action:
+          action: call-service
+          service: button.press
+          service_data:
+            entity_id: button.alp_brighter
+
+      - type: button
+        entity: button.alp_dimmer
+        name: Dimmer
+        icon: mdi:brightness-minus
+        tap_action:
+          action: call-service
+          service: button.press
+          service_data:
+            entity_id: button.alp_dimmer
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        entity: button.alp_warmer
+        name: Warmer
+        icon: mdi:thermometer-plus
+        tap_action:
+          action: call-service
+          service: button.press
+          service_data:
+            entity_id: button.alp_warmer
+
+      - type: button
+        entity: button.alp_cooler
+        name: Cooler
+        icon: mdi:thermometer-minus
+        tap_action:
+          action: call-service
+          service: button.press
+          service_data:
+            entity_id: button.alp_cooler
+
+  # ============================================================================
+  # FINE CONTROL - Sliders
+  # ============================================================================
+  - type: entities
+    title: 🎚️ Fine Control
+    show_header_toggle: false
+    entities:
+      - entity: number.alp_brightness_adjustment
+        name: Brightness Adjustment
+        icon: mdi:brightness-6
+
+      - entity: number.alp_warmth_adjustment
+        name: Warmth Adjustment
+        icon: mdi:thermometer
+
+  # ============================================================================
+  # RESET CONTROLS - Clear Everything
+  # ============================================================================
+  - type: entities
+    title: 🔄 Reset Controls
+    show_header_toggle: false
+    entities:
+      - entity: script.alp_reset_all
+        name: Reset Everything
+        icon: mdi:restart
+        tap_action:
+          action: call-service
+          service: script.alp_reset_all
+          confirmation:
+            text: This will clear all adjustments, timers, and scenes. Continue?
+
+# ============================================================================
+# ALTERNATIVE: COMPACT STATUS CARD
+# ============================================================================
+# For a more compact view, use this markdown card with all key info:
+
+# type: markdown
+# title: 🔍 ALP Quick Status
+# content: |
+#   **Scene:** {{ states('sensor.alp_current_scene') | title }}
+#   **Last Action:** {{ states('sensor.alp_last_action') }}
+#
+#   **Adjustments:**
+#   • Brightness: {{ states('sensor.alp_brightness_adjustment') }}%
+#   • Warmth: {{ states('sensor.alp_warmth_adjustment') }}K
+#
+#   **Boosts:**
+#   • Environmental: {{ states('sensor.alp_environmental_boost') }}%
+#   • Sunset: {{ states('sensor.alp_sunset_boost') }}%
+#
+#   **Timers:** {{ states('sensor.alp_timer_status') }}
+#   **Zone Health:** {{ states('sensor.alp_zone_health') }}
+#   **Wake Sequence:** {{ states('sensor.alp_wake_sequence_status') }}
+
+# ============================================================================
+# ALTERNATIVE: GRID LAYOUT (More Visual)
+# ============================================================================
+# For a modern grid-based layout:
+
+# type: grid
+# cards:
+#   # Status Cards
+#   - type: entity
+#     entity: sensor.alp_last_action
+#     name: Last Action
+#     icon: mdi:history
+#
+#   - type: entity
+#     entity: sensor.alp_timer_status
+#     name: Timers
+#     icon: mdi:timer-sand
+#
+#   - type: entity
+#     entity: sensor.alp_zone_health
+#     name: Zone Health
+#     icon: mdi:heart-pulse
+#
+#   - type: entity
+#     entity: sensor.alp_wake_sequence_status
+#     name: Wake Sequence
+#     icon: mdi:alarm
+#
+#   # Quick Action Buttons
+#   - type: button
+#     entity: script.alp_scene_auto
+#     name: Auto Mode
+#     icon: mdi:sync
+#
+#   - type: button
+#     entity: script.apply_scene_evening_comfort
+#     name: Evening
+#     icon: mdi:weather-sunset
+#
+#   - type: button
+#     entity: script.alp_reset_all
+#     name: Reset
+#     icon: mdi:restart
+#
+#   - type: button
+#     entity: script.alp_show_status
+#     name: Status
+#     icon: mdi:information
+#
+# columns: 4
+# square: false
+
+# ============================================================================
+# USAGE INSTRUCTIONS
+# ============================================================================
+#
+# 1. Open your Lovelace dashboard in edit mode
+# 2. Click "Add Card" at the bottom
+# 3. Select "Manual" card type
+# 4. Paste the YAML from above
+# 5. Click "Save"
+#
+# CUSTOMIZATION:
+# - Remove cards you don't need
+# - Reorder cards by moving the YAML blocks
+# - Change icons by editing "icon: mdi:xxx" lines
+# - Adjust card titles in "title: xxx" lines
+#
+# ENTITY AVAILABILITY:
+# All entities referenced above will be available after:
+# 1. Restarting Home Assistant
+# 2. Waiting ~30 seconds for integration to load
+# 3. Checking Developer Tools → States for sensor.alp_*
+#
+# TROUBLESHOOTING:
+# - Entity not found? Check integration is loaded
+# - Card not updating? Check entity state in Developer Tools
+# - Wrong data? Check entity attributes in Developer Tools
+#
+# SUPPORT:
+# See PHASE_6_7_8_COMPLETION_SUMMARY.md for complete documentation
