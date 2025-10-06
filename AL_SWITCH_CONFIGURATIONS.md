@@ -1,15 +1,23 @@
 # Adaptive Lighting Switch Configurations
-**Date**: 2025-10-06
+**Date**: 2025-10-06 (Updated)
 **Purpose**: Document exact AL switch configs from implementation_1.yaml for implementation_2 migration
-**Status**: ⚠️ CONFIGURATION REQUIRED
+**Status**: ✅ COMPLETE - All configs added to implementation_2.yaml
 
 ---
 
-## CRITICAL: implementation_2.yaml is MISSING AL Switch Configurations
+## ✅ UPDATE: All AL Switch Configurations NOW INCLUDED
 
-**Finding**: implementation_2.yaml assumes Adaptive Lighting switches are configured via UI, but does NOT include the actual switch configurations from implementation_1.yaml.
+**Good News**: As of commit b5e8687c, implementation_2.yaml NOW includes all 5 Adaptive Lighting switch configurations from implementation_1.yaml!
 
-**Impact**: Users migrating from implementation_1 to implementation_2 will lose all their carefully tuned AL switch parameters unless they manually recreate them via UI.
+**Location in implementation_2.yaml**: Lines 136-240 (adaptive_lighting section)
+
+**Additional File Created**: `adaptive_lighting_pro_zones.yaml` with complete ALP integration zone configs
+
+**What's Included**:
+- All 5 AL base integration switches with exact parameters
+- `light.all_adaptive_lights` group (13 lights total)
+- `group.adaptive_lighting_switches` for tracking
+- Complete ALP zone configurations matching AL switches
 
 ---
 
@@ -334,10 +342,33 @@ For each switch, verify attributes match:
 
 ## ALP Integration Configuration
 
-The Adaptive Lighting Pro integration MUST be configured to reference these switch names. Check `configuration.yaml` or UI config for:
+✅ **COMPLETE CONFIGURATION PROVIDED**: See `adaptive_lighting_pro_zones.yaml` for full zone configs.
+
+The Adaptive Lighting Pro integration MUST be configured to reference these switch names.
+
+**Option 1: Use the provided config file** (Recommended):
+```yaml
+# In configuration.yaml:
+adaptive_lighting_pro: !include adaptive_lighting_pro_zones.yaml
+```
+
+**Option 2: Configure via UI**:
+Settings → Integrations → Adaptive Lighting Pro → Configure
+
+**Complete zone configuration example** (all 5 zones provided in adaptive_lighting_pro_zones.yaml):
 
 ```yaml
 adaptive_lighting_pro:
+  # Global sensors
+  lux_sensor: sensor.outdoor_illuminance
+  weather_entity: weather.home
+
+  # Features
+  environmental_enabled: true
+  sunset_boost_enabled: true
+  wake_sequence_enabled: true
+  wake_target_zone: bedroom_primary
+
   zones:
     - zone_id: "recessed_ceiling"
       adaptive_lighting_switch: "switch.adaptive_lighting_recessed_ceiling"
@@ -346,7 +377,9 @@ adaptive_lighting_pro:
         - light.living_room_hallway_lights
       brightness_min: 2
       brightness_max: 23
-      # ... other zone config
+      enabled: true
+      environmental_enabled: true
+      sunset_enabled: true
 
     - zone_id: "kitchen_island"
       adaptive_lighting_switch: "switch.adaptive_lighting_kitchen_island"
@@ -356,12 +389,16 @@ adaptive_lighting_pro:
       brightness_max: 100
       color_temp_min: 2000
       color_temp_max: 4000
-      # ... other zone config
+      enabled: true
+      environmental_enabled: true
+      sunset_enabled: true
 
-    # ... repeat for all 5 zones
+    # ... (all 5 zones in adaptive_lighting_pro_zones.yaml)
 ```
 
 **CRITICAL**: Zone brightness/color_temp ranges in ALP integration MUST match the AL switch configurations above, or ALP will send invalid values to AL.
+
+**Verification**: The provided `adaptive_lighting_pro_zones.yaml` has been validated to match all AL switch configs exactly.
 
 ---
 
@@ -383,13 +420,26 @@ adaptive_lighting_pro:
 
 ## Conclusion
 
-**Status**: ⚠️ **ACTION REQUIRED**
+**Status**: ✅ **COMPLETE**
 
-implementation_2.yaml does NOT include Adaptive Lighting switch configurations. Users migrating from implementation_1 to implementation_2 MUST manually recreate these 5 switches via UI or YAML.
+implementation_2.yaml NOW includes all Adaptive Lighting switch configurations from implementation_1.yaml.
 
-**Recommended Action**:
-1. Create `packages/adaptive_lighting_switches.yaml` with all 5 switch configs
-2. Update implementation_2.yaml header to reference this requirement
-3. Add migration checklist to YAML_MIGRATION_COMPLETE.md
+**What's Provided**:
+1. ✅ `implementation_2.yaml` lines 136-240: All 5 AL switch configs
+2. ✅ `adaptive_lighting_pro_zones.yaml`: Complete ALP integration zone configs
+3. ✅ `AL_SWITCH_CONFIGURATIONS.md`: This documentation file
 
-**Estimated Time**: 30 minutes to configure 5 switches via UI, or 10 minutes to copy YAML configs
+**Migration Path**:
+1. Copy `implementation_2.yaml` to `packages/adaptive_lighting.yaml`
+2. Copy `adaptive_lighting_pro_zones.yaml` to your config directory
+3. In `configuration.yaml`, add:
+   ```yaml
+   packages: !include_dir_named packages/
+   adaptive_lighting_pro: !include adaptive_lighting_pro_zones.yaml
+   ```
+4. Restart Home Assistant
+5. Verify all switches appear: `switch.adaptive_lighting_*`
+
+**Estimated Time**: 5 minutes to copy files + 1 restart (vs 30-60 min manual config)
+
+**No Manual Configuration Needed** - Everything is in code and version controlled!
