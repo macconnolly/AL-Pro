@@ -94,6 +94,151 @@ light:
       - light.bathroom_shower
       # Add your specific bathroom lights here
 
+  # All Adaptive Lights - Convenience group for physical control
+  - platform: group
+    name: "All Adaptive Lights"
+    unique_id: al_all_adaptive_lights_group
+    entities:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+      - light.kitchen_island_pendants
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+
+# -----------------------------------------------------------------------------
+# Group for Adaptive Lighting Control Switches
+# -----------------------------------------------------------------------------
+group:
+  adaptive_lighting_switches:
+    name: "All Adaptive Lighting Control Switches"
+    entities:
+      - switch.adaptive_lighting_main_living
+      - switch.adaptive_lighting_kitchen_island
+      - switch.adaptive_lighting_bedroom_primary
+      - switch.adaptive_lighting_accent_spots
+      - switch.adaptive_lighting_recessed_ceiling
+
+# -----------------------------------------------------------------------------
+# Adaptive Lighting Base Integration Configurations
+# -----------------------------------------------------------------------------
+# These configure the Adaptive Lighting (base) integration switches.
+# Each switch controls one zone and provides the baseline adaptive behavior.
+# The ALP integration enhances these with environmental, scene, and manual layers.
+
+adaptive_lighting:
+  - name: "recessed_ceiling"
+    lights:
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
+    min_brightness: 2
+    max_brightness: 23
+    sleep_brightness: 1
+    initial_transition: 0
+    transition: 0
+    interval: 20
+    sleep_transition: 3
+    adapt_delay: 0
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
+  - name: "kitchen_island"
+    lights:
+      - light.kitchen_island_pendants
+    min_brightness: 30
+    max_brightness: 100
+    sleep_brightness: 1
+    min_color_temp: 2000
+    max_color_temp: 4000
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 3
+    interval: 20
+    adapt_delay: 0
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
+  - name: "bedroom_primary"
+    lights:
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
+    min_brightness: 20
+    max_brightness: 40
+    sleep_brightness: 5
+    min_color_temp: 1800
+    max_color_temp: 2250
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 5
+    interval: 20
+    adapt_delay: 0
+    autoreset_control_seconds: 0
+    take_over_control: true
+    skip_redundant_commands: true
+    detect_non_ha_changes: true
+    include_config_in_attributes: true
+
+  - name: "accent_spots"
+    lights:
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
+    min_brightness: 20
+    max_brightness: 50
+    sleep_brightness: 1
+    min_color_temp: 2000
+    max_color_temp: 6500
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 5
+    interval: 20
+    adapt_delay: 0
+    autoreset_control_seconds: 0
+    take_over_control: true
+    send_split_delay: 0
+    skip_redundant_commands: true
+    detect_non_ha_changes: true
+    include_config_in_attributes: true
+
+  - name: "main_living"
+    lights:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
+    min_brightness: 45
+    max_brightness: 100
+    sleep_brightness: 25
+    min_color_temp: 2250
+    max_color_temp: 2950
+    sleep_color_temp: 1800
+    initial_transition: 0
+    transition: 0
+    sleep_transition: 0
+    interval: 20
+    adapt_delay: 5  # Grace period for manual overrides
+    autoreset_control_seconds: 0
+    take_over_control: true
+    detect_non_ha_changes: true
+    separate_turn_on_commands: false
+    send_split_delay: 0
+    skip_redundant_commands: true
+    include_config_in_attributes: true
+
 # -----------------------------------------------------------------------------
 # Scene Choreography Scripts
 # -----------------------------------------------------------------------------
