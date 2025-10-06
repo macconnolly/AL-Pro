@@ -1,0 +1,529 @@
+# ADAPTIVE LIGHTING PRO - COMPLETE DASHBOARD
+# Copy and paste these cards directly into Home Assistant UI Dashboard Editor
+#
+# INSTRUCTIONS:
+# 1. Navigate to your Home Assistant dashboard
+# 2. Click the three dots (⋮) in top right → Edit Dashboard
+# 3. Click + ADD CARD at the bottom
+# 4. Click "Show Code Editor" (bottom left)
+# 5. Delete the placeholder YAML
+# 6. Copy and paste ONE card at a time from below
+# 7. Click SAVE
+#
+# DO NOT wrap these in views: or any other structure - paste directly!
+
+# ==============================================================================
+# CARD 1: MASTER CONTROL PANEL - Everything You Need Daily
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # 🏠 Adaptive Lighting Pro
+      Complete control panel for everyday use
+
+  # Current Status Row
+  - type: horizontal-stack
+    cards:
+      - type: entity
+        entity: sensor.alp_current_scene
+        name: Scene
+        icon: mdi:palette
+
+      - type: entity
+        entity: sensor.alp_status
+        name: Status
+        icon: mdi:information
+
+      - type: entity
+        entity: switch.alp_pause_adaptive_control
+        name: Paused
+        icon: mdi:pause
+
+  # Quick Scene Buttons
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: button
+        name: Auto
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.alp_scene_auto
+        entity: script.alp_scene_auto
+        show_state: false
+
+      - type: button
+        name: All Lights
+        icon: mdi:lightbulb-group
+        tap_action:
+          action: call-service
+          service: script.apply_scene_all_lights
+        entity: script.apply_scene_all_lights
+        show_state: false
+
+      - type: button
+        name: Evening
+        icon: mdi:weather-sunset
+        tap_action:
+          action: call-service
+          service: script.apply_scene_evening_comfort
+        entity: script.apply_scene_evening_comfort
+        show_state: false
+
+      - type: button
+        name: Ultra Dim
+        icon: mdi:weather-night
+        tap_action:
+          action: call-service
+          service: script.apply_scene_ultra_dim
+        entity: script.apply_scene_ultra_dim
+        show_state: false
+
+  # Brightness/Warmth Quick Adjust
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Brighter
+        icon: mdi:brightness-7
+        tap_action:
+          action: call-service
+          service: script.alp_brighter
+        entity: button.alp_brighter
+        show_state: false
+
+      - type: button
+        name: Dimmer
+        icon: mdi:brightness-4
+        tap_action:
+          action: call-service
+          service: script.alp_dimmer
+        entity: button.alp_dimmer
+        show_state: false
+
+      - type: button
+        name: Warmer
+        icon: mdi:fire
+        tap_action:
+          action: call-service
+          service: script.alp_warmer
+        entity: button.alp_warmer
+        show_state: false
+
+      - type: button
+        name: Cooler
+        icon: mdi:snowflake
+        tap_action:
+          action: call-service
+          service: script.alp_cooler
+        entity: button.alp_cooler
+        show_state: false
+
+  # Fine Control Sliders
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - entity: number.alp_brightness_adjustment
+        name: Brightness Fine Control
+        icon: mdi:brightness-6
+
+      - entity: number.alp_warmth_adjustment
+        name: Warmth Fine Control
+        icon: mdi:thermometer
+
+  # Reset and Diagnostics
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Reset All
+        icon: mdi:restart
+        tap_action:
+          action: call-service
+          service: script.alp_reset_all
+          confirmation:
+            text: Reset all adjustments and return to auto?
+        entity: script.alp_reset_all
+        show_state: false
+
+      - type: button
+        name: Show Status
+        icon: mdi:information-outline
+        tap_action:
+          action: call-service
+          service: script.alp_show_status
+        entity: script.alp_show_status
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 2: ZONE CONTROL - Per-Zone Management
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # 🏠 Zone Control
+      Manage individual lighting zones
+
+  - type: entities
+    title: Manual Control Status
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_zones_with_manual_control
+        name: Zones with Manual Control
+        icon: mdi:hand-wave
+
+      - entity: sensor.alp_manual_timer_status
+        name: Timer Status
+        icon: mdi:timer-sand
+
+      - type: divider
+
+      - entity: sensor.alp_zone_manual_control_main_living
+        name: Main Living
+        icon: mdi:sofa
+
+      - entity: sensor.alp_zone_manual_control_kitchen_island
+        name: Kitchen
+        icon: mdi:silverware-fork-knife
+
+      - entity: sensor.alp_zone_manual_control_bedroom_primary
+        name: Bedroom
+        icon: mdi:bed
+
+      - entity: sensor.alp_zone_manual_control_accent_spots
+        name: Accent Spots
+        icon: mdi:spotlight-beam
+
+      - entity: sensor.alp_zone_manual_control_recessed_ceiling
+        name: Recessed
+        icon: mdi:ceiling-light
+
+  # Zone Reset Buttons
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: button
+        name: Reset All Zones
+        icon: mdi:refresh-circle
+        tap_action:
+          action: call-service
+          service: script.alp_reset_all_zones
+        entity: script.alp_reset_all_zones
+        show_state: false
+
+      - type: button
+        name: Reset Single Zone
+        icon: mdi:refresh
+        tap_action:
+          action: call-service
+          service: script.alp_reset_zone
+          data:
+            zone: main_living
+        entity: script.alp_reset_zone
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 3: ENVIRONMENTAL & BOOSTS - Adaptive Intelligence
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # 🌤️ Environmental Adaptation
+      Automatic brightness adjustments based on conditions
+
+  - type: entities
+    title: Active Boosts
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_environmental_boost
+        name: Environmental Boost
+        icon: mdi:weather-cloudy
+
+      - entity: sensor.alp_sunset_boost
+        name: Sunset Boost
+        icon: mdi:weather-sunset
+
+      - type: attribute
+        entity: sensor.alp_environmental_boost
+        attribute: lux_value
+        name: Current Lux
+        icon: mdi:brightness-5
+
+      - type: attribute
+        entity: sensor.alp_environmental_boost
+        attribute: weather_condition
+        name: Weather
+        icon: mdi:weather-partly-cloudy
+
+      - type: divider
+
+      - entity: button.show_environmental_status
+        name: Show Detailed Status
+        icon: mdi:information
+        tap_action:
+          action: call-service
+          service: script.alp_show_environmental_status
+
+---
+
+# ==============================================================================
+# CARD 4: WAKE & ALARMS - Morning Routine Control
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # ⏰ Wake Sequence Control
+      Manage morning wake-up lighting
+
+  - type: entities
+    title: Wake Settings
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_wake_sequence_status
+        name: Wake Status
+        icon: mdi:alarm
+
+      - entity: sensor.alp_next_alarm
+        name: Next Alarm
+        icon: mdi:alarm-check
+
+      - entity: input_boolean.alp_disable_next_sonos_wakeup
+        name: Skip Next Alarm
+        icon: mdi:alarm-snooze
+
+      - type: divider
+
+      - type: button
+        name: Set Wake Time
+        icon: mdi:alarm-plus
+        tap_action:
+          action: call-service
+          service: script.alp_set_wake_alarm
+          data:
+            alarm_time: "06:30"
+
+      - type: button
+        name: Clear Wake Alarm
+        icon: mdi:alarm-off
+        tap_action:
+          action: call-service
+          service: script.alp_clear_wake_alarm
+
+      - type: button
+        name: Toggle Skip
+        icon: mdi:alarm-snooze
+        tap_action:
+          action: call-service
+          service: script.alp_toggle_skip_alarm
+
+---
+
+# ==============================================================================
+# CARD 5: CONFIGURATION - System Settings
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # ⚙️ Configuration Settings
+      Adjust system behavior
+
+  - type: entities
+    title: Adjustment Settings
+    show_header_toggle: false
+    entities:
+      - entity: number.alp_brightness_increment
+        name: Brightness Step Size
+        icon: mdi:stairs
+
+      - entity: number.alp_color_temp_increment
+        name: Warmth Step Size
+        icon: mdi:stairs
+
+      - entity: number.alp_manual_control_timeout
+        name: Manual Control Timeout
+        icon: mdi:timer-outline
+
+      - type: divider
+
+      - entity: switch.alp_pause_adaptive_control
+        name: Pause System
+        icon: mdi:pause-circle
+
+---
+
+# ==============================================================================
+# CARD 6: SYSTEM HEALTH - Diagnostics & Monitoring
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      # 🔍 System Diagnostics
+      Monitor integration health and performance
+
+  - type: entities
+    title: System Health
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_health_score
+        name: Health Score
+        icon: mdi:heart-pulse
+
+      - entity: sensor.alp_zone_health
+        name: Zone Health
+        icon: mdi:home-group
+
+      - entity: sensor.alp_last_action
+        name: Last Action
+        icon: mdi:history
+
+      - entity: sensor.alp_performance_metrics
+        name: Performance
+        icon: mdi:speedometer
+
+      - entity: sensor.alp_usage_statistics
+        name: Usage Stats
+        icon: mdi:chart-timeline-variant
+
+      - entity: sensor.alp_active_lights_count
+        name: Active Lights
+        icon: mdi:lightbulb
+
+  # Diagnostic Actions
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Zone Details
+        icon: mdi:home-group
+        tap_action:
+          action: call-service
+          service: script.alp_show_zone_details
+        show_state: false
+
+      - type: button
+        name: Manual Control
+        icon: mdi:timer-cog
+        tap_action:
+          action: call-service
+          service: script.alp_show_manual_control
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 7: QUICK STATUS (Compact Alternative)
+# ==============================================================================
+type: markdown
+title: 🔍 ALP Quick Status
+content: |
+  **Current State:** {{ states('sensor.alp_status') }}
+  **Scene:** {{ states('sensor.alp_current_scene') | title }}
+  **Last Action:** {{ states('sensor.alp_last_action') }}
+
+  **Adjustments:**
+  • Brightness: {{ states('number.alp_brightness_adjustment') }}%
+  • Warmth: {{ states('number.alp_warmth_adjustment') }}K
+
+  **Active Boosts:**
+  • Environmental: {{ states('sensor.alp_environmental_boost') }}%
+  • Sunset: {{ states('sensor.alp_sunset_boost') }}%
+
+  **Manual Control:**
+  • Active Zones: {{ states('sensor.alp_zones_with_manual_control') }}
+  • Timer Status: {{ states('sensor.alp_manual_timer_status') }}
+
+  **Wake Sequence:** {{ states('sensor.alp_wake_sequence_status') }}
+  **Health Score:** {{ states('sensor.alp_health_score') }}%
+
+---
+
+# ==============================================================================
+# CARD 8: MOBILE-FRIENDLY COMPACT CONTROL
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: glance
+    title: ALP Status
+    entities:
+      - entity: sensor.alp_current_scene
+        name: Scene
+      - entity: sensor.alp_status
+        name: Status
+      - entity: sensor.alp_health_score
+        name: Health
+
+  - type: grid
+    columns: 2
+    square: true
+    cards:
+      - type: button
+        name: Auto
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.alp_scene_auto
+        show_state: false
+
+      - type: button
+        name: Evening
+        icon: mdi:weather-sunset
+        tap_action:
+          action: call-service
+          service: script.apply_scene_evening_comfort
+        show_state: false
+
+      - type: button
+        name: Brighter
+        icon: mdi:brightness-7
+        tap_action:
+          action: call-service
+          service: script.alp_brighter
+        show_state: false
+
+      - type: button
+        name: Dimmer
+        icon: mdi:brightness-4
+        tap_action:
+          action: call-service
+          service: script.alp_dimmer
+        show_state: false
+
+---
+
+# ==============================================================================
+# TESTING CHECKLIST
+# ==============================================================================
+# After adding cards, verify:
+#
+# ✓ Card 1 (Master Control) - All buttons respond, sliders adjust
+# ✓ Card 2 (Zone Control) - Shows manual control status per zone
+# ✓ Card 3 (Environmental) - Shows current boost values
+# ✓ Card 4 (Wake) - Wake sequence status updates, skip toggle works
+# ✓ Card 5 (Configuration) - Number entities accept changes
+# ✓ Card 6 (Health) - All sensors show data
+# ✓ Card 7 (Quick Status) - Markdown updates automatically
+# ✓ Card 8 (Mobile) - Compact layout works on phone
+#
+# TROUBLESHOOTING:
+# - Entity not available? Check integration is loaded
+# - Script not found? Verify implementation_2.yaml is loaded
+# - Button not working? Check service exists in Developer Tools
+#
+# CUSTOMIZATION:
+# - Remove any cards you don't need
+# - Adjust grid columns for your screen size
+# - Change icons by editing mdi:xxx values
+# - Add confirmations to destructive actions
