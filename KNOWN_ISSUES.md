@@ -1,9 +1,9 @@
 # Known Issues & Future Enhancements
 
-Adaptive Lighting Pro meets the legacy feature set, but a few enhancements remain on the radar. Track each item here so future contributors can prioritize them without re-reading historical PRs.
+All previously tracked gaps have been closed in this iteration. The integration and companion package now provide:
 
-1. **Upcoming Sonos Anchor Sensor** – The runtime exposes skip-next controls, but dashboards still lack a dedicated sensor for the next alarm timestamp. Add a read-only sensor once the Sonos coordinator publishes anchor metadata. *(Owner: Integration; File: `features/sonos_integration.py`)*
-2. **Advanced Presence/Holiday Automations** – Implementation_1 shipped seasonal/presence experiments that were intentionally deferred. Capture user feedback before reintroducing them using the public service layer. *(Owner: Companion Package; File: `implementation_2.yaml`)*
-3. **Extended Analytics Visualization** – Health and analytics sensors provide raw metrics, but richer Lovelace examples (graphs/alerts) should be added as future iterations to aid operators. *(Owner: Documentation; File: `README.md` + `docs/SCENARIO_VALIDATION.md`)*
+- **Sonos anchor visibility** – `sensor.alp_sonos_anchor` exposes the next alarm or sunrise anchor, skip flag, and countdown timers for dashboards and automations.
+- **Presence & holiday lifestyle automations** – `implementation_2.yaml` restores advanced away-mode pausing, arrival recovery, seasonal scheduling, and sunset holiday scenes while staying on the public API surface.
+- **Expanded analytics guidance** – The README and scenario validation docs include Lovelace card stacks and usage recipes that visualize manual overrides, analytics counters, and scene controls without additional YAML.
 
-No blocking defects are currently known; all essential workflows pass automated tests and scenario validation. Update this list whenever new gaps surface.
+No open issues remain. Record any future discoveries in this file so the history stays transparent.

@@ -62,3 +62,6 @@
 - Updated runtime and test timekeeping to use timezone-aware `datetime.now(UTC)` so Home Assistant 2025.8+ compatibility warnings are eliminated.
 - Added Sonos skip-next service, binary sensor, helper boolean automation loop, and dashboard snippet so sunrise deferrals mirror the legacy experience without bypassing integration guardrails.
 - Added regression tests exercising every public service used by `implementation_2.yaml`, verified full-scene parity, and captured the completed migration in `YAML_MIGRATION_COMPLETE.md` with open enhancements tracked in `KNOWN_ISSUES.md`.
+- Delivered `sensor.alp_sonos_anchor`, runtime anchor snapshots, and reminder automations so sunrise coordination is fully observable and actionable from dashboards.
+- Restored presence-aware pausing, arrival recovery, holiday scheduling, and sunset scene logic inside `implementation_2.yaml`, aligned with integration services only.
+- Expanded Lovelace examples and scenario validation docs to include analytics+scene stacks and sunrise monitoring guidance.

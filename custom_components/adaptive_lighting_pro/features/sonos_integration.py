@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Callable, Iterable, List, Optional
 from zoneinfo import ZoneInfo
 
@@ -20,6 +20,18 @@ from ..utils.logger import log_debug
 class SonosConfig:
     sensor: str | None
     skip_next_alarm: bool = False
+
+
+@dataclass
+class SonosAnchorSnapshot:
+    """Stateful snapshot describing the current sunrise anchor."""
+
+    anchor: Optional[datetime]
+    anchor_source: str
+    next_alarm: Optional[datetime]
+    sun_anchor: Optional[datetime]
+    skip_next: bool
+    updated: datetime
 
 
 def _parse_iso(value: str, tz: ZoneInfo) -> Optional[datetime]:
@@ -75,6 +87,7 @@ class SonosSunriseCoordinator:
         config: SonosConfig,
         debug: bool,
         on_skip_updated: Callable[[bool], None] | None = None,
+        on_anchor_updated: Callable[[], None] | None = None,
     ) -> None:
         self._hass = hass
         self._event_bus = event_bus
@@ -84,7 +97,12 @@ class SonosSunriseCoordinator:
         self._anchor: Optional[datetime] = None
         self._skip_next = config.skip_next_alarm
         self._on_skip_updated = on_skip_updated
+        self._on_anchor_updated = on_anchor_updated
         self._sensor_listener = None
+        self._anchor_source: str = "unavailable"
+        self._next_alarm: Optional[datetime] = None
+        self._sun_anchor_cached: Optional[datetime] = None
+        self._last_update: datetime = datetime.now(UTC)
         self._timer = async_track_time_interval(
             hass, self._check_anchor, timedelta(minutes=1)
         )
@@ -124,6 +142,18 @@ class SonosSunriseCoordinator:
 
         self._evaluate()
 
+    def anchor_snapshot(self) -> SonosAnchorSnapshot:
+        """Return structured information about the current anchor state."""
+
+        return SonosAnchorSnapshot(
+            anchor=self._anchor,
+            anchor_source=self._anchor_source,
+            next_alarm=self._next_alarm,
+            sun_anchor=self._sun_anchor_cached,
+            skip_next=self._skip_next,
+            updated=self._last_update,
+        )
+
     async def _handle_sensor(self, event: Event) -> None:
         self._evaluate()
 
@@ -131,23 +161,45 @@ class SonosSunriseCoordinator:
         tz = ZoneInfo(str(self._hass.config.time_zone))
         now = datetime.now(tz)
         anchor: Optional[datetime] = None
+        anchor_source = "unavailable"
+        next_alarm: Optional[datetime] = None
         if self._config.sensor and not self._skip_next:
             state = self._hass.states.get(self._config.sensor)
             if state:
-                anchor = find_next_alarm(
+                next_alarm = find_next_alarm(
                     now=now,
                     tz=tz,
                     state=state.state if state.state != "unknown" else None,
                     attributes=state.attributes,
                 )
+                if next_alarm is not None:
+                    anchor = next_alarm
+                    anchor_source = "alarm"
         sun_anchor = self._sun_anchor(now, tz)
         if self._skip_next and sun_anchor:
             anchor = sun_anchor
+            anchor_source = "sun_skip" if anchor_source != "alarm" else "alarm"
         if anchor is None:
             anchor = sun_anchor
+            anchor_source = "sun" if sun_anchor else anchor_source
+        previous_anchor = self._anchor
+        previous_source = self._anchor_source
+        previous_alarm = self._next_alarm
+        previous_sun = self._sun_anchor_cached
+        self._anchor = anchor
+        self._anchor_source = anchor_source if anchor else "unavailable"
+        self._next_alarm = next_alarm
+        self._sun_anchor_cached = sun_anchor
+        self._last_update = now.astimezone(UTC)
         if anchor:
             log_debug(self._debug, "Sonos anchor updated %s", anchor)
-        self._anchor = anchor
+        if (
+            previous_anchor != self._anchor
+            or previous_source != self._anchor_source
+            or previous_alarm != self._next_alarm
+            or previous_sun != self._sun_anchor_cached
+        ) and self._on_anchor_updated:
+            self._on_anchor_updated()
 
     def _sun_anchor(self, now: datetime, tz: ZoneInfo) -> Optional[datetime]:
         sun = self._hass.states.get("sun.sun")
@@ -187,3 +239,5 @@ class SonosSunriseCoordinator:
             if self._on_skip_updated:
                 self._on_skip_updated(False)
             self._evaluate()
+            if self._on_anchor_updated:
+                self._on_anchor_updated()

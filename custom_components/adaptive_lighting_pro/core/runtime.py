@@ -69,7 +69,11 @@ from ..features.environmental import EnvironmentalConfig, EnvironmentalObserver
 from ..features.manual_control import ManualControlConfig, ManualControlObserver
 from ..features.modes import ModeManager
 from ..features.scenes import SceneConfig, SceneManager
-from ..features.sonos_integration import SonosConfig, SonosSunriseCoordinator
+from ..features.sonos_integration import (
+    SonosAnchorSnapshot,
+    SonosConfig,
+    SonosSunriseCoordinator,
+)
 from ..robustness.rate_limiter import RateLimitConfig, RateLimiter
 from ..robustness.retry_manager import RetryManager
 from ..robustness.watchdog import Watchdog
@@ -272,6 +276,20 @@ class AdaptiveLightingProRuntime:
         self._record_event("sonos_skip_updated", skip=skip)
         self._notify_entities()
 
+    def _handle_sonos_anchor_updated(self) -> None:
+        self._beat("sonos_anchor")
+        if not self._sonos:
+            return
+        snapshot = self._sonos.anchor_snapshot()
+        anchor_iso = snapshot.anchor.isoformat() if snapshot.anchor else None
+        self._record_event(
+            "sonos_anchor_updated",
+            anchor=anchor_iso,
+            source=snapshot.anchor_source,
+            skip_next=snapshot.skip_next,
+        )
+        self._notify_entities()
+
     def _setup_observers(self) -> None:
         sensors = self._data.get(CONF_SENSORS, {})
         self._manual_observer = ManualControlObserver(
@@ -304,6 +322,7 @@ class AdaptiveLightingProRuntime:
             ),
             debug=bool(self._debug_config.get("debug_log", False)),
             on_skip_updated=self._handle_sonos_skip_updated,
+            on_anchor_updated=self._handle_sonos_anchor_updated,
         )
         self._sonos.start()
         controller_conf = self._data.get(CONF_CONTROLLERS, {})
@@ -1105,6 +1124,51 @@ class AdaptiveLightingProRuntime:
             return False
         return self._sonos.skip_next
 
+    def sonos_anchor_snapshot(self) -> Dict[str, Any]:
+        """Return details about the upcoming sunrise anchor."""
+
+        if not self._sonos:
+            return {
+                "state": "unavailable",
+                "anchor": None,
+                "anchor_source": "unavailable",
+                "skip_next": False,
+                "next_alarm_iso": None,
+                "sunrise_iso": None,
+                "seconds_until_anchor": None,
+                "updated_iso": None,
+            }
+        snapshot: SonosAnchorSnapshot = self._sonos.anchor_snapshot()
+
+        def _as_local(value: datetime | None) -> datetime | None:
+            if value is None:
+                return None
+            return dt_util.as_local(value)
+
+        anchor_local = _as_local(snapshot.anchor)
+        anchor_utc = snapshot.anchor.astimezone(dt_util.UTC) if snapshot.anchor else None
+        seconds_until: int | None = None
+        if anchor_utc is not None:
+            delta = anchor_utc - dt_util.utcnow()
+            seconds_until = max(0, int(delta.total_seconds()))
+
+        return {
+            "state": "ready" if anchor_local else "idle",
+            "anchor": anchor_local,
+            "anchor_source": snapshot.anchor_source,
+            "skip_next": snapshot.skip_next,
+            "next_alarm_iso": _as_local(snapshot.next_alarm).isoformat()
+            if snapshot.next_alarm
+            else None,
+            "sunrise_iso": _as_local(snapshot.sun_anchor).isoformat()
+            if snapshot.sun_anchor
+            else None,
+            "seconds_until_anchor": seconds_until,
+            "updated_iso": _as_local(snapshot.updated).isoformat()
+            if snapshot.updated
+            else None,
+        }
+
     def set_scene_warmth_offset(self, value: float) -> None:
         warmth = int(value)
         if self._scene_offset_user["warmth"] == warmth:
@@ -1166,6 +1230,9 @@ class AdaptiveLightingProRuntime:
             if data.get("last_error")
         }
         summary = self.analytics_summary()
+        anchor_snapshot = self.sonos_anchor_snapshot().copy()
+        anchor_dt = anchor_snapshot.pop("anchor", None)
+        anchor_snapshot["anchor_iso"] = anchor_dt.isoformat() if anchor_dt else None
         telemetry = {
             "state": "paused" if self._global_pause else "active",
             "mode": self._mode_manager.mode,
@@ -1182,6 +1249,7 @@ class AdaptiveLightingProRuntime:
             "scene_offsets": dict(self._scene_offsets),
             "sunset_boost_pct": self._sunset_boost_pct,
             "manual_actions": dict(self._manual_action_flags),
+            "sonos_anchor": anchor_snapshot,
         }
         return telemetry
 

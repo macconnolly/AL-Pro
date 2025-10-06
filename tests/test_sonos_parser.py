@@ -9,6 +9,9 @@ import pytest
 from custom_components.adaptive_lighting_pro.binary_sensor import (
     AdaptiveLightingProSonosSkipBinarySensor,
 )
+from custom_components.adaptive_lighting_pro.sensor import (
+    AdaptiveLightingProSonosAnchorSensor,
+)
 from custom_components.adaptive_lighting_pro.const import (
     CONF_SENSORS,
     CONF_SONOS_SENSOR,
@@ -159,5 +162,59 @@ def test_skip_service_without_sonos_sensor(hass: HomeAssistant) -> None:
         assert result["status"] == "ok"
         assert result["skip_next"] is True
         assert runtime.sonos_skip_next() is True
+
+    hass.loop.run_until_complete(scenario())
+
+
+def test_sonos_anchor_sensor_reports_values(hass: HomeAssistant) -> None:
+    async def scenario() -> None:
+        now = datetime.now(UTC)
+        alarm_iso = (now + timedelta(minutes=50)).isoformat()
+        sun_iso = (now + timedelta(hours=1, minutes=5)).isoformat()
+        zones = [
+            {
+                "zone_id": "living",
+                "al_switch": "switch.living",
+                "lights": ["light.one"],
+                "enabled": True,
+                "zone_multiplier": 1.0,
+                "sunrise_offset_min": 0,
+                "environmental_boost_enabled": True,
+                "sunset_boost_enabled": True,
+            }
+        ]
+        hass.states["switch.living"] = State("on", {"integration": "adaptive_lighting"})
+        hass.states["sensor.sonos"] = State(
+            "ready",
+            {"alarms": [{"datetime": alarm_iso}]},
+        )
+        hass.states["sun.sun"] = State(
+            "below_horizon",
+            {"next_rising": sun_iso},
+        )
+        entry = ConfigEntry(
+            data={
+                CONF_ZONES: zones,
+                CONF_SENSORS: {CONF_SONOS_SENSOR: "sensor.sonos"},
+            },
+            options={CONF_SONOS_SETTINGS: {}},
+        )
+        runtime = AdaptiveLightingProRuntime(hass, entry)
+        await runtime.async_setup()
+        sensor = AdaptiveLightingProSonosAnchorSensor(runtime)
+        value = sensor.native_value
+        assert value is not None
+        assert value.isoformat().startswith(alarm_iso[:19])
+        attrs = sensor.extra_state_attributes
+        assert attrs["anchor_source"] == "alarm"
+        assert attrs["state"] == "ready"
+        assert attrs["next_alarm_iso"].startswith(alarm_iso[:19])
+        assert attrs["sunrise_iso"].startswith(sun_iso[:19])
+        assert attrs["seconds_until_anchor"] > 0
+        await runtime.skip_next_alarm(True)
+        attrs_after_skip = sensor.extra_state_attributes
+        assert attrs_after_skip["skip_next"] is True
+        assert attrs_after_skip["anchor_source"] in {"sun", "sun_skip"}
+        assert attrs_after_skip["state"] == "ready"
 
     hass.loop.run_until_complete(scenario())

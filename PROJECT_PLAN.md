@@ -11,14 +11,16 @@ Adaptive Lighting Pro replaces the legacy YAML package with a production-grade H
 - **Test suite (`tests/`)** covers config validation, Sonos parsing, manual timers, rate limiting, watchdog sweeps, Zen32 inputs, and service orchestration through scenario-driven pytest cases.
 
 ## Current Focus Areas
-1. **Lifestyle Extensions** – Harden the new Sonos skip-next workflow and identify adjacent lifestyle hooks worth elevating (e.g., upcoming alarm surfacing).
+1. **Lifestyle Extensions** – Harden the new Sonos skip-next workflow, sunrise anchor sensor, and upcoming-alarm reminders while identifying adjacent lifestyle hooks worth elevating.
 2. **Dashboard Polish** – Continue refining scenario validation docs and Lovelace guidance so Implementation_2 users can drop in dashboards without bespoke YAML.
-3. **Feedback Loop** – Monitor manual sensor usage, analytics, and watchdog metrics to identify future enhancements beyond the legacy parity scope.
+3. **Feedback Loop** – Monitor manual sensor usage, analytics, and watchdog metrics to identify future enhancements beyond the legacy parity scope, including the new presence/holiday automations.
 
 ## Latest Audit
 - **Service Coverage** – Added `tests/test_service_api_parity.py` to prove that force sync, enable/disable/reset zone, and backup/restore services (used heavily by `implementation_2.yaml`) behave as expected.
 - **Scene Parity** – Extended `tests/test_adjust_and_scenes.py` to validate Full Bright, No Spots, Evening Comfort, and Ultra Dim presets including manual timers, offsets, and group toggles.
 - **Documentation** – Published `YAML_MIGRATION_COMPLETE.md` and `KNOWN_ISSUES.md` so migration status and deferred enhancements remain visible to future contributors.
+- **Sunrise Visibility** – Introduced `sensor.alp_sonos_anchor`, runtime anchor snapshots, reminder automations, and accompanying regression tests in `tests/test_sonos_parser.py`.
+- **Presence & Holiday UX** – Reintroduced advanced away/return, seasonal scheduling, and holiday scene logic in `implementation_2.yaml` using only public services.
 
 ## Implementation_2 Companion Package
 The delivered `implementation_2.yaml` leverages the integration’s public APIs without recreating business logic. Highlights include:
@@ -31,5 +33,5 @@ Details live in `docs/IMPLEMENTATION_2_PLAN.md`, which maps every retained YAML 
 
 ## Next Steps
 - Capture household feedback on the new Implementation_2 automations (movie bridge thresholds, sunset nudge levels, skip toggle cadence) and tune defaults accordingly.
-- Ship an upcoming-alarm sensor once the Sonos coordinator begins exposing anchor metadata to dashboards. *(Tracked in `KNOWN_ISSUES.md`.)*
-- Expand Lovelace examples that pair analytics sensors with the new scripts and automations (README stack published; collect feedback for graphing/alert refinements). *(Tracked in `KNOWN_ISSUES.md` item 3.)*
+- Observe holiday/presence automation behaviour through the season and calibrate timing offsets or group membership as needed.
+- Expand Lovelace examples that pair analytics sensors with the new scripts and automations (README stack published; collect feedback for graphing/alert refinements).

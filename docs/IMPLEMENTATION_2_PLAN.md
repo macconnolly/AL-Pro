@@ -51,11 +51,10 @@ These behaviors are now baked into the integration presets. Implementation_2 scr
    - `button.alp_backup_and_sync` chains backup + sync for dashboards or quick actions.
 
 ## Outstanding Integration Work Feeding implementation_2
-- Surface upcoming Sonos alarm metadata as a sensor so dashboards can show the next wake anchor.
-- Additional dashboards or helpers for summarizing analytics beyond the built-in sensors.
-- Future expansion hooks (e.g., holiday or presence-based scenes) as new requirements surface.
+- Gather feedback on the new sunrise reminders, presence pausing, and holiday cadence to refine defaults or expose configuration selectors in a future options flow.
+- Explore richer analytics visualizations (graphs/history) built on the existing sensors if households request deeper trend monitoring.
 
 ## Next Actions
-1. Expand dashboard examples that combine manual sensors, analytics, and scene controls for a turnkey Lovelace experience (initial stack published in README, iterate with feedback).
-2. Gather household feedback and adjust Implementation_2 defaults (script aliases, trigger thresholds) accordingly.
-3. Evaluate exposing upcoming Sonos anchor times for dashboards once integration sensor lands.
+1. Expand dashboard examples that combine manual sensors, analytics, sunrise anchors, and scene controls for a turnkey Lovelace experience (stack published in README—iterate with feedback).
+2. Gather household feedback and adjust Implementation_2 defaults (script aliases, trigger thresholds, presence group members) accordingly.
+3. Monitor sunrise reminders/holiday cadence through the season and capture any requested configuration knobs for a future options update.

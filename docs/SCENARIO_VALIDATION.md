@@ -167,6 +167,28 @@ This document proves key Adaptive Lighting Pro behaviors using concrete code ref
 
 **✅ VERIFIED**
 
+## Feature: Sunrise Anchor Sensor & Reminders
+**User Story**: I want full visibility and proactive reminders for the next sunrise anchor, whether it comes from Sonos alarms or natural sunrise.
+
+**Logic Trace**:
+1. Entry Point: The Sonos coordinator now tracks anchors, sources, and skip flags while exposing snapshots (`features/sonos_integration.py` L82-L199).
+2. Data Flow: Runtime anchor callbacks record events, refresh telemetry, and expose a serialized snapshot for platforms (`core/runtime.py` L279-L292, L1122-L1170, L1222-L1253).
+3. State Changes: `AdaptiveLightingProSonosAnchorSensor` surfaces the timestamp, source, countdown, and skip state for dashboards and automations (`sensor.py` L22-L113).
+4. Exit Point: Companion automations issue reminders 10 minutes before the anchor and dismiss notifications once the window passes or is skipped (`implementation_2.yaml` L527-L569).
+
+**✅ VERIFIED**
+
+## Feature: Presence & Holiday Automations
+**User Story**: When everyone leaves or the holidays arrive, Adaptive Lighting should gracefully pause, resume, or shift scenes without manual babysitting.
+
+**Logic Trace**:
+1. Entry Point: Companion automations monitor the household presence group and holiday boolean while leveraging public services (`implementation_2.yaml` L11-L22, L641-L769).
+2. Data Flow: Away detection enables the global pause switch and applies the ultra-dim scene; return detection clears the pause, restores adaptive defaults, and force-syncs (`implementation_2.yaml` L641-L695, `core/runtime.py` L1194-L1204).
+3. State Changes: Holiday schedule automations toggle the seasonal boolean daily and trigger evening comfort scenes at sunset when occupants are home (`implementation_2.yaml` L697-L769).
+4. Exit Point: Logbook entries, Lovelace entities, and the default-scene reset ensure users see and can override the automation at any step (see README Lovelace stack and `implementation_2.yaml` L320-L520).
+
+**✅ VERIFIED**
+
 ## Home Assistant 2025.8+ Compliance Notes
 - Python 3.12 compatibility with async/await patterns and selectors confirmed (`manifest.json`, `config_flow.py`).
 - Platform modules remain in `custom_components/adaptive_lighting_pro/`—no symlinks are required for Home Assistant to discover them (`AGENTS.md`).

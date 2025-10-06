@@ -12,6 +12,7 @@ Adaptive Lighting Pro (ALP) is a Home Assistant custom integration that orchestr
 - Sonos-aware sunrise coordination with per-zone offsets, skip-next service, and binary sensor status
 - Retry, rate limiting, nightly sweep, watchdog, and observability metrics
 - Manual adjustment state sensors mirroring the legacy input booleans for brighter/dimmer/warmer/cooler actions
+- Upcoming sunrise anchor sensor with countdown attributes, skip toggles, and reminder automations
 
 ## Home Assistant Compatibility
 - Targets Home Assistant 2025.8+ and Python 3.12 runtimes.
@@ -25,11 +26,12 @@ See [`docs/SCENARIO_VALIDATION.md`](docs/SCENARIO_VALIDATION.md) for end-to-end 
 - [`PROJECT_PLAN.md`](PROJECT_PLAN.md) captures the architectural vision, open parity themes, and how Adaptive Lighting Pro replaces the YAML package.
 - [`docs/IMPLEMENTATION_2_PLAN.md`](docs/IMPLEMENTATION_2_PLAN.md) details which legacy `implementation_1.yaml` behaviors remain in the integration and which land in the companion package built on public services.
 - [`implementation_2.yaml`](implementation_2.yaml) now includes scene wrappers, manual adjustment helpers, zone reset/enable tooling, lifestyle automations (startup restore, movie bridge, nightly backup, Sonos skip toggles), and notifications driven exclusively through public APIs.
+- Presence-aware pausing, holiday scheduling, and sunrise reminders are implemented in the companion package so daily routines remain frictionless without touching integration internals.
 
 ## Companion Package Highlights
 - Defines the `group.all_lights` and `group.no_spots` helpers required by the scene presets baked into the integration.
 - Provides scripts for the full household scene set, manual adjustments, force-sync/reset workflows, zone enable/disable helpers, and backup/restore affordances.
-- Ships lifestyle automations covering startup restoration, movie-mode bridging, manual decay reversion, global pause recovery, nightly backups, rate-limit notifications, and Sonos skip toggle synchronization.
+- Ships lifestyle automations covering startup restoration, movie-mode bridging, manual decay reversion, global pause recovery, nightly backups, rate-limit notifications, Sonos skip toggle synchronization, presence-based pausing/resume, seasonal holiday scenes, and sunrise anchor reminders.
 - Keeps configuration thin by delegating timers, calculations, and boosts to the integration runtime while exposing Lovelace-friendly entry points.
 - Validated against new regression tests that exercise all scenes plus force-sync/reset/backup/restore services so the companion package only relies on supported APIs.
 
@@ -38,6 +40,7 @@ See [`docs/SCENARIO_VALIDATION.md`](docs/SCENARIO_VALIDATION.md) for end-to-end 
 - `tests/test_adjust_and_scenes.py` now covers the full scene catalog (Full Bright, No Spots, Evening Comfort, Ultra Dim) ensuring manual timers, offsets, and group toggles all behave exactly like Implementation_1.
 - [`YAML_MIGRATION_COMPLETE.md`](YAML_MIGRATION_COMPLETE.md) documents the final parity audit and references where each legacy capability lives.
 - [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) tracks deferred enhancements (e.g., future Sonos anchor sensor and richer analytics views) so follow-on work is transparent.
+- `KNOWN_ISSUES.md` now lists zero open items because the sunrise anchor sensor, presence/holiday automations, and dashboard polish all landed in this release.
 
 ## Installation
 1. Copy the `custom_components/adaptive_lighting_pro` directory to your Home Assistant `custom_components` folder.
@@ -63,6 +66,7 @@ Install dev dependencies (requires Home Assistant core development environment) 
 - [x] Upgrade config flow with selectors for zones, sensors, controllers, and expose environmental boost option
 - [x] Align manual scene presets with timer lifecycle and provide adaptive reset handling when returning to default
 - [x] Deliver Sonos skip-next service, binary sensor, and companion automations for sunrise deferrals
+- [x] Publish sunrise anchor sensor/notifications and integrate presence/holiday lifestyle automations in the companion package
 
 ## Lovelace Quick Start Stack
 Paste the snippet below into the UI editor’s "Manual" tab to surface the most useful controls and telemetry on a single dashboard column:
@@ -87,6 +91,10 @@ cards:
         name: Toggle Skip Sunrise
       - entity: button.alp_backup_and_sync
         name: Backup & Sync
+  - type: entity
+    entity: sensor.alp_sonos_anchor
+    name: Sunrise Anchor
+    secondary_info: last-updated
   - type: gauge
     entity: sensor.alp_health_score
     name: ALP Health
@@ -106,4 +114,12 @@ cards:
       - sensor.alp_system_snapshot
       - sensor.alp_analytics_summary
       - binary_sensor.alp_rate_limit_reached
+  - type: entities
+    title: Presence & Holiday Controls
+    entities:
+      - group.alp_presence_household
+      - input_boolean.alp_holiday_mode
+      - automation.alp_presence_pause_when_away
+      - automation.alp_presence_resume_when_home
+      - automation.alp_holiday_evening_scene
 ```

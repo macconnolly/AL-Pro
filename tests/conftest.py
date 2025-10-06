@@ -33,6 +33,11 @@ components_binary_sensor = types.ModuleType("homeassistant.components.binary_sen
 components_binary_sensor.BinarySensorEntity = type(
     "BinarySensorEntity", (object,), {}
 )
+components_sensor = types.ModuleType("homeassistant.components.sensor")
+components_sensor.SensorEntity = type(
+    "SensorEntity", (helpers_entity.Entity,), {}
+)
+components_sensor.SensorDeviceClass = types.SimpleNamespace(TIMESTAMP="timestamp")
 util_module = types.ModuleType("homeassistant.util")
 util_dt_module = types.ModuleType("homeassistant.util.dt")
 vol_module = types.ModuleType("voluptuous")
@@ -43,6 +48,9 @@ def _dt_now():
 
 
 util_dt_module.now = _dt_now
+util_dt_module.UTC = UTC
+util_dt_module.as_local = lambda value: value
+util_dt_module.utcnow = _dt_now
 util_module.dt = util_dt_module
 
 
@@ -255,6 +263,7 @@ sys.modules.setdefault("homeassistant.helpers.entity", helpers_entity)
 sys.modules.setdefault("homeassistant.components", components)
 sys.modules.setdefault("homeassistant.components.logbook", components_logbook)
 sys.modules.setdefault("homeassistant.components.binary_sensor", components_binary_sensor)
+sys.modules.setdefault("homeassistant.components.sensor", components_sensor)
 sys.modules.setdefault("homeassistant.util", util_module)
 sys.modules.setdefault("homeassistant.util.dt", util_dt_module)
 sys.modules.setdefault("homeassistant.core", homeassistant.core)

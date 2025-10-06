@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from homeassistant.components.sensor import SensorEntity
+from datetime import datetime
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -11,6 +13,7 @@ from .const import (
     ANALYTICS_SENSOR_ID,
     DOMAIN,
     HEALTH_SENSOR_ID,
+    SONOS_ANCHOR_SENSOR_ID,
     TELEMETRY_SENSOR_ID,
 )
 from .entity import AdaptiveLightingProEntity
@@ -26,6 +29,7 @@ async def async_setup_entry(
         AdaptiveLightingProHealthSensor(runtime),
         AdaptiveLightingProAnalyticsSensor(runtime),
         AdaptiveLightingProTelemetrySensor(runtime),
+        AdaptiveLightingProSonosAnchorSensor(runtime),
     ]
     async_add_entities(entities)
 
@@ -82,4 +86,28 @@ class AdaptiveLightingProTelemetrySensor(AdaptiveLightingProEntity, SensorEntity
     def extra_state_attributes(self) -> Dict[str, Any]:
         snapshot = self._runtime.telemetry_snapshot().copy()
         snapshot.pop("state", None)
+        return snapshot
+
+
+class AdaptiveLightingProSonosAnchorSensor(
+    AdaptiveLightingProEntity, SensorEntity
+):
+    """Expose upcoming sunrise anchor timestamp."""
+
+    _attr_entity_id = SONOS_ANCHOR_SENSOR_ID
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, runtime) -> None:
+        super().__init__(runtime, "ALP Sunrise Anchor", SONOS_ANCHOR_SENSOR_ID)
+
+    @property
+    def native_value(self) -> datetime | None:
+        snapshot = self._runtime.sonos_anchor_snapshot()
+        return snapshot.get("anchor")
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        snapshot = self._runtime.sonos_anchor_snapshot().copy()
+        anchor = snapshot.pop("anchor", None)
+        snapshot["anchor_iso"] = anchor.isoformat() if anchor else None
         return snapshot

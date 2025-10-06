@@ -206,9 +206,9 @@ RATE_LIMIT_ENTITY_ID: Final = "binary_sensor.alp_rate_limit_reached"
 SONOS_SKIP_ENTITY_ID: Final = "binary_sensor.alp_sonos_skip_next"
 
 TELEMETRY_SENSOR_ID: Final = "sensor.alp_system_snapshot"
-
 HEALTH_SENSOR_ID: Final = "sensor.alp_health_score"
 ANALYTICS_SENSOR_ID: Final = "sensor.alp_analytics_summary"
+SONOS_ANCHOR_SENSOR_ID: Final = "sensor.alp_sonos_anchor"
 MODE_SELECT_ID: Final = "select.alp_mode"
 SCENE_SELECT_ID: Final = "select.alp_scene"
 

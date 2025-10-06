@@ -28,6 +28,11 @@ group:
     entities:
       - light.dining_room_spot_lights
       - light.living_room_spot_lights
+  alp_presence_household:
+    name: "ALP Household Presence"
+    entities:
+      - person.homeowner
+      - person.partner
 
 # -----------------------------------------------------------------------------
 # Input booleans for lifestyle toggles
@@ -36,6 +41,9 @@ input_boolean:
   alp_skip_next_sunrise:
     name: "Skip Next Sunrise Sync"
     icon: mdi:alarm-off
+  alp_holiday_mode:
+    name: "Holiday Lighting Mode"
+    icon: mdi:string-lights
 
 # -----------------------------------------------------------------------------
 # Scripts: wrappers around Adaptive Lighting Pro public services
@@ -516,6 +524,50 @@ automation:
                 target:
                   entity_id: input_boolean.alp_skip_next_sunrise
 
+  - id: alp_sunrise_anchor_notification
+    alias: "ALP Sunrise Anchor Reminder"
+    description: "Alert before the next sunrise anchor fires."
+    mode: restart
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_sonos_anchor
+        attribute: seconds_until_anchor
+        below: 600
+    condition:
+      - condition: template
+        value_template: "{{ state_attr('sensor.alp_sonos_anchor', 'seconds_until_anchor') is number }}"
+      - condition: state
+        entity_id: binary_sensor.alp_sonos_skip_next
+        state: "off"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Sunrise sequence starting soon"
+          message: >-
+            The next Adaptive Lighting sunrise sync begins in
+            {{ (state_attr('sensor.alp_sonos_anchor', 'seconds_until_anchor') | int(0) // 60) }}
+            minute(s). Lights will gently ramp using the configured offsets.
+          notification_id: alp_sunrise_anchor
+
+  - id: alp_sunrise_anchor_notification_clear
+    alias: "ALP Sunrise Anchor Reminder Clear"
+    description: "Dismiss the sunrise reminder once the anchor passes or a skip occurs."
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.alp_sonos_anchor
+        attribute: seconds_until_anchor
+        above: 900
+      - platform: state
+        entity_id: binary_sensor.alp_sonos_skip_next
+        to: "on"
+      - platform: state
+        entity_id: sensor.alp_sonos_anchor
+        to: "idle"
+    action:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: alp_sunrise_anchor
+
   - id: alp_global_pause_exit_resync
     alias: "ALP Global Pause Exit Resync"
     description: "When global pause is lifted, resync to restore automation."
@@ -585,6 +637,136 @@ automation:
           name: "Adaptive Lighting Pro"
           message: "Manual override on {{ zone_id }} exceeded timer; zone reset triggered."
           entity_id: "binary_sensor.alp_manual_{{ zone_id }}"
+
+  - id: alp_presence_pause_when_away
+    alias: "ALP Pause When Everyone Leaves"
+    description: "Pause Adaptive Lighting when the household is away."
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: group.alp_presence_household
+        to: "not_home"
+        for: "00:05:00"
+    condition:
+      - condition: state
+        entity_id: switch.alp_global_pause_switch
+        state: "off"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.alp_global_pause_switch
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: ultra_dim
+      - service: logbook.log
+        data:
+          name: "Adaptive Lighting Pro"
+          message: "House unoccupied for 5 minutes. Adaptive Lighting paused and ultra dim applied."
+          entity_id: group.alp_presence_household
+
+  - id: alp_presence_resume_when_home
+    alias: "ALP Resume When Someone Returns"
+    description: "Resume Adaptive Lighting as soon as someone arrives home."
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: group.alp_presence_household
+        to: "home"
+        for: "00:02:00"
+    condition:
+      - condition: state
+        entity_id: switch.alp_global_pause_switch
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.alp_global_pause_switch
+      - service: adaptive_lighting_pro.select_mode
+        data:
+          mode: adaptive
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+      - service: adaptive_lighting_pro.force_sync
+      - service: logbook.log
+        data:
+          name: "Adaptive Lighting Pro"
+          message: "Presence detected. Adaptive Lighting resumed with default scene."
+          entity_id: group.alp_presence_household
+
+  - id: alp_holiday_schedule_enable
+    alias: "ALP Holiday Mode Auto Enable"
+    description: "Automatically enable holiday lighting mode during the festive season."
+    trigger:
+      - platform: time
+        at: "15:00:00"
+    condition:
+      - condition: template
+        value_template: >-
+          {{ now().month in [11, 12] or (now().month == 1 and now().day <= 6) }}
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.alp_holiday_mode
+
+  - id: alp_holiday_schedule_disable
+    alias: "ALP Holiday Mode Auto Disable"
+    description: "Exit holiday lighting mode outside the festive window."
+    trigger:
+      - platform: time
+        at: "03:00:00"
+    condition:
+      - condition: template
+        value_template: >-
+          {{ not (now().month in [11, 12] or (now().month == 1 and now().day <= 6)) }}
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.alp_holiday_mode
+
+  - id: alp_holiday_evening_scene
+    alias: "ALP Holiday Evening Scene"
+    description: "Apply Evening Comfort when holiday mode is on and someone is home."
+    mode: restart
+    trigger:
+      - platform: sun
+        event: sunset
+        offset: "-00:20:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.alp_holiday_mode
+        state: "on"
+      - condition: state
+        entity_id: group.alp_presence_household
+        state: "home"
+      - condition: state
+        entity_id: select.alp_mode
+        state: adaptive
+      - condition: template
+        value_template: "{{ states('select.alp_scene') in ['default', 'evening_comfort'] }}"
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: evening_comfort
+
+  - id: alp_holiday_morning_reset
+    alias: "ALP Holiday Morning Reset"
+    description: "Return to default scene after holiday evenings."
+    mode: single
+    trigger:
+      - platform: time
+        at: "06:30:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.alp_holiday_mode
+        state: "on"
+      - condition: template
+        value_template: "{{ states('select.alp_scene') != 'default' }}"
+    action:
+      - service: adaptive_lighting_pro.select_scene
+        data:
+          scene: default
+      - service: adaptive_lighting_pro.force_sync
 
 # -----------------------------------------------------------------------------
 # Optional helper button to chain backup and sync
