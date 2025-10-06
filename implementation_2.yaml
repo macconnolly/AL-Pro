@@ -231,6 +231,161 @@ script:
             - light.accent_spots
             - light.bathroom_lights
 
+  # -------------------------------------------------------------------------
+  # Diagnostic Display Scripts - System Status Visibility
+  # -------------------------------------------------------------------------
+  # Per claude.md: "You can't improve what you can't see"
+  # These scripts provide detailed visibility into ALP system state
+
+  alp_show_status:
+    alias: "ALP: Show Current Status"
+    description: "Display comprehensive notification with current ALP state"
+    icon: mdi:information-outline
+    sequence:
+      - service: notify.persistent_notification
+        data:
+          title: "ALP Status Report"
+          notification_id: "alp_status_report"
+          message: |
+            **Current Scene:** {{ states('sensor.alp_current_scene') | title }}
+            **Brightness Adjustment:** {{ states('number.alp_brightness_adjustment') }}%
+            **Warmth Adjustment:** {{ states('number.alp_warmth_adjustment') }}K
+
+            **Timers:** {{ states('sensor.alp_manual_timer_status') | default('Unknown') }}
+            **Zone Health:** {{ states('sensor.alp_zone_health') | default('Unknown') }}
+            **Wake Sequence:** {{ states('sensor.alp_wake_sequence_status') }}
+
+            **System Health:** {{ states('sensor.alp_health_score') | default('Unknown') }}%
+            **Last Action:** {{ states('sensor.alp_last_action') | default('Unknown') }}
+
+            **Environmental Boost:** {{ states('sensor.alp_environmental_boost') }}%
+            **Sunset Boost:** {{ states('sensor.alp_sunset_boost') }}%
+
+  alp_show_environmental_status:
+    alias: "ALP: Show Environmental Status"
+    description: "Display current environmental conditions and boost calculation"
+    icon: mdi:weather-partly-cloudy
+    sequence:
+      - service: notify.persistent_notification
+        data:
+          title: "Environmental Status"
+          notification_id: "alp_environmental_status"
+          message: |
+            **Current Conditions:**
+            Lux Level: {{ states('sensor.living_room_presence_light_sensor_light_level') | default('N/A') }}
+            Weather: {{ states('weather.home') | title }}
+            Season: {% set month = now().month %}
+                    {%- if month in [12,1,2] %}Winter
+                    {%- elif month in [6,7,8] %}Summer
+                    {%- else %}Transition{% endif %}
+            Sun Elevation: {{ state_attr('sun.sun', 'elevation') | round(1) }}°
+
+            **Environmental Boost:** {{ states('sensor.alp_environmental_boost') }}%
+            **Sunset Boost:** {{ states('sensor.alp_sunset_boost') }}%
+
+            **Time Scaling:**
+            {% set hour = now().hour %}
+            {%- if 22 <= hour or hour <= 6 %}Disabled (Night)
+            {%- elif 6 < hour <= 8 or 18 <= hour < 22 %}Reduced (70%)
+            {%- else %}Full{% endif %}
+
+  alp_show_zone_details:
+    alias: "ALP: Show Zone Details"
+    description: "Display per-zone status and manual control state"
+    icon: mdi:home-group
+    sequence:
+      - service: notify.persistent_notification
+        data:
+          title: "Zone Status Report"
+          notification_id: "alp_zone_status"
+          message: |
+            {% set zones = ['main_living', 'kitchen_island', 'bedroom_primary', 'accent_spots', 'recessed_ceiling'] %}
+            {% for zone_id in zones %}
+            **{{ zone_id | replace('_', ' ') | title }}:**
+            Status: {{ states('sensor.alp_zone_manual_control_' ~ zone_id) | default('Unknown') }}
+            AL Switch: {{ states('switch.adaptive_lighting_' ~ zone_id) }}
+            Lights On: {{ expand('light.' ~ zone_id ~ '_lights') | selectattr('state', 'eq', 'on') | list | count }}
+
+            {% endfor %}
+
+            **Total Manual Zones:** {{ states('sensor.alp_zones_with_manual_control') }}
+            **Active Lights:** {{ states('sensor.alp_active_lights_count') }}
+
+  alp_show_manual_control:
+    alias: "ALP: Show Manual Control Status"
+    description: "Display detailed manual control and timer information"
+    icon: mdi:timer-cog
+    sequence:
+      - service: notify.persistent_notification
+        data:
+          title: "Manual Control Report"
+          notification_id: "alp_manual_control"
+          message: |
+            **Manual Adjustment Status:** {{ states('sensor.alp_manual_adjustment_status') }}
+
+            **Active Timers:**
+            {% set timers = states.timer | selectattr('entity_id', 'match', 'timer.alp_manual_.*') | selectattr('state', 'eq', 'active') | list %}
+            {% if timers %}
+            {% for timer in timers %}
+            - {{ timer.name }}: {{ state_attr(timer.entity_id, 'remaining') }}
+            {% endfor %}
+            {% else %}
+            No active timers
+            {% endif %}
+
+            **Manual Control Timeout:** {{ states('number.alp_manual_control_timeout') }} minutes
+            **Brightness Increment:** {{ states('number.alp_brightness_increment') }}%
+            **Warmth Increment:** {{ states('number.alp_color_temp_increment') }}K
+
+  alp_reset_all:
+    alias: "ALP: Reset Everything"
+    description: "Clear all adjustments, timers, and return to auto"
+    icon: mdi:restart
+    sequence:
+      # Step 1: Return to auto scene (clears manual control)
+      - service: adaptive_lighting_pro.apply_scene
+        data:
+          scene: auto
+
+      # Step 2: Reset adjustments to zero
+      - service: number.set_value
+        target:
+          entity_id: number.alp_brightness_adjustment
+        data:
+          value: 0
+
+      - service: number.set_value
+        target:
+          entity_id: number.alp_warmth_adjustment
+        data:
+          value: 0
+
+      # Step 3: Notify user
+      - service: notify.persistent_notification
+        data:
+          message: |
+            All adjustments cleared:
+            • Scene: Auto
+            • Brightness: 0%
+            • Warmth: 0K
+            • Manual control: Cleared
+          title: "ALP: Complete Reset"
+          notification_id: "alp_reset_complete"
+
+  alp_scene_auto:
+    alias: "ALP: Return to Auto"
+    description: "Quick return to automatic adaptive control"
+    icon: mdi:sync
+    sequence:
+      - service: adaptive_lighting_pro.apply_scene
+        data:
+          scene: auto
+      - service: notify.persistent_notification
+        data:
+          message: "Returned to automatic adaptive control"
+          title: "ALP: Auto Mode"
+          notification_id: "alp_auto_mode"
+
 # -----------------------------------------------------------------------------
 # Voice Control Aliases
 # -----------------------------------------------------------------------------
