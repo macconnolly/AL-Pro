@@ -2,10 +2,18 @@
 # This file configures the ALP integration zones to work with the Adaptive Lighting
 # base integration switches defined in implementation_2.yaml
 #
-# Add to configuration.yaml:
-#   adaptive_lighting_pro: !include adaptive_lighting_pro_zones.yaml
+# ✅ YAML SUPPORT ENABLED (as of 2025-10-06)
 #
-# OR configure via UI: Settings → Integrations → Adaptive Lighting Pro → Configure
+# USAGE:
+# 1. Add to configuration.yaml:
+#      adaptive_lighting_pro: !include adaptive_lighting_pro_zones.yaml
+#
+# 2. Restart Home Assistant
+#
+# 3. Integration will automatically import and create config entry
+#
+# ALTERNATIVE: Configure via UI (Settings → Integrations → Add → ALP)
+# NOTE: If UI config exists, YAML will be ignored. Delete UI config to use YAML.
 
 adaptive_lighting_pro:
   # Global configuration sensors (required by integration)
