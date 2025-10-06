@@ -174,6 +174,36 @@ class AdaptiveLightingProConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._integration_settings: dict[str, Any] = {}
         self._name: str = "Adaptive Lighting Pro"
 
+    async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
+        """Handle import from YAML configuration.
+
+        This is called when configuration is provided in configuration.yaml
+        via the adaptive_lighting_pro: section.
+
+        Args:
+            import_data: Configuration from YAML
+
+        Returns:
+            FlowResult creating the config entry
+        """
+        _LOGGER.info("Importing Adaptive Lighting Pro configuration from YAML")
+
+        # Check if already configured (prevent duplicates)
+        await self.async_set_unique_id(DOMAIN)
+        self._abort_if_unique_id_configured()
+
+        # Validate Adaptive Lighting integration is present
+        if not await validate_adaptive_lighting(self.hass):
+            _LOGGER.error("Cannot import YAML config: Adaptive Lighting integration not found")
+            return self.async_abort(reason="adaptive_lighting_not_found")
+
+        # Create config entry directly from YAML data
+        # The data format from YAML matches what async_step_finalize expects
+        return self.async_create_entry(
+            title="Adaptive Lighting Pro (YAML)",
+            data=import_data,
+        )
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:

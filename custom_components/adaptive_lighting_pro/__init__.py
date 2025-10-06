@@ -4,17 +4,30 @@ This integration provides sophisticated adaptive lighting control with per-zone
 manual overrides, environmental adaptation, and home mode management.
 
 Ported from implementation_1.yaml (3,216 lines) with fixes and enhancements.
+
+Configuration:
+- UI Config Flow: Settings → Integrations → Add Integration → Adaptive Lighting Pro
+- YAML Config: Add to configuration.yaml:
+    adaptive_lighting_pro:
+      lux_sensor: sensor.outdoor_illuminance
+      weather_entity: weather.home
+      zones:
+        - zone_id: "zone_name"
+          # ... zone config
 """
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigEntry
+import voluptuous as vol
+
+from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN, ADAPTIVE_LIGHTING_DOMAIN
 from .coordinator import ALPDataUpdateCoordinator
@@ -40,6 +53,85 @@ PLATFORMS: list[Platform] = [
     # Future phases will add:
     # Platform.LIGHT,
 ]
+
+# YAML Configuration Schema
+ZONE_SCHEMA = vol.Schema({
+    vol.Required("zone_id"): cv.string,
+    vol.Optional("name"): cv.string,
+    vol.Required("adaptive_lighting_switch"): cv.entity_id,
+    vol.Required("lights"): cv.entity_ids,
+    vol.Required("brightness_min"): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+    vol.Required("brightness_max"): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+    vol.Optional("color_temp_min"): vol.All(vol.Coerce(int), vol.Range(min=1000, max=10000)),
+    vol.Optional("color_temp_max"): vol.All(vol.Coerce(int), vol.Range(min=1000, max=10000)),
+    vol.Optional("enabled", default=True): cv.boolean,
+    vol.Optional("environmental_enabled", default=True): cv.boolean,
+    vol.Optional("sunset_enabled", default=True): cv.boolean,
+    vol.Optional("wake_sequence_enabled", default=False): cv.boolean,
+    vol.Optional("priority", default=0): vol.Coerce(int),
+})
+
+CONFIG_SCHEMA = vol.Schema({
+    DOMAIN: vol.Schema({
+        vol.Optional("lux_sensor"): cv.entity_id,
+        vol.Optional("weather_entity"): cv.entity_id,
+        vol.Optional("environmental_enabled", default=True): cv.boolean,
+        vol.Optional("sunset_boost_enabled", default=True): cv.boolean,
+        vol.Optional("wake_sequence_enabled", default=False): cv.boolean,
+        vol.Optional("wake_target_zone"): cv.string,
+        vol.Optional("wake_duration_minutes", default=15): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+        vol.Optional("wake_max_boost_pct", default=20): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+        vol.Optional("brightness_increment", default=5): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
+        vol.Optional("color_temp_increment", default=500): vol.All(vol.Coerce(int), vol.Range(min=100, max=2000)),
+        vol.Optional("manual_control_timeout", default=7200): vol.All(vol.Coerce(int), vol.Range(min=300, max=14400)),
+        vol.Required("zones"): vol.All(cv.ensure_list, [ZONE_SCHEMA]),
+    })
+}, extra=vol.ALLOW_EXTRA)
+
+
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
+    """Set up Adaptive Lighting Pro from YAML configuration.
+
+    This function handles YAML configuration by creating a config entry
+    via the import source. Home Assistant will then call async_setup_entry.
+
+    Args:
+        hass: Home Assistant instance
+        config: Configuration dictionary from configuration.yaml
+
+    Returns:
+        True if YAML setup initiated successfully
+    """
+    if DOMAIN not in config:
+        # No YAML config, integration will be set up via UI only
+        return True
+
+    _LOGGER.info("Found Adaptive Lighting Pro YAML configuration, importing...")
+
+    # Extract our config from the full config
+    alp_config = config[DOMAIN]
+
+    # Check if a config entry already exists (avoid duplicate imports)
+    existing_entries = hass.config_entries.async_entries(DOMAIN)
+    if existing_entries:
+        _LOGGER.warning(
+            "Adaptive Lighting Pro already configured via UI. "
+            "YAML config will be ignored. Remove YAML config or delete UI config entry."
+        )
+        return True
+
+    # Create a config entry from YAML (import source)
+    # This will trigger async_setup_entry with the YAML data
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_IMPORT},
+            data=alp_config,
+        )
+    )
+
+    _LOGGER.info("Adaptive Lighting Pro YAML configuration imported successfully")
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
