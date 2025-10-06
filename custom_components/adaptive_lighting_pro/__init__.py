@@ -35,9 +35,6 @@ from .services import async_register_services, async_unregister_services
 from .integrations.sonos import SonosIntegration
 from .integrations.zen32 import Zen32Integration
 
-# Import platforms from platforms directory
-from .platforms import number, switch
-
 if TYPE_CHECKING:
     from .coordinator import ALPDataUpdateCoordinator
 
@@ -84,6 +81,10 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Optional("brightness_increment", default=5): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
         vol.Optional("color_temp_increment", default=500): vol.All(vol.Coerce(int), vol.Range(min=100, max=2000)),
         vol.Optional("manual_control_timeout", default=7200): vol.All(vol.Coerce(int), vol.Range(min=300, max=14400)),
+        vol.Optional("zen32_enabled", default=False): cv.boolean,
+        vol.Optional("zen32_button_entities"): dict,
+        vol.Optional("zen32_button_actions"): dict,
+        vol.Optional("zen32_debounce_duration", default=0.5): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=5.0)),
         vol.Required("zones"): vol.All(cv.ensure_list, [ZONE_SCHEMA]),
     })
 }, extra=vol.ALLOW_EXTRA)

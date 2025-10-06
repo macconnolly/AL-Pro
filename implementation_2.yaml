@@ -400,7 +400,7 @@ script:
             **Zone Health:** {{ states('sensor.alp_zone_health') | default('Unknown') }}
             **Wake Sequence:** {{ states('sensor.alp_wake_sequence_status') }}
 
-            **System Health:** {{ states('sensor.alp_health_score') | default('Unknown') }}%
+            **System Health:** {{ states('sensor.alp_system_health') | default('Unknown') }}
             **Last Action:** {{ states('sensor.alp_last_action') | default('Unknown') }}
 
             **Environmental Boost:** {{ states('sensor.alp_environmental_boost') }}%

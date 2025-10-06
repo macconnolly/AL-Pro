@@ -49,8 +49,10 @@ CONF_SONOS_KITCHEN_OFFSET = "sonos_kitchen_offset"
 
 # Zen32 Scene Controller Settings Keys (Phase 3.1)
 CONF_ZEN32_ENABLED = "zen32_enabled"
+CONF_ZEN32_EVENT_ENTITY = "zen32_event_entity"
 CONF_ZEN32_BUTTON_ENTITIES = "zen32_button_entities"
 CONF_ZEN32_BUTTON_ACTIONS = "zen32_button_actions"
+CONF_ZEN32_DEBOUNCE = "zen32_debounce"
 CONF_ZEN32_DEBOUNCE_DURATION = "zen32_debounce_duration"
 
 # Wake Sequence Settings Keys (Phase 2.1)

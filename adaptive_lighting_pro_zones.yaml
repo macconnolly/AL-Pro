@@ -15,186 +15,201 @@
 # ALTERNATIVE: Configure via UI (Settings → Integrations → Add → ALP)
 # NOTE: If UI config exists, YAML will be ignored. Delete UI config to use YAML.
 
-adaptive_lighting_pro:
-  # Global configuration sensors (required by integration)
-  lux_sensor: sensor.outdoor_illuminance
-  weather_entity: weather.home
+# Global configuration sensors (required by integration)
+lux_sensor: sensor.living_room_presence_light_sensor_light_level
+weather_entity: weather.home
 
-  # Environmental features
-  environmental_enabled: true
-  sunset_boost_enabled: true
+# Environmental features
+environmental_enabled: true
+sunset_boost_enabled: true
 
-  # Wake sequence
-  wake_sequence_enabled: true
-  wake_target_zone: bedroom_primary
-  wake_duration_minutes: 15
-  wake_max_boost_pct: 20
+# Wake sequence
+wake_sequence_enabled: true
+wake_target_zone: bedroom_primary
+wake_duration_minutes: 15
+wake_max_boost_pct: 20
 
-  # Manual control defaults
-  brightness_increment: 5
-  color_temp_increment: 500
-  manual_control_timeout: 7200  # 2 hours
+# Manual control defaults
+brightness_increment: 5
+color_temp_increment: 500
+manual_control_timeout: 7200  # 2 hours
 
-  # Zone definitions
-  zones:
-    # -------------------------------------------------------------------------
-    # Zone 1: Recessed Ceiling (Overhead - Very Dim)
-    # -------------------------------------------------------------------------
-    - zone_id: "recessed_ceiling"
-      name: "Recessed Ceiling"
+# Zen32 Scene Controller Integration
+zen32_enabled: true
+zen32_debounce_duration: 0.5  # seconds
+zen32_button_entities:
+  button_1: "event.scene_controller_scene_001"  # Top Left
+  button_2: "event.scene_controller_scene_002"  # Top Right
+  button_3: "event.scene_controller_scene_003"  # Bottom Left
+  button_4: "event.scene_controller_scene_004"  # Bottom Right
+  button_5: "event.scene_controller_scene_005"  # Center
+zen32_button_actions:
+  button_1: "cycle_scene"          # Top Left - cycle through scenes
+  button_2: "brighter"             # Top Right - increase brightness
+  button_3: "reset_manual"         # Bottom Left - reset manual adjustments
+  button_4: "dimmer"               # Bottom Right - decrease brightness
+  button_5: "none"                 # Center - toggle all lights (handled outside ALP)
 
-      # Adaptive Lighting Integration Reference
-      adaptive_lighting_switch: "switch.adaptive_lighting_recessed_ceiling"
+# Zone definitions
+zones:
+  # -------------------------------------------------------------------------
+  # Zone 1: Recessed Ceiling (Overhead - Very Dim)
+  # -------------------------------------------------------------------------
+  - zone_id: "recessed_ceiling"
+    name: "Recessed Ceiling"
 
-      # Lights in this zone (must match AL switch config)
-      lights:
-        - light.kitchen_main_lights
-        - light.living_room_hallway_lights
+    # Adaptive Lighting Integration Reference
+    adaptive_lighting_switch: "switch.adaptive_lighting_recessed_ceiling"
 
-      # Brightness Configuration (must match AL switch)
-      brightness_min: 2
-      brightness_max: 23
+    # Lights in this zone (must match AL switch config)
+    lights:
+      - light.kitchen_main_lights
+      - light.living_room_hallway_lights
 
-      # Color Temperature (AL uses defaults, so we use defaults too)
-      # color_temp_min: 2000  # Default
-      # color_temp_max: 6500  # Default
+    # Brightness Configuration (must match AL switch)
+    brightness_min: 2
+    brightness_max: 23
 
-      # Feature flags
-      enabled: true
-      environmental_enabled: true
-      sunset_enabled: true
-      wake_sequence_enabled: false  # Overhead lights not part of wake sequence
+    # Color Temperature (AL uses defaults, so we use defaults too)
+    # color_temp_min: 2000  # Default
+    # color_temp_max: 6500  # Default
 
-      # Zone priority (optional, defaults to 0)
-      priority: 0
+    # Feature flags
+    enabled: true
+    environmental_enabled: true
+    sunset_enabled: true
+    wake_sequence_enabled: false  # Overhead lights not part of wake sequence
 
-    # -------------------------------------------------------------------------
-    # Zone 2: Kitchen Island (Task Lighting - Bright)
-    # -------------------------------------------------------------------------
-    - zone_id: "kitchen_island"
-      name: "Kitchen Island"
+    # Zone priority (optional, defaults to 0)
+    priority: 0
 
-      # Adaptive Lighting Integration Reference
-      adaptive_lighting_switch: "switch.adaptive_lighting_kitchen_island"
+  # -------------------------------------------------------------------------
+  # Zone 2: Kitchen Island (Task Lighting - Bright)
+  # -------------------------------------------------------------------------
+  - zone_id: "kitchen_island"
+    name: "Kitchen Island"
 
-      # Lights in this zone (must match AL switch config)
-      lights:
-        - light.kitchen_island_pendants
+    # Adaptive Lighting Integration Reference
+    adaptive_lighting_switch: "switch.adaptive_lighting_kitchen_island"
 
-      # Brightness Configuration (must match AL switch)
-      brightness_min: 30
-      brightness_max: 100
+    # Lights in this zone (must match AL switch config)
+    lights:
+      - light.kitchen_island_pendants
 
-      # Color Temperature Configuration (must match AL switch)
-      color_temp_min: 2000
-      color_temp_max: 4000
+    # Brightness Configuration (must match AL switch)
+    brightness_min: 30
+    brightness_max: 100
 
-      # Feature flags
-      enabled: true
-      environmental_enabled: true
-      sunset_enabled: true
-      wake_sequence_enabled: false  # Kitchen not part of wake sequence
+    # Color Temperature Configuration (must match AL switch)
+    color_temp_min: 2000
+    color_temp_max: 4000
 
-      # Zone priority
-      priority: 0
+    # Feature flags
+    enabled: true
+    environmental_enabled: true
+    sunset_enabled: true
+    wake_sequence_enabled: false  # Kitchen not part of wake sequence
 
-    # -------------------------------------------------------------------------
-    # Zone 3: Bedroom Primary (Sleep-Friendly - Very Warm)
-    # -------------------------------------------------------------------------
-    - zone_id: "bedroom_primary"
-      name: "Bedroom Primary"
+    # Zone priority
+    priority: 0
 
-      # Adaptive Lighting Integration Reference
-      adaptive_lighting_switch: "switch.adaptive_lighting_bedroom_primary"
+  # -------------------------------------------------------------------------
+  # Zone 3: Bedroom Primary (Sleep-Friendly - Very Warm)
+  # -------------------------------------------------------------------------
+  - zone_id: "bedroom_primary"
+    name: "Bedroom Primary"
 
-      # Lights in this zone (must match AL switch config)
-      lights:
-        - light.master_bedroom_table_lamps
-        - light.master_bedroom_corner_accent
+    # Adaptive Lighting Integration Reference
+    adaptive_lighting_switch: "switch.adaptive_lighting_bedroom_primary"
 
-      # Brightness Configuration (must match AL switch)
-      brightness_min: 20
-      brightness_max: 40
+    # Lights in this zone (must match AL switch config)
+    lights:
+      - light.master_bedroom_table_lamps
+      - light.master_bedroom_corner_accent
 
-      # Color Temperature Configuration (must match AL switch)
-      color_temp_min: 1800
-      color_temp_max: 2250
+    # Brightness Configuration (must match AL switch)
+    brightness_min: 20
+    brightness_max: 40
 
-      # Feature flags
-      enabled: true
-      environmental_enabled: true
-      sunset_enabled: true
-      wake_sequence_enabled: true  # PRIMARY WAKE ZONE
+    # Color Temperature Configuration (must match AL switch)
+    color_temp_min: 1800
+    color_temp_max: 2250
 
-      # Zone priority
-      priority: 10  # Higher priority for wake sequence
+    # Feature flags
+    enabled: true
+    environmental_enabled: true
+    sunset_enabled: true
+    wake_sequence_enabled: true  # PRIMARY WAKE ZONE
 
-    # -------------------------------------------------------------------------
-    # Zone 4: Accent Spots (Decorative - Wide Color Range)
-    # -------------------------------------------------------------------------
-    - zone_id: "accent_spots"
-      name: "Accent Spots"
+    # Zone priority
+    priority: 10  # Higher priority for wake sequence
 
-      # Adaptive Lighting Integration Reference
-      adaptive_lighting_switch: "switch.adaptive_lighting_accent_spots"
+  # -------------------------------------------------------------------------
+  # Zone 4: Accent Spots (Decorative - Wide Color Range)
+  # -------------------------------------------------------------------------
+  - zone_id: "accent_spots"
+    name: "Accent Spots"
 
-      # Lights in this zone (must match AL switch config)
-      lights:
-        - light.dining_room_spot_lights
-        - light.living_room_spot_lights
+    # Adaptive Lighting Integration Reference
+    adaptive_lighting_switch: "switch.adaptive_lighting_accent_spots"
 
-      # Brightness Configuration (must match AL switch)
-      brightness_min: 20
-      brightness_max: 50
+    # Lights in this zone (must match AL switch config)
+    lights:
+      - light.dining_room_spot_lights
+      - light.living_room_spot_lights
 
-      # Color Temperature Configuration (must match AL switch)
-      color_temp_min: 2000
-      color_temp_max: 6500
+    # Brightness Configuration (must match AL switch)
+    brightness_min: 20
+    brightness_max: 50
 
-      # Feature flags
-      enabled: true
-      environmental_enabled: true
-      sunset_enabled: true
-      wake_sequence_enabled: false  # Accent lights not part of wake
+    # Color Temperature Configuration (must match AL switch)
+    color_temp_min: 2000
+    color_temp_max: 6500
 
-      # Zone priority
-      priority: 0
+    # Feature flags
+    enabled: true
+    environmental_enabled: true
+    sunset_enabled: true
+    wake_sequence_enabled: false  # Accent lights not part of wake
 
-    # -------------------------------------------------------------------------
-    # Zone 5: Main Living (Primary Area - Bright, Neutral-Warm)
-    # -------------------------------------------------------------------------
-    - zone_id: "main_living"
-      name: "Main Living"
+    # Zone priority
+    priority: 0
 
-      # Adaptive Lighting Integration Reference
-      adaptive_lighting_switch: "switch.adaptive_lighting_main_living"
+  # -------------------------------------------------------------------------
+  # Zone 5: Main Living (Primary Area - Bright, Neutral-Warm)
+  # -------------------------------------------------------------------------
+  - zone_id: "main_living"
+    name: "Main Living"
 
-      # Lights in this zone (must match AL switch config)
-      # Note: Removed duplicate light.entryway_lamp from original config
-      lights:
-        - light.entryway_lamp
-        - light.living_room_floor_lamp
-        - light.office_desk_lamp
-        - light.living_room_corner_accent
-        - light.living_room_couch_lamp
-        - light.living_room_credenza_light
+    # Adaptive Lighting Integration Reference
+    adaptive_lighting_switch: "switch.adaptive_lighting_main_living"
 
-      # Brightness Configuration (must match AL switch)
-      brightness_min: 45
-      brightness_max: 100
+    # Lights in this zone (must match AL switch config)
+    # Note: Removed duplicate light.entryway_lamp from original config
+    lights:
+      - light.entryway_lamp
+      - light.living_room_floor_lamp
+      - light.office_desk_lamp
+      - light.living_room_corner_accent
+      - light.living_room_couch_lamp
+      - light.living_room_credenza_light
 
-      # Color Temperature Configuration (must match AL switch)
-      color_temp_min: 2250
-      color_temp_max: 2950
+    # Brightness Configuration (must match AL switch)
+    brightness_min: 45
+    brightness_max: 100
 
-      # Feature flags
-      enabled: true
-      environmental_enabled: true
-      sunset_enabled: true
-      wake_sequence_enabled: false  # Living room not part of wake sequence
+    # Color Temperature Configuration (must match AL switch)
+    color_temp_min: 2250
+    color_temp_max: 2950
 
-      # Zone priority
-      priority: 5  # Higher priority as primary living area
+    # Feature flags
+    enabled: true
+    environmental_enabled: true
+    sunset_enabled: true
+    wake_sequence_enabled: false  # Living room not part of wake sequence
+
+    # Zone priority
+    priority: 5  # Higher priority as primary living area
 
 # -----------------------------------------------------------------------------
 # Configuration Notes
@@ -233,6 +248,17 @@ adaptive_lighting_pro:
 # - color_temp_increment: 500 (button press = +/- 500K)
 # - manual_control_timeout: 7200 (2 hours before auto-reset)
 #
+# ZEN32 SCENE CONTROLLER:
+# - zen32_enabled: true (enable Zen32 physical button integration)
+# - zen32_button_entities: Map button IDs to event entities
+#   * button_1 (Top Left): event.scene_controller_scene_001 - Cycle scenes
+#   * button_2 (Top Right): event.scene_controller_scene_002 - Brighter
+#   * button_3 (Bottom Left): event.scene_controller_scene_003 - Reset manual
+#   * button_4 (Bottom Right): event.scene_controller_scene_004 - Dimmer
+#   * button_5 (Center): event.scene_controller_scene_005 - Toggle all (outside ALP)
+# - zen32_button_actions: Map buttons to actions (cycle_scene, brighter, dimmer, reset_manual, none)
+# - zen32_debounce_duration: 0.5 seconds (prevent duplicate button presses)
+#
 # -----------------------------------------------------------------------------
 # Migration from implementation_1.yaml
 # -----------------------------------------------------------------------------
@@ -259,6 +285,8 @@ adaptive_lighting_pro:
 # [ ] Zone color temp ranges match AL switch configs
 # [ ] Wake target zone matches actual bedroom zone
 # [ ] Manual control timeout is acceptable (2 hours)
+# [ ] Zen32 event entities exist (event.scene_controller_scene_001-005) if enabled
+# [ ] Zen32 button actions match desired behavior (Top Left=cycle, Top Right=brighter, etc)
 #
 # After deploying, test:
 # [ ] Environmental boost activates on cloudy/dark days
@@ -268,5 +296,7 @@ adaptive_lighting_pro:
 # [ ] Scene application works (all_lights, evening_comfort, etc)
 # [ ] Pause/resume global control works
 # [ ] Per-zone manual control timers work
+# [ ] Zen32 buttons trigger correct actions (if enabled)
+# [ ] Zen32 debounce prevents double-presses
 #
 # -----------------------------------------------------------------------------
