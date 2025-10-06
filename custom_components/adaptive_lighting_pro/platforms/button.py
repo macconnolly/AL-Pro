@@ -140,27 +140,9 @@ class ALPBrighterButton(ALPButton):
         increment = self.coordinator.get_brightness_increment()
         new_value = min(current + increment, 50)  # Idempotent at max
 
-        # Buttons are temporary overrides - start manual timers
+        # Coordinator handles EVERYTHING: timers, manual_control, refresh
+        # start_timers=True triggers: start_manual_timer() → _mark_zone_lights_as_manual() → set_manual_control
         await self.coordinator.set_brightness_adjustment(new_value, start_timers=True)
-
-        # Set manual control on all active zones to prevent AL from fighting back
-        for zone_id in self.coordinator.zone_ids:
-            zone_config = self.coordinator.zones.get(zone_id, {})
-            if zone_config.get("enabled", True):
-                al_switch = zone_config.get("adaptive_lighting_switch")
-                zone_lights = zone_config.get("lights", [])
-                if al_switch and zone_lights:
-                    await self.hass.services.async_call(
-                        "adaptive_lighting",
-                        "set_manual_control",
-                        {
-                            "entity_id": al_switch,
-                            "lights": zone_lights,
-                            "manual_control": True,
-                        },
-                        blocking=False,
-                    )
-        _LOGGER.debug("Set manual control for all zones after brightness adjustment")
 
 
 class ALPDimmerButton(ALPButton):
@@ -186,27 +168,8 @@ class ALPDimmerButton(ALPButton):
         increment = self.coordinator.get_brightness_increment()
         new_value = max(current - increment, -50)  # Idempotent at min
 
-        # Buttons are temporary overrides - start manual timers
+        # Coordinator handles EVERYTHING: timers, manual_control, refresh
         await self.coordinator.set_brightness_adjustment(new_value, start_timers=True)
-
-        # Set manual control on all active zones to prevent AL from fighting back
-        for zone_id in self.coordinator.zone_ids:
-            zone_config = self.coordinator.zones.get(zone_id, {})
-            if zone_config.get("enabled", True):
-                al_switch = zone_config.get("adaptive_lighting_switch")
-                zone_lights = zone_config.get("lights", [])
-                if al_switch and zone_lights:
-                    await self.hass.services.async_call(
-                        "adaptive_lighting",
-                        "set_manual_control",
-                        {
-                            "entity_id": al_switch,
-                            "lights": zone_lights,
-                            "manual_control": True,
-                        },
-                        blocking=False,
-                    )
-        _LOGGER.debug("Set manual control for all zones after brightness adjustment")
 
 
 class ALPWarmerButton(ALPButton):
@@ -232,27 +195,8 @@ class ALPWarmerButton(ALPButton):
         increment = self.coordinator.get_color_temp_increment()
         new_value = max(current - increment, -3000)  # Lower K = warmer
 
-        # Buttons are temporary overrides - start manual timers
+        # Coordinator handles EVERYTHING: timers, manual_control, refresh
         await self.coordinator.set_warmth_adjustment(new_value, start_timers=True)
-
-        # Set manual control on all active zones to prevent AL from fighting back
-        for zone_id in self.coordinator.zone_ids:
-            zone_config = self.coordinator.zones.get(zone_id, {})
-            if zone_config.get("enabled", True):
-                al_switch = zone_config.get("adaptive_lighting_switch")
-                zone_lights = zone_config.get("lights", [])
-                if al_switch and zone_lights:
-                    await self.hass.services.async_call(
-                        "adaptive_lighting",
-                        "set_manual_control",
-                        {
-                            "entity_id": al_switch,
-                            "lights": zone_lights,
-                            "manual_control": True,
-                        },
-                        blocking=False,
-                    )
-        _LOGGER.debug("Set manual control for all zones after warmth adjustment")
 
 
 class ALPCoolerButton(ALPButton):
@@ -278,27 +222,8 @@ class ALPCoolerButton(ALPButton):
         increment = self.coordinator.get_color_temp_increment()
         new_value = min(current + increment, 3000)  # Higher K = cooler
 
-        # Buttons are temporary overrides - start manual timers
+        # Coordinator handles EVERYTHING: timers, manual_control, refresh
         await self.coordinator.set_warmth_adjustment(new_value, start_timers=True)
-
-        # Set manual control on all active zones to prevent AL from fighting back
-        for zone_id in self.coordinator.zone_ids:
-            zone_config = self.coordinator.zones.get(zone_id, {})
-            if zone_config.get("enabled", True):
-                al_switch = zone_config.get("adaptive_lighting_switch")
-                zone_lights = zone_config.get("lights", [])
-                if al_switch and zone_lights:
-                    await self.hass.services.async_call(
-                        "adaptive_lighting",
-                        "set_manual_control",
-                        {
-                            "entity_id": al_switch,
-                            "lights": zone_lights,
-                            "manual_control": True,
-                        },
-                        blocking=False,
-                    )
-        _LOGGER.debug("Set manual control for all zones after warmth adjustment")
 
 
 class ALPResetButton(ALPButton):

@@ -1299,6 +1299,22 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         return self._manual_control_timeout
 
+    def get_manual_control_zones(self) -> set[str]:
+        """Get set of zones currently under manual control.
+
+        Returns:
+            Set of zone IDs with active manual control timers
+        """
+        return set(self._manual_control.keys()) if hasattr(self, "_manual_control") else set()
+
+    def get_wake_active_zones(self) -> set[str]:
+        """Get set of zones currently in wake sequence.
+
+        Returns:
+            Set of zone IDs with active wake sequence
+        """
+        return set(self._wake_active_zones) if hasattr(self, "_wake_active_zones") else set()
+
     def get_scene_brightness_offset(self) -> int:
         """Get current scene brightness offset.
 

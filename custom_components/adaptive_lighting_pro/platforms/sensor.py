@@ -922,7 +922,7 @@ class ManualAdjustmentStatusSensor(ALPEntity, SensorEntity):
 
     @property
     def native_value(self):
-        active_zones = len(self.coordinator._manual_control)
+        active_zones = len(self.coordinator.get_manual_control_zones())
         b_adj = self.coordinator.get_brightness_adjustment()
         w_adj = self.coordinator.get_warmth_adjustment()
 
@@ -936,7 +936,7 @@ class ManualAdjustmentStatusSensor(ALPEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         return {
-            "zones_with_manual": list(self.coordinator._manual_control),
+            "zones_with_manual": list(self.coordinator.get_manual_control_zones()),
             "brightness_adjustment": f"{self.coordinator.get_brightness_adjustment()}%",
             "warmth_adjustment": f"{self.coordinator.get_warmth_adjustment()}K"
         }
@@ -1000,8 +1000,7 @@ class WakeSequenceStatusSensor(ALPEntity, SensorEntity):
 
         attrs = {
             "active": wake_data.get("active", False),
-            "zones_in_wake": list(self.coordinator._wake_active_zones)
-                            if hasattr(self.coordinator, "_wake_active_zones") else [],
+            "zones_in_wake": list(self.coordinator.get_wake_active_zones()),
             "duration_minutes": wake_data.get("duration_minutes", 30),
             "current_offset": wake_data.get("current_offset", 0)
         }

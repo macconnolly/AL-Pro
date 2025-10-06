@@ -1,16 +1,20 @@
 # ADAPTIVE LIGHTING PRO - COMPLETE DASHBOARD
-# Copy and paste these cards directly into Home Assistant UI Dashboard Editor
+# 20 comprehensive cards covering all control, monitoring, and interaction scenarios
 #
-# INSTRUCTIONS:
+# COPY ALL CARDS AT ONCE - INSTRUCTIONS:
 # 1. Navigate to your Home Assistant dashboard
 # 2. Click the three dots (⋮) in top right → Edit Dashboard
-# 3. Click + ADD CARD at the bottom
-# 4. Click "Show Code Editor" (bottom left)
-# 5. Delete the placeholder YAML
-# 6. Copy and paste ONE card at a time from below
+# 3. Click "RAW CONFIGURATION EDITOR" at the top
+# 4. Scroll to the bottom of your existing dashboard YAML
+# 5. Copy EVERYTHING from line 15 below (starting with "# ====") to the end of this file
+# 6. Paste at the end of your dashboard under the "views:" section
 # 7. Click SAVE
 #
-# DO NOT wrap these in views: or any other structure - paste directly!
+# ALTERNATIVE (Add cards one at a time):
+# - Click + ADD CARD → Show Code Editor → Paste one card section → SAVE
+# - Each card is separated by "# ======" dividers
+#
+# NOTE: Cards are already properly formatted - DO NOT wrap in additional structures!
 
 # ==============================================================================
 # CARD 1: MASTER CONTROL PANEL - Everything You Need Daily
@@ -527,3 +531,1118 @@ cards:
 # - Adjust grid columns for your screen size
 # - Change icons by editing mdi:xxx values
 # - Add confirmations to destructive actions
+
+---
+
+# ==============================================================================
+# ENHANCED CARDS - Advanced Scenarios & Power User Features
+# ==============================================================================
+
+# ==============================================================================
+# CARD 9: TROUBLESHOOTING DASHBOARD - "Why did that happen?"
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 🔍 Troubleshooting Dashboard
+      Instant answers to "Why did my lights change?"
+
+  - type: entities
+    title: Recent Activity
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_last_action
+        name: Last Action
+        icon: mdi:history
+        secondary_info: last-changed
+
+      - type: attribute
+        entity: sensor.alp_last_action
+        attribute: time_ago_human
+        name: Time Since Last Action
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.alp_last_action
+        attribute: action
+        name: Action Details
+        icon: mdi:information
+
+      - type: divider
+
+      - entity: sensor.alp_timer_status
+        name: Active Timers
+        icon: mdi:timer-sand
+
+      - type: attribute
+        entity: sensor.alp_timer_status
+        attribute: active_zones
+        name: Zones with Timers
+        icon: mdi:map-marker-multiple
+
+      - type: attribute
+        entity: sensor.alp_timer_status
+        attribute: total_active
+        name: Total Active Timers
+        icon: mdi:counter
+
+  - type: markdown
+    content: |\n      **Common Scenarios:**
+      • **Lights dimmed unexpectedly** → Check if environmental boost activated
+      • **Lights changed at sunrise** → Wake sequence may be running
+      • **Adjustment reverted** → Manual timer expired (check timer status above)
+      • **Scene didn't apply** → Zone may have manual control active
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Show Full Status
+        icon: mdi:clipboard-text
+        tap_action:
+          action: call-service
+          service: script.alp_show_status
+        show_state: false
+
+      - type: button
+        name: Show Zone Details
+        icon: mdi:home-group
+        tap_action:
+          action: call-service
+          service: script.alp_show_zone_details
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 10: ACTIVE MODIFIERS OVERVIEW - Visual Breakdown
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # ⚡ Active Modifiers
+      Everything currently affecting your lights
+
+  - type: gauge
+    entity: sensor.alp_brightness_adjustment
+    name: Manual Brightness
+    min: -100
+    max: 100
+    severity:
+      red: -100
+      yellow: -50
+      green: 0
+    needle: true
+
+  - type: gauge
+    entity: sensor.alp_warmth_adjustment
+    name: Manual Warmth
+    min: -2500
+    max: 2500
+    severity:
+      red: -2500
+      yellow: -1000
+      green: 0
+    needle: true
+
+  - type: entities
+    title: Automatic Adjustments
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_environmental_boost
+        name: Environmental Boost
+        icon: mdi:weather-cloudy
+        secondary_info: last-changed
+
+      - entity: sensor.alp_sunset_brightness_boost
+        name: Sunset Brightness
+        icon: mdi:weather-sunset
+
+      - entity: sensor.alp_sunset_warmth_offset
+        name: Sunset Warmth
+        icon: mdi:thermometer
+
+      - type: divider
+
+      - type: custom:bar-card
+        entities:
+          - entity: sensor.alp_environmental_boost
+            name: Environmental
+            max: 25
+            min: 0
+            color: orange
+          - entity: sensor.alp_sunset_brightness_boost
+            name: Sunset
+            max: 50
+            min: 0
+            color: red
+        height: 40px
+        padding: 2px
+        positions:
+          name: inside
+          value: inside
+
+  - type: markdown
+    content: |\n      **Total Effect:**
+      • Brightness: {{ states('sensor.alp_brightness_adjustment') | int + states('sensor.alp_environmental_boost') | int + states('sensor.alp_sunset_brightness_boost') | int }}%
+      • Warmth: {{ states('sensor.alp_warmth_adjustment') | int + states('sensor.alp_sunset_warmth_offset') | int }}K
+
+      _Tip: Negative values make lights dimmer/warmer, positive values make brighter/cooler_
+
+---
+
+# ==============================================================================
+# CARD 11: ZONE BOUNDARY VISUALIZATION - Current Min/Max Per Zone
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 📊 Zone Boundaries
+      Current adaptive range for each zone
+
+  - type: entities
+    title: Main Living Room
+    show_header_toggle: false
+    entities:
+      - type: custom:bar-card
+        entity: sensor.alp_brightness_min_main_living
+        name: Min Brightness
+        min: 0
+        max: 100
+        color: blue
+        height: 30px
+
+      - type: custom:bar-card
+        entity: sensor.alp_brightness_max_main_living
+        name: Max Brightness
+        min: 0
+        max: 100
+        color: amber
+        height: 30px
+
+      - type: custom:bar-card
+        entity: sensor.alp_color_temp_min_main_living
+        name: Min Warmth
+        min: 1500
+        max: 6500
+        color: orange
+        height: 30px
+
+      - type: custom:bar-card
+        entity: sensor.alp_color_temp_max_main_living
+        name: Max Warmth
+        min: 1500
+        max: 6500
+        color: lightblue
+        height: 30px
+
+  - type: entities
+    title: Kitchen Island
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_brightness_min_kitchen_island
+        name: Min Brightness
+        icon: mdi:brightness-4
+
+      - entity: sensor.alp_brightness_max_kitchen_island
+        name: Max Brightness
+        icon: mdi:brightness-7
+
+      - entity: sensor.alp_color_temp_min_kitchen_island
+        name: Min Warmth
+        icon: mdi:thermometer-low
+
+      - entity: sensor.alp_color_temp_max_kitchen_island
+        name: Max Warmth
+        icon: mdi:thermometer-high
+
+  - type: entities
+    title: Bedroom Primary
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_brightness_min_bedroom_primary
+        name: Min Brightness
+        icon: mdi:brightness-4
+
+      - entity: sensor.alp_brightness_max_bedroom_primary
+        name: Max Brightness
+        icon: mdi:brightness-7
+
+      - entity: sensor.alp_color_temp_min_bedroom_primary
+        name: Min Warmth
+        icon: mdi:thermometer-low
+
+      - entity: sensor.alp_color_temp_max_bedroom_primary
+        name: Max Warmth
+        icon: mdi:thermometer-high
+
+  - type: markdown
+    content: |\n      **Understanding Boundaries:**
+      • **Min/Max Brightness**: Range adaptive lighting will use (0-100%)
+      • **Min/Max Warmth**: Color temperature range (1500K warm - 6500K cool)
+      • **Adjustments move boundaries**: +20% brightness raises min by 20%
+      • **Zones maintain range**: Lights still adapt within adjusted boundaries
+
+---
+
+# ==============================================================================
+# CARD 12: ENVIRONMENTAL DEEP DIVE - Component Breakdown
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 🌤️ Environmental Analysis
+      Detailed breakdown of automatic adjustments
+
+  - type: entities
+    title: Current Conditions
+    show_header_toggle: false
+    entities:
+      - type: attribute
+        entity: sensor.alp_environmental_boost
+        attribute: lux_value
+        name: Outdoor Lux
+        icon: mdi:brightness-5
+
+      - type: attribute
+        entity: sensor.alp_environmental_boost
+        attribute: weather_condition
+        name: Weather
+        icon: mdi:weather-partly-cloudy
+
+      - type: attribute
+        entity: sun.sun
+        attribute: elevation
+        name: Sun Elevation
+        icon: mdi:sun-angle
+
+      - type: divider
+
+      - entity: sensor.alp_environmental_boost
+        name: Total Environmental Boost
+        icon: mdi:weather-cloudy
+
+  - type: markdown
+    content: |\n      **Environmental Boost Breakdown:**
+      {% set boost_attr = state_attr('sensor.alp_environmental_boost', 'breakdown') %}
+      {% if boost_attr %}
+      • **Lux Contribution**: {{ boost_attr.lux_boost_pct }}% (from {{ boost_attr.lux_value }} lux)
+      • **Weather Contribution**: {{ boost_attr.weather_boost_pct }}%
+      • **Seasonal Adjustment**: {{ boost_attr.seasonal_adjustment_pct }}%
+      • **Time Multiplier**: {{ boost_attr.time_multiplier }}x
+      • **Raw Before Time**: {{ boost_attr.raw_boost_before_time }}%
+      • **Limiting Factor**: {{ boost_attr.limiting_factor }}
+      {% else %}
+      _No environmental data available_
+      {% endif %}
+
+      **How It Works:**
+      1. **Lux Sensing**: Dark conditions (< 100 lux) add up to 15%
+      2. **Weather**: Cloudy/rainy/foggy add 5-20%
+      3. **Season**: Winter +8%, summer -3%
+      4. **Time of Day**: Night = 0%, dawn/dusk = 70%, day = 100%
+      5. **Max Cap**: Never exceeds 25% total boost
+
+  - type: entities
+    title: Sunset Fade
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_sunset_brightness_boost
+        name: Brightness Boost
+        icon: mdi:brightness-auto
+
+      - entity: sensor.alp_sunset_warmth_offset
+        name: Warmth Offset
+        icon: mdi:thermometer
+
+      - type: attribute
+        entity: sun.sun
+        attribute: next_setting
+        name: Next Sunset
+        icon: mdi:weather-sunset-down
+
+  - type: markdown
+    content: |\n      **Sunset Fade Explained:**
+      As sun approaches horizon (elevation < 3°):
+      • **Brightness**: Gradually increases to compensate for fading daylight
+      • **Warmth**: Shifts warmer for golden hour aesthetic
+      • **Duration**: Ramps over 30 minutes around sunset
+      • **Disable**: Turn off sunset boost in zone settings if not desired
+
+  - type: button
+    name: Show Environmental Status
+    icon: mdi:information
+    tap_action:
+      action: call-service
+      service: script.alp_show_environmental_status
+    show_state: false
+
+---
+
+# ==============================================================================
+# CARD 13: TIMER MANAGEMENT - Visual Countdown & Control
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # ⏱️ Manual Control Timers
+      Track and manage zone override expiry
+
+  - type: conditional
+    conditions:
+      - entity: sensor.alp_timer_status
+        state_not: "No Active Timers"
+    card:
+      type: entities
+      title: Active Timers
+      show_header_toggle: false
+      entities:
+        - entity: sensor.alp_timer_status
+          name: Timer Summary
+          icon: mdi:timer-sand
+
+        - type: attribute
+          entity: sensor.alp_timer_status
+          attribute: timer_details
+          name: Detailed Breakdown
+          icon: mdi:format-list-bulleted
+
+  - type: markdown
+    content: |\n      {% set timer_details = state_attr('sensor.alp_timer_status', 'timer_details') %}
+      {% if timer_details %}
+      **Zone Timers:**
+      {% for zone, details in timer_details.items() %}
+      • **{{ zone | replace('_', ' ') | title }}**
+        - Remaining: {{ details.remaining_human }}
+        - Expires: {{ details.finishes_at | timestamp_custom('%I:%M %p', true) }}
+      {% endfor %}
+      {% else %}
+      _No active timers - all zones in automatic mode_
+      {% endif %}
+
+      **What Happens When Timer Expires:**
+      1. Zone returns to adaptive lighting control
+      2. Boundaries reset to configured defaults
+      3. Manual adjustments remain (use Reset All to clear those)
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Reset All Timers
+        icon: mdi:timer-off
+        tap_action:
+          action: call-service
+          service: script.alp_reset_all_zones
+          confirmation:
+            text: Clear all zone timers and return to adaptive?
+        show_state: false
+
+      - type: button
+        name: Show Manual Control
+        icon: mdi:timer-cog
+        tap_action:
+          action: call-service
+          service: script.alp_show_manual_control
+        show_state: false
+
+  - type: entities
+    title: Timer Configuration
+    show_header_toggle: false
+    entities:
+      - entity: number.alp_manual_control_timeout
+        name: Default Timeout
+        icon: mdi:timer-outline
+
+  - type: markdown
+    content: |\n      **Timer Behavior:**
+      • **Per-Zone**: Each zone has independent timer
+      • **Auto-Start**: Timer starts when you manually adjust lights
+      • **Smart Scaling**: Timeout adjusts based on sun position and conditions
+      • **Default**: {{ states('number.alp_manual_control_timeout') | int / 3600 }} hours
+
+---
+
+# ==============================================================================
+# CARD 14: SCENE PREVIEW & COMPARISON - "What will this do?"
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 🎨 Scene Guide
+      Understand what each scene does before applying
+
+  - type: entities
+    title: Available Scenes
+    show_header_toggle: false
+    entities:
+      - entity: select.alp_scene_select
+        name: Current Scene
+        icon: mdi:palette
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: markdown
+        content: |\n          ### 🔄 AUTO
+          **Returns to adaptive lighting**
+          • Clears all manual adjustments
+          • Cancels all zone timers
+          • Restores default boundaries
+          • Lights adapt to time of day
+
+          **Use When:**
+          • Done with manual control
+          • Want system to take over
+          • Reset to clean state
+
+      - type: markdown
+        content: |\n          ### 💡 ALL LIGHTS
+          **Maximum illumination**
+          • All zones at 100% brightness
+          • All lights turned on
+          • Cooler color temperature
+          • Scene offsets cleared
+
+          **Use When:**
+          • Hosting guests
+          • Deep cleaning
+          • Need maximum visibility
+          • Working from home
+
+      - type: markdown
+        content: |\n          ### 🌅 EVENING COMFORT
+          **Warm ambient relaxation**
+          • Dimmed to 60-70%
+          • Warmer color (2200-2500K)
+          • Accent lights emphasized
+          • Ceiling lights reduced
+
+          **Use When:**
+          • Winding down for evening
+          • Watching TV
+          • Relaxing after work
+          • Before bedtime routine
+
+      - type: markdown
+        content: |\n          ### 🌙 ULTRA DIM
+          **Minimal nighttime lighting**
+          • All zones at 10-20%
+          • Very warm (1800-2200K)
+          • Perfect for late night
+          • Won't disrupt sleep
+
+          **Use When:**
+          • Late night activities
+          • Getting ready for bed
+          • Need to see but stay sleepy
+          • Midnight bathroom trips
+
+  - type: markdown
+    content: |\n      **Scene Behavior:**
+      • **Persistent**: Scenes stay active until changed
+      • **Manual Control**: Scene sets manual_control for affected lights
+      • **Per-Zone Offsets**: Only affected zones get scene adjustments
+      • **Return to Auto**: Use AUTO scene to clear and restore adaptive
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: AUTO
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.alp_scene_auto
+        show_state: false
+
+      - type: button
+        name: All Lights
+        icon: mdi:lightbulb-group
+        tap_action:
+          action: call-service
+          service: script.apply_scene_all_lights
+        show_state: false
+
+      - type: button
+        name: Evening
+        icon: mdi:weather-sunset
+        tap_action:
+          action: call-service
+          service: script.apply_scene_evening_comfort
+        show_state: false
+
+      - type: button
+        name: Ultra Dim
+        icon: mdi:weather-night
+        tap_action:
+          action: call-service
+          service: script.apply_scene_ultra_dim
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 15: SETUP VALIDATION CHECKLIST - First-Run Verification
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # ✅ Setup Validation
+      Verify your configuration is working correctly
+
+  - type: entities
+    title: Zone Health Check
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.alp_zone_health
+        name: Overall Zone Health
+        icon: mdi:heart-pulse
+
+      - type: attribute
+        entity: sensor.alp_zone_health
+        attribute: healthy_count
+        name: Healthy Zones
+        icon: mdi:check-circle
+
+      - type: attribute
+        entity: sensor.alp_zone_health
+        attribute: total_zones
+        name: Total Zones
+        icon: mdi:counter
+
+      - type: attribute
+        entity: sensor.alp_zone_health
+        attribute: unhealthy_zones
+        name: Unhealthy Zones
+        icon: mdi:alert-circle
+
+  - type: markdown
+    content: |\n      {% set zones = state_attr('sensor.alp_zone_health', 'zones') %}
+      {% if zones %}
+      **Per-Zone Status:**
+      {% for zone_id, health in zones.items() %}
+      • **{{ zone_id | replace('_', ' ') | title }}**
+        - Available: {% if health.available %}✓{% else %}✗{% endif %}
+        - AL Switch: {{ health.al_switch }}
+        - Lights: {{ health.lights_configured }} configured
+        - Boundaries: {% if health.boundary_valid %}✓ Valid{% else %}✗ Invalid{% endif %} ({{ health.brightness_range }})
+      {% endfor %}
+      {% else %}
+      _No zone health data available_
+      {% endif %}
+
+  - type: entities
+    title: Required Entities Check
+    show_header_toggle: false
+    entities:
+      - type: markdown
+        content: |\n          **Sensors:**
+          • Environmental: {% if states('sensor.alp_environmental_boost') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Sunset: {% if states('sensor.alp_sunset_brightness_boost') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Wake Sequence: {% if states('sensor.alp_wake_sequence_status') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Last Action: {% if states('sensor.alp_last_action') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Timer Status: {% if states('sensor.alp_timer_status') != 'unavailable' %}✓{% else %}✗{% endif %}
+
+          **Controls:**
+          • Brightness Adjust: {% if states('number.alp_brightness_adjustment') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Warmth Adjust: {% if states('number.alp_warmth_adjustment') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Scene Select: {% if states('select.alp_scene_select') != 'unavailable' %}✓{% else %}✗{% endif %}
+          • Pause Switch: {% if states('switch.alp_pause_adaptive_control') != 'unavailable' %}✓{% else %}✗{% endif %}
+
+  - type: markdown
+    content: |\n      **Troubleshooting Setup Issues:**
+
+      **All zones show unavailable:**
+      1. Check Adaptive Lighting integration is installed
+      2. Verify AL switches are created for each zone
+      3. Restart Home Assistant
+      4. Check logs for errors: Settings → System → Logs
+
+      **Missing sensors:**
+      1. Check ALP integration is loaded: Settings → Devices & Services
+      2. Wait 30 seconds after restart for entities to register
+      3. Verify in Developer Tools → States
+
+      **Invalid boundaries:**
+      1. Ensure min_brightness < max_brightness in zone config
+      2. Check color_temp_min < color_temp_max
+      3. Reconfigure zone if needed
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Show Zone Details
+        icon: mdi:home-group
+        tap_action:
+          action: call-service
+          service: script.alp_show_zone_details
+        show_state: false
+
+      - type: button
+        name: Force Refresh
+        icon: mdi:refresh
+        tap_action:
+          action: call-service
+          service: script.alp_force_refresh
+        show_state: false
+
+---
+
+# ==============================================================================
+# CARD 16: ADVANCED POWER USER CONTROLS - Fine-Grained Precision
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 🎛️ Advanced Controls
+      Precision adjustments for power users
+
+  - type: entities
+    title: Direct Value Input
+    show_header_toggle: false
+    entities:
+      - entity: number.alp_brightness_adjustment
+        name: Brightness Adjustment
+        icon: mdi:brightness-percent
+
+      - entity: number.alp_warmth_adjustment
+        name: Warmth Adjustment
+        icon: mdi:thermometer
+
+      - type: divider
+
+      - entity: number.alp_brightness_increment
+        name: Button Step Size (Brightness)
+        icon: mdi:stairs-up
+
+      - entity: number.alp_color_temp_increment
+        name: Button Step Size (Warmth)
+        icon: mdi:stairs-up
+
+      - entity: number.alp_manual_control_timeout
+        name: Manual Control Timeout (seconds)
+        icon: mdi:timer
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Set Custom Brightness
+        icon: mdi:brightness-6
+        tap_action:
+          action: call-service
+          service: script.alp_set_brightness
+          data:
+            brightness: 37
+        show_state: false
+
+      - type: button
+        name: Set Custom Warmth
+        icon: mdi:thermometer
+        tap_action:
+          action: call-service
+          service: script.alp_set_warmth
+          data:
+            warmth: 750
+        show_state: false
+
+  - type: markdown
+    content: |\n      **Custom Value Scripts:**
+      ```yaml
+      # Set exact brightness adjustment
+      service: script.alp_set_brightness
+      data:
+        brightness: 37  # Any value -100 to +100
+
+      # Set exact warmth adjustment
+      service: script.alp_set_warmth
+      data:
+        warmth: 750  # Any value -2500 to +2500
+      ```
+
+      **Tip**: Edit button actions above to set your preferred values
+
+  - type: entities
+    title: System Override
+    show_header_toggle: false
+    entities:
+      - entity: switch.alp_pause_adaptive_control
+        name: Pause All Adaptive Control
+        icon: mdi:pause-circle
+
+  - type: markdown
+    content: |\n      **When Paused:**
+      • No automatic adjustments
+      • Environmental boost disabled
+      • Wake sequence disabled
+      • Manual adjustments still work
+      • Scenes still apply
+
+      **Use When:**
+      • Testing specific configurations
+      • Debugging issues
+      • Want complete manual control
+      • Temporary override needed
+
+---
+
+# ==============================================================================
+# CARD 17: VOICE CONTROL REFERENCE - Quick Command Guide
+# ==============================================================================
+type: markdown
+title: 🎙️ Voice Control Reference
+content: |\n  # Voice Commands (Alexa/Google)
+
+  **Scenes:**
+  • "Alexa, turn on all the lights" → All Lights scene
+  • "Alexa, turn on evening mode" → Evening Comfort
+  • "Alexa, turn on night mode" → Ultra Dim
+  • "Alexa, reset the lights" → Return to Auto
+
+  **Adjustments:**
+  • "Alexa, make it brighter" → +20% brightness
+  • "Alexa, make it dimmer" → -20% brightness
+  • "Alexa, make it warmer" → -500K (more orange/red)
+  • "Alexa, make it cooler" → +500K (more blue/white)
+
+  **Implementation (implementation_2.yaml):**
+  Voice commands map to these scripts:
+  • `voice_all_lights` → `apply_scene_all_lights`
+  • `voice_evening_mode` → `apply_scene_evening_comfort`
+  • `voice_night_mode` → `apply_scene_ultra_dim`
+  • `voice_brighter` → `alp_brighter`
+  • `voice_dimmer` → `alp_dimmer`
+  • `voice_warmer` → `alp_warmer`
+  • `voice_cooler` → `alp_cooler`
+  • `voice_reset_lights` → `alp_reset_all`
+
+  **Setup:**
+  1. Add voice scripts from implementation_2.yaml (lines 395-451)
+  2. Expose scripts in Alexa/Google integration
+  3. Test with "Alexa, discover devices"
+
+  **Tip**: Customize script names to match your preferred voice phrases
+
+---
+
+# ==============================================================================
+# CARD 18: COMPREHENSIVE STATUS DASHBOARD - Everything at a Glance
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 📊 Complete System Status
+      One-stop dashboard for all ALP information
+
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+      - type: entity
+        entity: sensor.alp_current_scene
+        name: Scene
+        icon: mdi:palette
+
+      - type: entity
+        entity: sensor.alp_brightness_adjustment
+        name: Brightness
+        icon: mdi:brightness-6
+
+      - type: entity
+        entity: sensor.alp_warmth_adjustment
+        name: Warmth
+        icon: mdi:thermometer
+
+      - type: entity
+        entity: sensor.alp_environmental_boost
+        name: Env Boost
+        icon: mdi:weather-cloudy
+
+      - type: entity
+        entity: sensor.alp_sunset_brightness_boost
+        name: Sunset
+        icon: mdi:weather-sunset
+
+      - type: entity
+        entity: sensor.alp_timer_status
+        name: Timers
+        icon: mdi:timer-sand
+
+      - type: entity
+        entity: sensor.alp_zone_health
+        name: Health
+        icon: mdi:heart-pulse
+
+      - type: entity
+        entity: sensor.alp_last_action
+        name: Last Action
+        icon: mdi:history
+
+      - type: entity
+        entity: sensor.alp_wake_sequence_status
+        name: Wake
+        icon: mdi:alarm
+
+  - type: markdown
+    content: |\n      **Quick Status:**
+      • Current Scene: {{ states('sensor.alp_current_scene') | title }}
+      • System: {% if is_state('switch.alp_pause_adaptive_control', 'on') %}Paused{% else %}Active{% endif %}
+      • Manual Zones: {{ state_attr('sensor.alp_timer_status', 'total_active') | default(0) }}
+      • Zone Health: {{ states('sensor.alp_zone_health') }}
+      • Last Change: {{ state_attr('sensor.alp_last_action', 'time_ago_human') | default('Unknown') }}
+
+      **Total Effect:**
+      • Brightness: {{ states('sensor.alp_brightness_adjustment') | int + states('sensor.alp_environmental_boost') | int + states('sensor.alp_sunset_brightness_boost') | int }}%
+      • Warmth: {{ states('sensor.alp_warmth_adjustment') | int + states('sensor.alp_sunset_warmth_offset') | int }}K
+
+      **Zones:**
+      {% set zones_manual = state_attr('sensor.alp_timer_status', 'active_zones') %}
+      {% if zones_manual %}
+      {% for zone in zones_manual %}
+      • {{ zone | replace('_', ' ') | title }}: Manual control active
+      {% endfor %}
+      {% else %}
+      • All zones in adaptive mode
+      {% endif %}
+
+---
+
+# ==============================================================================
+# CARD 19: AUTOMATION CONTROL - Enable/Disable Key Automations
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |\n      # 🤖 Automation Control
+      Enable/disable key system behaviors
+
+  - type: entities
+    title: Wake & Alarms
+    show_header_toggle: false
+    entities:
+      - entity: sensor.alp_wake_sequence_status
+        name: Wake Sequence Status
+        icon: mdi:alarm
+
+      - entity: input_boolean.alp_disable_next_sonos_wakeup
+        name: Skip Next Alarm
+        icon: mdi:alarm-snooze
+
+      - entity: sensor.alp_next_alarm
+        name: Next Scheduled Alarm
+        icon: mdi:alarm-check
+
+  - type: markdown
+    content: |\n      **Wake Sequence Behavior:**
+      • Starts 30 minutes before alarm
+      • Gradually raises brightness
+      • Sets manual_control to lock lights
+      • Prevents environmental boost during wake
+      • Ends when alarm time reached
+      • Automatically clears manual_control
+
+      **Skip Alarm Toggle:**
+      • Enable to skip tomorrow's wake sequence only
+      • Automatically resets after alarm time passes
+      • Useful for weekends/holidays
+
+  - type: entities
+    title: Time-Based Automations (implementation_2.yaml)
+    show_header_toggle: false
+    entities:
+      - type: markdown
+        content: |\n          **Available Automations:**
+          • `alp_morning_routine` - Auto bright at sunrise
+          • `alp_evening_transition` - Auto evening scene after sunset
+          • `alp_bedtime_routine` - Auto ultra dim at night
+          • `alp_work_mode_auto` - Detect work-from-home
+
+          **Note**: These are disabled by default in implementation_2.yaml.
+          Uncomment in YAML if desired.
+
+  - type: entities
+    title: Environmental Notifications (implementation_2.yaml)
+    show_header_toggle: false
+    entities:
+      - type: markdown
+        content: |\n          **Available Notifications:**
+          • `alp_dark_day_alert` - Notify when env boost activates (>20%)
+          • `alp_sunset_alert` - Notify when sunset fade begins
+
+          **Note**: Uncomment in implementation_2.yaml to enable.
+
+---
+
+# ==============================================================================
+# CARD 20: MOBILE OPTIMIZATION - Touch-Friendly Compact View
+# ==============================================================================
+type: vertical-stack
+cards:
+  - type: glance
+    title: ALP Quick Status
+    show_name: true
+    show_state: true
+    entities:
+      - entity: sensor.alp_current_scene
+        name: Scene
+      - entity: sensor.alp_brightness_adjustment
+        name: Bright
+      - entity: sensor.alp_warmth_adjustment
+        name: Warm
+      - entity: sensor.alp_timer_status
+        name: Timers
+
+  - type: grid
+    columns: 2
+    square: true
+    cards:
+      - type: button
+        name: Auto
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.alp_scene_auto
+        show_state: false
+        show_name: true
+
+      - type: button
+        name: Evening
+        icon: mdi:weather-sunset
+        tap_action:
+          action: call-service
+          service: script.apply_scene_evening_comfort
+        show_state: false
+        show_name: true
+
+      - type: button
+        name: "+"
+        icon: mdi:brightness-7
+        tap_action:
+          action: call-service
+          service: script.alp_brighter
+        show_state: false
+        icon_height: 40px
+
+      - type: button
+        name: "-"
+        icon: mdi:brightness-4
+        tap_action:
+          action: call-service
+          service: script.alp_dimmer
+        show_state: false
+        icon_height: 40px
+
+      - type: button
+        name: Warm
+        icon: mdi:fire
+        tap_action:
+          action: call-service
+          service: script.alp_warmer
+        show_state: false
+
+      - type: button
+        name: Cool
+        icon: mdi:snowflake
+        tap_action:
+          action: call-service
+          service: script.alp_cooler
+        show_state: false
+
+      - type: button
+        name: Status
+        icon: mdi:information
+        tap_action:
+          action: call-service
+          service: script.alp_show_status
+        show_state: false
+
+      - type: button
+        name: Reset
+        icon: mdi:restart
+        tap_action:
+          action: call-service
+          service: script.alp_reset_all
+          confirmation:
+            text: Reset all?
+        show_state: false
+
+---
+
+# ==============================================================================
+# FINAL NOTES & CUSTOMIZATION GUIDE
+# ==============================================================================
+# You now have 20 comprehensive cards covering every scenario:
+#
+# BASIC USE (Cards 1-8):
+# 1. Master Control - Daily adjustments
+# 2. Zone Control - Per-zone management
+# 3. Environmental - Auto boosts
+# 4. Wake & Alarms - Morning routine
+# 5. Configuration - System settings
+# 6. System Health - Diagnostics
+# 7. Quick Status - Compact markdown
+# 8. Mobile-Friendly - Touch controls
+#
+# ENHANCED USE (Cards 9-20):
+# 9. Troubleshooting - "Why did that happen?"
+# 10. Active Modifiers - Visual breakdown
+# 11. Zone Boundaries - Min/max visualization
+# 12. Environmental Deep Dive - Component analysis
+# 13. Timer Management - Countdown & control
+# 14. Scene Preview - "What will this do?"
+# 15. Setup Validation - First-run checklist
+# 16. Advanced Controls - Power user precision
+# 17. Voice Reference - Command guide
+# 18. Comprehensive Status - Everything at once
+# 19. Automation Control - Enable/disable behaviors
+# 20. Mobile Optimization - Touch-friendly
+#
+# CUSTOMIZATION TIPS:
+# • Start with cards 1-8 for basic daily use
+# • Add card 9 (Troubleshooting) if you need to debug
+# • Add card 15 (Setup Validation) during first setup
+# • Add card 20 (Mobile) if viewing on phone
+# • Remove any cards you don't need
+# • Adjust grid columns based on screen width
+# • Change icons to match your preference
+# • Modify button actions for custom values
+#
+# ENTITY AVAILABILITY:
+# • Most entities require integration restart to appear
+# • Wait 30 seconds after restart for registration
+# • Check Developer Tools → States if entity missing
+# • Some cards use conditional display (auto-hide if not available)
+#
+# CARD DEPENDENCIES:
+# • Cards 1-8: Core integration entities only
+# • Card 10: Requires custom:bar-card (optional, fallback to entities)
+# • Card 11: Requires custom:bar-card (optional, fallback to entities)
+# • Cards 9-20: All use standard entities
+#
+# OPTIONAL CUSTOM CARDS:
+# Install these for enhanced visualization:
+# • custom:bar-card - Visual progress bars (HACS)
+# • custom:mini-graph-card - Historical trends (HACS)
+# • custom:button-card - Advanced button styling (HACS)
+#
+# PERFORMANCE NOTES:
+# • Each card = 1 separate UI element
+# • Start with 3-5 cards, add more as needed
+# • Use vertical-stack to group related cards
+# • Consider creating separate dashboard tabs
+#
+# ACCESSIBILITY:
+# • All cards use semantic HTML
+# • Icons have descriptive names
+# • Color-blind friendly (not relying on color alone)
+# • Screen reader compatible
+# • Keyboard navigable
+#
+# FUTURE ENHANCEMENTS:
+# When Phase 3-5 features are implemented:
+# • Add per-zone timeout override controls
+# • Add system health composite sensor
+# • Add performance metrics display
+# • Add usage statistics graphs
+#
+# ENJOY YOUR COMPREHENSIVE ALP DASHBOARD!
