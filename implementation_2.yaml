@@ -27,6 +27,15 @@
 ###############################################################################
 
 # -----------------------------------------------------------------------------
+# Input Helpers - Sonos Wake Control
+# -----------------------------------------------------------------------------
+input_boolean:
+  alp_disable_next_sonos_wakeup:
+    name: Skip Next Morning Alarm
+    icon: mdi:alarm-snooze
+    initial: false
+
+# -----------------------------------------------------------------------------
 # Light Groups - User's Physical Light Topology
 # -----------------------------------------------------------------------------
 # These define YOUR specific light zones. Integration provides zone management,
@@ -507,6 +516,96 @@ automation:
             Sunset fade active - lights warming and dimming gradually
             (Boost: {{ states('sensor.alp_sunset_boost') }}%)
           title: "Adaptive Lighting: Sunset Mode"
+
+  # ---------------------------------------------------------------------------
+  # Sonos Alarm Management - Skip Next Morning Alarm
+  # ---------------------------------------------------------------------------
+  - id: alp_nightly_skip_alarm_prompt
+    alias: "ALP: Nightly Skip Alarm Prompt"
+    description: "Ask at 9 PM if tomorrow's alarm should be skipped"
+    mode: single
+
+    trigger:
+      - platform: time
+        at: "21:00:00"
+
+    condition:
+      # Only if there's an alarm tomorrow morning
+      - condition: template
+        value_template: >
+          {% set alarm = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+          {% if alarm %}
+            {% set hours_until = (as_timestamp(alarm) - now().timestamp()) / 3600 %}
+            {{ 6 < hours_until < 14 }}
+          {% else %}
+            false
+          {% endif %}
+
+    action:
+      # Send actionable notification
+      # ⚠️ CUSTOMIZE: Change to your mobile app entity
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "Skip Tomorrow's Alarm?"
+          message: >
+            {% set alarm = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+            Wake sequence scheduled for {{ alarm | timestamp_custom('%I:%M %p') }}
+          data:
+            actions:
+              - action: "SKIP_ALARM"
+                title: "Skip Wake Sequence"
+              - action: "KEEP_ALARM"
+                title: "Keep Alarm"
+
+  - id: alp_handle_skip_alarm_response
+    alias: "ALP: Handle Skip Alarm Response"
+    description: "Process the user's response to skip alarm prompt"
+    mode: single
+
+    trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "SKIP_ALARM"
+
+    action:
+      # Set the skip toggle
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.alp_disable_next_sonos_wakeup
+
+      # Confirm to user
+      # ⚠️ CUSTOMIZE: Change to your mobile app entity
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "✅ Alarm Skipped"
+          message: "Tomorrow's wake sequence will be skipped"
+
+  - id: alp_reset_skip_alarm_after_time
+    alias: "ALP: Reset Skip Alarm After Time"
+    description: "Clear the skip toggle after the alarm time passes"
+    mode: single
+
+    trigger:
+      - platform: template
+        value_template: >
+          {% set alarm = state_attr('sensor.sonos_upcoming_alarms', 'earliest_alarm_timestamp') %}
+          {% if alarm %}
+            {{ now() > as_datetime(alarm) + timedelta(minutes=30) }}
+          {% else %}
+            false
+          {% endif %}
+
+    condition:
+      - condition: state
+        entity_id: input_boolean.alp_disable_next_sonos_wakeup
+        state: 'on'
+
+    action:
+      # Reset the toggle for next day
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.alp_disable_next_sonos_wakeup
 
 ###############################################################################
 # TIER 3: ADVANCED CONFIGURATION (Commented - Power Users)
