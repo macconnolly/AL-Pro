@@ -10,6 +10,7 @@ Following claude.md: "You can't improve what you can't see"
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from typing import Any
 
@@ -81,6 +82,18 @@ async def async_setup_entry(
 
     # System health with scoring
     sensors.append(SystemHealthSensor(coordinator, config_entry))
+
+    # Performance and usage tracking (missing from implementation_1.yaml)
+    sensors.extend([
+        PerformanceMetricsSensor(coordinator, config_entry),
+        UsageStatisticsSensor(coordinator, config_entry),
+        ActiveLightsCountSensor(coordinator, config_entry, hass),
+        ManualAdjustmentStatusSensor(coordinator, config_entry),
+        BrightnessStatusSensor(coordinator, config_entry),
+    ])
+
+    # Wake sequence status with progress tracking
+    sensors.append(WakeSequenceStatusSensor(coordinator, config_entry))
 
     _LOGGER.info("Setting up %d sensors for complete system visibility", len(sensors))
     async_add_entities(sensors)
@@ -788,3 +801,210 @@ class SystemHealthSensor(ALPEntity, SensorEntity):
                 if zone.get("computed_brightness_range", {}).get("boundary_collapsed", False)
             ],
         }
+
+
+class PerformanceMetricsSensor(ALPEntity, SensorEntity):
+    """Track performance metrics."""
+
+    _attr_icon = "mdi:speedometer"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_performance_metrics"
+        self._attr_name = "ALP Performance Metrics"
+        self._last_update_count = 0
+        self._daily_updates = []
+
+    @property
+    def native_value(self):
+        return "Active" if self.coordinator.last_updated else "Idle"
+
+    @property
+    def extra_state_attributes(self):
+        # Track daily automation counts
+        today_count = len([t for t in self._daily_updates
+                          if t.date() == dt.datetime.now().date()])
+
+        return {
+            "last_calculation": self.coordinator.last_updated,
+            "total_automations_today": today_count,
+            "avg_lights_per_zone": len(self.coordinator.zones),
+            "response_time_ms": self.coordinator.data.get("last_update_duration_ms", 0)
+        }
+
+
+class UsageStatisticsSensor(ALPEntity, SensorEntity):
+    """Track usage patterns and statistics."""
+
+    _attr_icon = "mdi:chart-timeline-variant"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_usage_statistics"
+        self._attr_name = "ALP Usage Statistics"
+        self._mode_start_time = dt.datetime.now()
+        self._current_mode = "auto"
+
+    @property
+    def native_value(self):
+        duration = (dt.datetime.now() - self._mode_start_time).total_seconds() / 3600
+        return f"{duration:.1f} hours in {self._current_mode}"
+
+    @property
+    def extra_state_attributes(self):
+        scene = self.coordinator.get_current_scene()
+        if scene != self._current_mode:
+            self._mode_start_time = dt.datetime.now()
+            self._current_mode = scene
+
+        return {
+            "current_mode": scene,
+            "mode_duration_hours": (dt.datetime.now() - self._mode_start_time).total_seconds() / 3600,
+            "total_brightness_changes_today": self.coordinator.data.get("brightness_changes_today", 0),
+            "total_warmth_changes_today": self.coordinator.data.get("warmth_changes_today", 0),
+            "environmental_boosts_today": self.coordinator.data.get("env_boosts_today", 0)
+        }
+
+
+class ActiveLightsCountSensor(ALPEntity, SensorEntity):
+    """Count active lights with details."""
+
+    _attr_icon = "mdi:lightbulb"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, config_entry, hass):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_active_lights_count"
+        self._attr_name = "ALP Active Lights Count"
+        self.hass = hass
+
+    @property
+    def native_value(self):
+        lights_on = [e for e in self.hass.states.async_all("light")
+                    if e.state == "on"]
+        return len(lights_on)
+
+    @property
+    def extra_state_attributes(self):
+        lights_on = [e.entity_id for e in self.hass.states.async_all("light")
+                    if e.state == "on"]
+        return {
+            "lights_on": lights_on,
+            "count_by_zone": self._count_by_zone(lights_on)
+        }
+
+    def _count_by_zone(self, lights_on):
+        zone_counts = {}
+        for zone_id, zone in self.coordinator.zones.items():
+            zone_lights = zone.get("lights", [])
+            count = len([l for l in zone_lights if l in lights_on])
+            if count > 0:
+                zone_counts[zone_id] = count
+        return zone_counts
+
+
+class ManualAdjustmentStatusSensor(ALPEntity, SensorEntity):
+    """Quick manual adjustment status."""
+
+    _attr_icon = "mdi:timer-cog-outline"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_manual_adjustment_status"
+        self._attr_name = "ALP Manual Adjustment Status"
+
+    @property
+    def native_value(self):
+        active_zones = len(self.coordinator._manual_control)
+        b_adj = self.coordinator.get_brightness_adjustment()
+        w_adj = self.coordinator.get_warmth_adjustment()
+
+        if active_zones > 0:
+            return f"{active_zones} zone(s) manual"
+        elif b_adj != 0 or w_adj != 0:
+            return "Adjustments applied"
+        else:
+            return "No adjustments"
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "zones_with_manual": list(self.coordinator._manual_control),
+            "brightness_adjustment": f"{self.coordinator.get_brightness_adjustment()}%",
+            "warmth_adjustment": f"{self.coordinator.get_warmth_adjustment()}K"
+        }
+
+
+class BrightnessStatusSensor(ALPEntity, SensorEntity):
+    """Human-readable brightness status."""
+
+    _attr_icon = "mdi:brightness-percent"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_brightness_status"
+        self._attr_name = "ALP Brightness Status"
+
+    @property
+    def native_value(self):
+        adj = self.coordinator.get_brightness_adjustment()
+        if adj > 0:
+            return f"+{adj}% brighter"
+        elif adj < 0:
+            return f"{adj}% dimmer"
+        else:
+            return "Default brightness"
+
+
+class WakeSequenceStatusSensor(ALPEntity, SensorEntity):
+    """Comprehensive wake sequence status with progress tracking."""
+
+    _attr_icon = "mdi:alarm"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_wake_sequence_status"
+        self._attr_name = "ALP Wake Sequence Status"
+
+    @property
+    def native_value(self):
+        """Current wake sequence state."""
+        wake_data = self.coordinator.data.get("wake_sequence", {})
+
+        if wake_data.get("active"):
+            start_time = wake_data.get("start_time")
+            duration = wake_data.get("duration_minutes", 30)
+            if start_time:
+                elapsed = (dt.datetime.now() - start_time).total_seconds() / 60
+                progress = min(100, (elapsed / duration) * 100)
+                return f"Active ({progress:.0f}% complete)"
+            return "Active"
+
+        next_alarm = wake_data.get("next_alarm")
+        if next_alarm:
+            return f"Scheduled for {next_alarm.strftime('%I:%M %p')}"
+
+        return "Not Scheduled"
+
+    @property
+    def extra_state_attributes(self):
+        """Detailed wake sequence information."""
+        wake_data = self.coordinator.data.get("wake_sequence", {})
+
+        attrs = {
+            "active": wake_data.get("active", False),
+            "zones_in_wake": list(self.coordinator._wake_active_zones)
+                            if hasattr(self.coordinator, "_wake_active_zones") else [],
+            "duration_minutes": wake_data.get("duration_minutes", 30),
+            "current_offset": wake_data.get("current_offset", 0)
+        }
+
+        if wake_data.get("next_alarm"):
+            attrs["next_alarm"] = wake_data["next_alarm"].isoformat()
+            attrs["time_until_alarm"] = str(wake_data["next_alarm"] - dt.datetime.now())
+
+        if wake_data.get("start_time"):
+            attrs["start_time"] = wake_data["start_time"].isoformat()
+            attrs["elapsed_minutes"] = (dt.datetime.now() - wake_data["start_time"]).total_seconds() / 60
+
+        return attrs

@@ -450,6 +450,7 @@ class Mode(Enum):
 
 class Scene(Enum):
     """Lighting scenes."""
+    AUTO = "auto"  # Return to automatic adaptive control
     DEFAULT = "default"
     ALL_LIGHTS = "all_lights"
     NO_SPOTLIGHTS = "no_spotlights"
@@ -578,6 +579,15 @@ MODE_CONFIGS = {
 # Scene Configurations - Full System Restored
 # From implementation_1.yaml lines 3077-3216
 SCENE_CONFIGS = {
+    Scene.AUTO: {
+        "name": "Auto",
+        "brightness_offset": 0,
+        "warmth_offset": 0,
+        "duration_minutes": None,  # Persistent
+        "zones": {},  # No zone-specific offsets
+        "description": "Return to automatic adaptive control",
+        "actions": []
+    },
     Scene.DEFAULT: {
         "name": "Default",
         "brightness_offset": 0,

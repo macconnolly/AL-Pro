@@ -697,6 +697,34 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 exc_info=True,
             )
 
+    def _clear_zone_manual_control(self, zone_id: str) -> None:
+        """Clear manual control for all lights in a zone.
+
+        Args:
+            zone_id: The zone to clear manual control for
+        """
+        if zone_id not in self.zones:
+            _LOGGER.warning("Cannot clear manual control for unknown zone: %s", zone_id)
+            return
+
+        zone = self.zones[zone_id]
+
+        # Clear from coordinator tracking
+        self._manual_control.discard(zone_id)
+
+        # Clear associated timer if exists
+        timer_id = f"timer.alp_manual_{zone_id}"
+        if self.hass.states.get(timer_id):
+            self.hass.async_create_task(
+                self.hass.services.async_call(
+                    "timer", "cancel",
+                    {"entity_id": timer_id},
+                    blocking=False
+                )
+            )
+
+        _LOGGER.info("Cleared manual control for zone %s", zone_id)
+
     async def _restore_adaptive_control(self, zone_id: str) -> None:
         """Restore adaptive control for a zone after timer expiry.
 
@@ -1506,6 +1534,24 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if scene not in SCENE_CONFIGS:
             _LOGGER.error("Unknown scene: %s", scene)
             return False
+
+        # Handle Scene.AUTO specially - clear all manual control and return to adaptive
+        if scene == Scene.AUTO:
+            # Clear ALL manual control and return to adaptive
+            for zone_id in list(self.zones.keys()):
+                self._clear_zone_manual_control(zone_id)
+
+            # Reset scene tracking
+            self._current_scene = Scene.AUTO
+            self.data["current_scene"] = Scene.AUTO
+
+            # Clear adjustments
+            await self.set_brightness_adjustment(0, start_timers=False)
+            await self.set_warmth_adjustment(0)
+
+            _LOGGER.info("Returned to automatic adaptive control")
+            await self.async_request_refresh()
+            return True
 
         config = SCENE_CONFIGS[scene]
         self._current_scene = scene

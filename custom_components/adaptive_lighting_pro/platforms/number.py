@@ -48,11 +48,11 @@ async def async_setup_entry(
     )
 
     entities = [
-        ALPBrightnessAdjustmentNumber(coordinator),
-        ALPWarmthAdjustmentNumber(coordinator),
-        ALPBrightnessIncrementNumber(coordinator),
-        ALPColorTempIncrementNumber(coordinator),
-        ALPManualTimeoutNumber(coordinator),
+        ALPBrightnessAdjustmentNumber(coordinator, config_entry),
+        ALPWarmthAdjustmentNumber(coordinator, config_entry),
+        ALPBrightnessIncrementNumber(coordinator, config_entry),
+        ALPColorTempIncrementNumber(coordinator, config_entry),
+        ALPManualTimeoutNumber(coordinator, config_entry),
     ]
 
     async_add_entities(entities)
@@ -69,11 +69,15 @@ class ALPBrightnessAdjustmentNumber(ALPEntity, NumberEntity):
     _attr_icon = "mdi:brightness-6"
     _attr_mode = NumberMode.SLIDER
 
-    def __init__(self, coordinator: ALPDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: ALPDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
         """Initialize the brightness adjustment number entity."""
-        super().__init__(coordinator)
-        self._attr_name = "Brightness Adjustment"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_brightness_adjustment"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "number",
+            "brightness_adjustment",
+            "Brightness Adjustment",
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -106,11 +110,15 @@ class ALPWarmthAdjustmentNumber(ALPEntity, NumberEntity):
     _attr_icon = "mdi:thermometer"
     _attr_mode = NumberMode.SLIDER
 
-    def __init__(self, coordinator: ALPDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: ALPDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
         """Initialize the warmth adjustment number entity."""
-        super().__init__(coordinator)
-        self._attr_name = "Warmth Adjustment"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_warmth_adjustment"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "number",
+            "warmth_adjustment",
+            "Warmth Adjustment",
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -143,11 +151,15 @@ class ALPBrightnessIncrementNumber(ALPEntity, NumberEntity):
     _attr_icon = "mdi:format-line-spacing"
     _attr_mode = NumberMode.BOX
 
-    def __init__(self, coordinator: ALPDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: ALPDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
         """Initialize the brightness increment number entity."""
-        super().__init__(coordinator)
-        self._attr_name = "Brightness Increment"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_brightness_increment"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "number",
+            "brightness_increment",
+            "Brightness Increment",
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -179,11 +191,15 @@ class ALPColorTempIncrementNumber(ALPEntity, NumberEntity):
     _attr_icon = "mdi:format-line-spacing"
     _attr_mode = NumberMode.BOX
 
-    def __init__(self, coordinator: ALPDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: ALPDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
         """Initialize the color temperature increment number entity."""
-        super().__init__(coordinator)
-        self._attr_name = "Color Temperature Increment"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_color_temp_increment"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "number",
+            "color_temp_increment",
+            "Color Temperature Increment",
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -215,11 +231,15 @@ class ALPManualTimeoutNumber(ALPEntity, NumberEntity):
     _attr_icon = "mdi:timer-outline"
     _attr_mode = NumberMode.BOX
 
-    def __init__(self, coordinator: ALPDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: ALPDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
         """Initialize the manual timeout number entity."""
-        super().__init__(coordinator)
-        self._attr_name = "Manual Control Timeout"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_manual_timeout"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "number",
+            "manual_timeout",
+            "Manual Control Timeout",
+        )
 
     @property
     def native_value(self) -> float | None:
