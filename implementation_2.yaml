@@ -4,7 +4,7 @@ blueprints:
   automation:
     home_adaptive_lighting:al_layer_manager_sonos_wake:
       name: "AL Layer Manager - Sonos Wake"
-      description: "Coordinated wake routine using layer_manager services emitted by AL bridge"
+      description: "Coordinated wake routine using al_layer_manager services with upstream layer_manager execution"
       domain: automation
       input:
         zone:
@@ -58,6 +58,29 @@ automation:
         alarm_time: input_datetime.office_alarm
         sonos_player: media_player.office
         bridge_helper: sensor.al_layer_manager_office_state
+  - alias: "ALM Evening Relax"
+    trigger:
+      - platform: time
+        at: "19:00:00"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.household_present
+        state: "on"
+    action:
+      - service: al_layer_manager.set_mode
+        data:
+          zone_id: office
+          mode: relax
+          brightness_multiplier: 0.7
+          kelvin_adjustment: -600
+      - service: al_layer_manager.sync_zone
+        data:
+          zone_id: office
+      - delay: "00:30:00"
+      - service: al_layer_manager.clear_mode
+        data:
+          zone_id: office
+          mode: relax
 
 script:
   al_layer_manager_manual_scene:
@@ -70,18 +93,13 @@ script:
       kelvin:
         example: 3400
     sequence:
-      - repeat:
-          for_each: "{{ state_attr('sensor.al_layer_manager_' ~ zone_id ~ '_lights', 'entities') }}"
-          sequence:
-            - service: layer_manager.insert_state
-              data:
-                entity_id: "{{ repeat.item }}"
-                id: "{{ zone_id }}_manual"
-                priority: 40
-                state: "on"
-                clear_layer: true
-                attributes:
-                  brightness: "{{ (brightness * 255) | int }}"
-                  color_temp_kelvin: "{{ kelvin }}"
-                  transition: 1
-                  al_reason: "blueprint_manual"
+      - service: al_layer_manager.start_manual_override
+        data:
+          zone_id: "{{ zone_id }}"
+          brightness: "{{ brightness }}"
+          kelvin: "{{ kelvin }}"
+          reason: blueprint_manual
+          duration: 45
+      - service: al_layer_manager.sync_zone
+        data:
+          zone_id: "{{ zone_id }}"

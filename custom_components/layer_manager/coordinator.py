@@ -107,6 +107,7 @@ class LayerManagerCoordinator:
         self._store = Store[Dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
         self._adaptive_track_states_remover = None
         self._adaptive_color_temp_factor: float = 0.0
+        self.external_summaries: Dict[str, Dict[str, Any]] = {}
 
         self._load_options()
 
@@ -665,8 +666,13 @@ class LayerManagerCoordinator:
             "adaptive": {
                 "color_factor": self._adaptive_color_temp_factor,
                 "entities": adaptive_entities
-            }
+            },
+            "external": self.external_summaries,
         }
+
+    def register_external_summary(self, namespace: str, payload: Dict[str, Any]) -> None:
+        self.external_summaries[namespace] = payload
+        async_dispatcher_send(self.hass, SIGNAL_DATA_UPDATE)
 
 
 def get_domain_default_state(domain: str):

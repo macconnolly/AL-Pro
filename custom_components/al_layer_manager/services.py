@@ -27,7 +27,7 @@ def validate_manual_service(payload: Dict[str, Any]) -> None:
 
 
 def validate_mode_service(payload: Dict[str, Any]) -> None:
-    required = {"mode", "brightness_multiplier", "kelvin_adjustment"}
+    required = {"zone_id", "mode", "brightness_multiplier", "kelvin_adjustment"}
     missing = required - payload.keys()
     if missing:
         raise ServiceContractError(f"Missing fields: {', '.join(sorted(missing))}")

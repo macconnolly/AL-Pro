@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from custom_components.al_layer_manager import LayerManagerIntegration
+import pytest
+
+from custom_components.al_layer_manager.engine import LayerManagerIntegration
 from custom_components.al_layer_manager.environment import SensorReading
 
 
@@ -37,3 +39,26 @@ def test_sync_respects_mode(sample_zone) -> None:
     assert computation.brightness < sample_zone.default_brightness
     assert any(cmd.data["id"].endswith("mode") for cmd in commands)
     assert computation.transition == sample_zone.modes["relax"].transition_seconds
+
+
+@pytest.mark.asyncio
+async def test_async_dispatch_uses_executor(sample_zone) -> None:
+    executed = []
+
+    async def executor(command):
+        executed.append(command)
+
+    integration = LayerManagerIntegration(
+        zones={sample_zone.zone_id: sample_zone}, command_executor=executor
+    )
+    now = datetime.fromisoformat("2024-02-01T07:00:00")
+    integration.manual.start_override(
+        zone_id=sample_zone.zone_id,
+        profile=sample_zone.manual,
+        brightness=0.8,
+        kelvin=3500,
+        reason="test",
+        now=now,
+    )
+    await integration.async_dispatch_zone(sample_zone.zone_id, now)
+    assert executed

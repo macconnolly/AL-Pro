@@ -6,6 +6,7 @@
 - [x] 2024-05-15: Recast roadmap into actionable matrix with task IDs, implementation steps, deliverables, and validation gates to drive parity execution.【F:docs/ha_layer_manager_integration_plan.md†L23-L93】
 - [x] 2024-05-16: Shipped beta integration with full manager stack, CI workflows, fixtures, and scenario tests meeting quality bar.【F:custom_components/al_layer_manager/sync.py†L14-L107】【F:tests/test_scenarios.py†L6-L47】【F:.github/workflows/ci-test.yml†L1-L19】
 - [x] 2024-05-17: Realigned orchestration with upstream `layer_manager`, introducing a bridge that emits canonical service commands, refactoring sync outputs into per-layer updates, and extending scenario coverage for manual/mode/environment blending.【F:custom_components/al_layer_manager/bridge.py†L1-L83】【F:custom_components/al_layer_manager/sync.py†L1-L117】【F:tests/test_bridge.py†L1-L24】
+- [x] 2024-05-18: Stood up Home Assistant runtime/service registration, environment helper listeners, upstream telemetry hand-off, and Implementation_2 automations using the new contracts.【F:custom_components/al_layer_manager/__init__.py†L1-L170】【F:custom_components/al_layer_manager/runtime.py†L1-L189】【F:implementation_2.yaml†L1-L87】【F:custom_components/layer_manager/coordinator.py†L1-L668】
 
 ## Backlog & Work Breakdown
 ### Phase 0 – Foundation & Discovery
@@ -96,7 +97,7 @@
   - [x] P3.B.1 Encode foggy, cloudy, S.A.D., and circadian profiles with additive offsets + per-zone caps.
   - [x] P3.B.2 Implement presence gating and manual disable flags.
   - [x] P3.B.3 Scenario test environmental boosts across weather transitions.
-  - [ ] P3.B.4 Wire environmental layer updates into live Home Assistant coordinator callbacks once HA harness is available.
+- [x] P3.B.4 Wire environmental layer updates into live Home Assistant coordinator callbacks once HA harness is available.【F:custom_components/al_layer_manager/runtime.py†L25-L109】
 - [x] **P3.C – Sun + wake flows**【F:docs/ha_layer_manager_integration_plan.md†L58-L63】
   - [x] P3.C.1 Build sun elevation listeners with seasonal thresholds and hysteresis.
   - [x] P3.C.2 Coordinate sunrise alarms, late-night dimming, and bedtime protection.
@@ -105,7 +106,7 @@
   - [x] P3.D.1 Implement priority stacking for focus/relax/movie/guest/cleaning/late-night/vacation modes.
   - [x] P3.D.2 Snapshot/restore scenes and ensure manual adjustments persist per mode window.
   - [x] P3.D.3 Integrate wearable/calendar hooks for future automation triggers.
-  - [ ] P3.D.4 Register mode layer telemetry with upstream `layer_manager` diagnostics panel.
+- [x] P3.D.4 Register mode layer telemetry with upstream `layer_manager` diagnostics panel.【F:custom_components/al_layer_manager/runtime.py†L132-L189】【F:custom_components/layer_manager/coordinator.py†L118-L668】
 - [x] **P3.E – User adjustment services**【F:docs/ha_layer_manager_integration_plan.md†L59-L64】
   - [x] P3.E.1 Provide bump services (brighter/dimmer/warmer/cooler) with configurable deltas.
   - [x] P3.E.2 Update cumulative adjustment sensors and analytics counters.
@@ -187,3 +188,4 @@
 - Vacation/sleep sanctuary modes must coordinate with nightly maintenance to avoid unintended resets during late mornings.【F:v7.yaml†L1486-L1759】
 - Diagnostics pipeline must surface override latency and sensor outages for trust; covered under P4.A/P4.E tasks.【F:v7.yaml†L490-L610】
 - Bridge-to-coordinator integration still needs async service registration and Home Assistant tests to validate end-to-end wiring once the HA test harness is introduced.【F:custom_components/al_layer_manager/bridge.py†L1-L83】
+- Service schemas currently require callers to pass validation metadata (mode brightness multiplier / kelvin adjustment); consider deriving these defaults server-side to simplify automations.【F:custom_components/al_layer_manager/services.py†L1-L33】

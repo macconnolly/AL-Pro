@@ -16,6 +16,6 @@ def test_validate_manual_service() -> None:
 
 
 def test_validate_mode_service() -> None:
-    validate_mode_service({"mode": "focus", "brightness_multiplier": 1.1, "kelvin_adjustment": 300})
+    validate_mode_service({"zone_id": "office", "mode": "focus", "brightness_multiplier": 1.1, "kelvin_adjustment": 300})
     with pytest.raises(ServiceContractError):
-        validate_mode_service({"mode": "focus", "brightness_multiplier": 0, "kelvin_adjustment": 300})
+        validate_mode_service({"zone_id": "office", "mode": "focus", "brightness_multiplier": 0, "kelvin_adjustment": 300})

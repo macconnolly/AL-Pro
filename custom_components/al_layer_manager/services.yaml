@@ -1,0 +1,77 @@
+start_manual_override:
+  name: Start Manual Override
+  description: Begin a manual lighting override respecting asymmetric boundaries.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+    brightness:
+      description: Target brightness between 0 and 1.
+      example: 0.6
+    kelvin:
+      description: Target color temperature in Kelvin.
+      example: 3200
+    reason:
+      description: Optional free-form string describing the manual trigger source.
+      example: voice
+    duration:
+      description: Optional override duration in minutes before adaptive resume.
+      example: 30
+
+extend_manual_override:
+  name: Extend Manual Override
+  description: Add time to an active manual override timer.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+    minutes:
+      description: Minutes to extend the active manual override.
+      example: 10
+
+clear_manual_override:
+  name: Clear Manual Override
+  description: Cancel an active manual override immediately.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+
+sync_zone:
+  name: Sync Zone
+  description: Force recomputation and layer updates for a zone.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+    timestamp:
+      description: Optional ISO timestamp to use instead of current time.
+      example: "2024-02-01T06:30:00"
+
+set_mode:
+  name: Activate Mode
+  description: Apply a named mode profile for the zone.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+    mode:
+      description: Mode key defined on the zone (e.g., focus, relax).
+      example: relax
+    brightness_multiplier:
+      description: Brightness multiplier for validation.
+      example: 0.8
+    kelvin_adjustment:
+      description: Kelvin adjustment for validation.
+      example: -400
+
+clear_mode:
+  name: Clear Mode
+  description: Clear an active mode for the zone.
+  fields:
+    zone_id:
+      description: Zone identifier configured in AL Layer Manager.
+      example: office
+    mode:
+      description: Mode key to clear.
+      example: relax
