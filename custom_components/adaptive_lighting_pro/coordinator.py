@@ -180,6 +180,21 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             wake_max_boost,
         )
 
+        # Configure Sonos integration for wake sequence alarm detection
+        sonos_enabled = integrations_config.get("sonos_enabled", False)
+        sonos_alarm_sensor = integrations_config.get("sonos_alarm_sensor")
+
+        self._sonos_integration.configure(
+            enabled=sonos_enabled,
+            alarm_sensor=sonos_alarm_sensor,
+        )
+
+        _LOGGER.info(
+            "Sonos integration configured: enabled=%s, alarm_sensor=%s",
+            sonos_enabled,
+            sonos_alarm_sensor,
+        )
+
         # Extract global settings with defaults
         global_settings = config_entry.data.get("global_settings", {})
         self._brightness_increment = global_settings.get(
@@ -578,9 +593,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 zone_range,
             )
 
-        # Skip if no adjustments active
-        if total_brightness == 0 and total_warmth == 0:
-            return
+        # CRITICAL FIX: Never skip when adjustments are 0
+        # Must restore boundaries to baseline when adjustments clear
+        # Previously had: if total_brightness == 0 and total_warmth == 0: return
+        # This caused boundaries to stay stuck at adjusted values after reset
 
         try:
             # Calculate adjusted boundaries using adjustment engine
@@ -1709,6 +1725,42 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # ========== Public API: Scenes ==========
 
+    def _extract_affected_lights_by_zone(self, actions: list) -> dict[str, list[str]]:
+        """Extract which lights in which zones are affected by scene actions.
+
+        Args:
+            actions: List of scene actions from SCENE_CONFIGS
+
+        Returns:
+            Dict mapping zone_id to list of affected light entity_ids
+        """
+        affected_lights_by_zone = {}
+
+        for action in actions:
+            action_name = action.get("action", "")
+
+            # Only care about light.turn_on and light.turn_off
+            if not action_name.startswith("light.turn_"):
+                continue
+
+            # Extract entity_ids from action
+            entity_ids = action.get("entity_id", [])
+            if isinstance(entity_ids, str):
+                entity_ids = [entity_ids]
+
+            # Map each light to its zone
+            for light_id in entity_ids:
+                for zone_id, zone_config in self.zones.items():
+                    zone_lights = zone_config.get("lights", [])
+                    if light_id in zone_lights:
+                        if zone_id not in affected_lights_by_zone:
+                            affected_lights_by_zone[zone_id] = []
+                        if light_id not in affected_lights_by_zone[zone_id]:
+                            affected_lights_by_zone[zone_id].append(light_id)
+                        break
+
+        return affected_lights_by_zone
+
     async def apply_scene(self, scene: Scene) -> bool:
         """Apply a scene with full actions and offsets.
 
@@ -1771,12 +1823,39 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 action_copy = action.copy()
                 action_name = action_copy.pop("action")
                 domain, service = action_name.split(".")
+
+                # CRITICAL: Split entity_id into target, rest into data
+                # Matches implementation_1.yaml service call format (lines 3098-3184)
+                service_data = {}
+                target_data = {}
+
+                for key, value in action_copy.items():
+                    if key == "entity_id":
+                        target_data["entity_id"] = value
+                    elif key == "lights":
+                        # For adaptive_lighting.set_manual_control, lights go in data
+                        service_data["lights"] = value
+                    elif key == "manual_control":
+                        # For adaptive_lighting.set_manual_control
+                        service_data["manual_control"] = value
+                    else:
+                        # brightness_pct, transition, etc go in data
+                        service_data[key] = value
+
+                # Call service with proper target/data separation
                 await self.hass.services.async_call(
                     domain,
                     service,
-                    action_copy,
+                    service_data=service_data,
+                    target=target_data if target_data else None,
                 )
-                _LOGGER.debug("Scene '%s' executed action: %s", config["name"], action_name)
+                _LOGGER.info(
+                    "Scene '%s' executed: %s (target=%s, data=%s)",
+                    config["name"],
+                    action_name,
+                    target_data,
+                    service_data,
+                )
             except Exception as err:
                 _LOGGER.error(
                     "Failed to execute scene action %s: %s",
