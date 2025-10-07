@@ -619,10 +619,25 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 total_warmth,
             )
 
-            # Prepare service data
+            # CRITICAL: Check if AL has manual_control set for this zone
+            # If so, skip applying adjustments to prevent fighting with user overrides
             al_switch = zone_config.get("adaptive_lighting_switch")
+            if al_switch:
+                al_state = self.hass.states.get(al_switch)
+                if al_state and al_state.attributes:
+                    manual_list = al_state.attributes.get("manual_control", [])
+                    if manual_list:  # Skip if ANY lights are manually controlled
+                        _LOGGER.debug(
+                            "Skipping zone %s - has manual control: %s",
+                            zone_id,
+                            manual_list[:3] if len(manual_list) > 3 else manual_list  # Log first 3 for brevity
+                        )
+                        return
+
+            # Prepare service data
             service_data = {
                 "entity_id": al_switch,
+                "use_defaults": "configuration",  # ALWAYS required per implementation_1 paradigm
                 "min_brightness": adjusted_config["brightness_min"],
                 "max_brightness": adjusted_config["brightness_max"],
             }
@@ -649,6 +664,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 {
                     "entity_id": al_switch,
                     "turn_on_lights": False,  # Don't turn on lights, just adjust existing
+                    "transition": 1,  # Smooth 1-second transition
                 },
             )
 
@@ -800,19 +816,20 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.info("Cleared manual control for zone %s", zone_id)
 
     async def _restore_adaptive_control(self, zone_id: str) -> None:
-        """Restore adaptive control for a zone after timer expiry.
+        """Reset brightness/warmth adjustments for a zone after timer expiry.
 
-        Timer expiry has two different meanings:
-        1. For brightness/warmth adjustments: Reset adjustment values to 0
-        2. For scenes: Clear manual_control on individual lights
-
-        We detect which case by checking if AL has any manual_control set.
+        CRITICAL FIX: Based on implementation_1.yaml analysis, timers are ONLY
+        for tracking when to reset adjustments back to 0. They do NOT manage
+        manual_control. Manual control is only used for:
+        - Scenes that lock specific lights
+        - Wake sequences that freeze lights
+        - Direct user control of individual lights
 
         Args:
             zone_id: Zone identifier
         """
         try:
-            # Clear timer in zone manager
+            # Cancel timer in zone manager
             await self.zone_manager.async_cancel_timer(zone_id)
 
             # Get zone config
@@ -883,16 +900,32 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
 
             # Apply adaptive lighting to restore control
-            # Do NOT specify lights parameter - let AL use its manual_control state
-            await self.hass.services.async_call(
-                ADAPTIVE_LIGHTING_DOMAIN,
-                "apply",
-                {
-                    "entity_id": al_switch,
-                    "turn_on_lights": False,
-                    "transition": 2,
-                },
-            )
+            # CRITICAL: Timer expiry DOES specify lights parameter for immediate restoration
+            # This forces AL to immediately update these lights vs waiting for next cycle
+            # Pattern from implementation_1.yaml lines 1939-1944
+            zone_lights = zone_config.get("lights", [])
+            if zone_lights:
+                await self.hass.services.async_call(
+                    ADAPTIVE_LIGHTING_DOMAIN,
+                    "apply",
+                    {
+                        "entity_id": al_switch,
+                        "lights": zone_lights,  # Force immediate restoration
+                        "turn_on_lights": False,
+                        "transition": 2,
+                    },
+                )
+            else:
+                # Fallback if no lights configured
+                await self.hass.services.async_call(
+                    ADAPTIVE_LIGHTING_DOMAIN,
+                    "apply",
+                    {
+                        "entity_id": al_switch,
+                        "turn_on_lights": False,
+                        "transition": 2,
+                    },
+                )
 
             _LOGGER.info("Timer expired for zone %s - restored adaptive control", zone_id)
 
@@ -1827,6 +1860,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                 service_data = {
                     "entity_id": al_switch,
+                    "use_defaults": "configuration",  # ALWAYS required per implementation_1 paradigm
                     "min_brightness": adjusted_config["brightness_min"],
                     "max_brightness": adjusted_config["brightness_max"],
                 }
@@ -1852,6 +1886,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     {
                         "entity_id": al_switch,
                         "turn_on_lights": False,  # Don't turn on, just adjust
+                        "transition": 1,  # Smooth 1-second transition
                     },
                 )
 

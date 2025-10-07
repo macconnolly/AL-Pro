@@ -17,7 +17,7 @@ from homeassistant.core import Event
 
 import pytest
 
-from custom_components.adaptive_lighting_pro.platforms.sensor import (
+from custom_components.adaptive_lighting_pro.sensor import (
     ALPStatusSensor,
     RealtimeMonitorSensor,
     ZoneManualControlSensor,
@@ -464,7 +464,7 @@ class TestDeviationTrackerSensor:
     @pytest.fixture
     def deviation_sensor(self, mock_coordinator, mock_config_entry):
         """Create DeviationTrackerSensor."""
-        from custom_components.adaptive_lighting_pro.platforms.sensor import DeviationTrackerSensor
+        from custom_components.adaptive_lighting_pro.sensor import DeviationTrackerSensor
         sensor = DeviationTrackerSensor(mock_coordinator, mock_config_entry)
         return sensor
 
@@ -516,7 +516,7 @@ class TestTotalManualControlSensor:
     @pytest.fixture
     def total_sensor(self, mock_coordinator, mock_config_entry):
         """Create TotalManualControlSensor."""
-        from custom_components.adaptive_lighting_pro.platforms.sensor import TotalManualControlSensor
+        from custom_components.adaptive_lighting_pro.sensor import TotalManualControlSensor
         sensor = TotalManualControlSensor(mock_coordinator, mock_config_entry)
         return sensor
 
@@ -553,7 +553,7 @@ class TestZonesWithManualControlSensor:
     @pytest.fixture
     def zones_sensor(self, mock_coordinator, mock_config_entry):
         """Create ZonesWithManualControlSensor."""
-        from custom_components.adaptive_lighting_pro.platforms.sensor import ZonesWithManualControlSensor
+        from custom_components.adaptive_lighting_pro.sensor import ZonesWithManualControlSensor
         sensor = ZonesWithManualControlSensor(mock_coordinator, mock_config_entry)
         return sensor
 

@@ -141,8 +141,9 @@ class ALPBrighterButton(ALPButton):
         increment = self.coordinator.get_brightness_increment()
         new_value = min(current + increment, 50)  # Idempotent at max
 
-        # Coordinator handles EVERYTHING: timers, manual_control, refresh
-        # start_timers=True triggers: start_manual_timer() → _mark_zone_lights_as_manual() → set_manual_control
+        # Coordinator handles EVERYTHING: timers, boundaries, refresh
+        # start_timers=True triggers timer to track when to reset adjustment (NOT manual_control)
+        # Button adjustments don't set manual_control - AL keeps adapting within new boundaries
         await self.coordinator.set_brightness_adjustment(new_value, start_timers=True)
 
 

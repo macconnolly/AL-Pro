@@ -20,7 +20,7 @@ import pytest
 from homeassistant.components.number import NumberMode
 from homeassistant.const import EntityCategory
 
-from custom_components.adaptive_lighting_pro.platforms.number import (
+from custom_components.adaptive_lighting_pro.number import (
     async_setup_entry,
     ALPBrightnessAdjustmentNumber,
     ALPWarmthAdjustmentNumber,

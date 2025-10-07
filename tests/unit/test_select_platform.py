@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 
-from custom_components.adaptive_lighting_pro.platforms.select import (
+from custom_components.adaptive_lighting_pro.select import (
     ALPSceneSelect,
     async_setup_entry,
 )

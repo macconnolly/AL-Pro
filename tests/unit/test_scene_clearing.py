@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.adaptive_lighting_pro.const import DOMAIN, Scene
-from custom_components.adaptive_lighting_pro.platforms.select import ALPSceneSelect
+from custom_components.adaptive_lighting_pro.select import ALPSceneSelect
 
 
 @pytest.mark.unit

@@ -290,6 +290,7 @@ class EnvironmentalAdapter:
             'exceptional': 15,
             'sunny': 0,
             'clear-night': 0,
+            'clear': 0,  # Added missing condition from implementation_1
         }
 
         return WEATHER_BOOST.get(condition, 0)
@@ -316,42 +317,28 @@ class EnvironmentalAdapter:
             return 0
 
     def _calculate_time_multiplier(self) -> float:
-        """Calculate time-of-day multiplier using sun elevation.
+        """Calculate time-of-day multiplier using clock time.
 
-        Uses sun position instead of clock time to handle seasonal variations:
-        - Night (sun < -6°): 0.0 (civil twilight, disable boost)
-        - Twilight (-6° to 0°): 0.7x (dawn/dusk transition)
-        - Day (sun > 0°): 1.0x (full boost)
+        From implementation_1.yaml lines 1548-1555:
+        - Night (10 PM - 6 AM): 0.0 (completely disabled)
+        - Dawn/Dusk (6-8 AM, 6-10 PM): 0.7x (reduced effectiveness)
+        - Day (8 AM - 6 PM): 1.0x (full boost)
 
-        Fallback to clock time if sun.sun unavailable.
+        CRITICAL: Uses clock time as primary per implementation_1 paradigm.
+        This ensures consistent behavior regardless of season/latitude.
 
         Returns:
             Time multiplier (0.0, 0.7, or 1.0)
         """
-        # Try sun elevation first (more accurate across seasons)
-        sun_state = self.hass.states.get("sun.sun")
-        if sun_state:
-            elevation = sun_state.attributes.get("elevation")
-            if elevation is not None:
-                try:
-                    elevation = float(elevation)
-                    if elevation < -6:
-                        return 0.0  # Night (civil twilight)
-                    elif -6 <= elevation < 0:
-                        return 0.7  # Dawn/dusk
-                    else:
-                        return 1.0  # Day
-                except (ValueError, TypeError):
-                    pass
-
-        # Fallback to clock time if sun unavailable
         hour = datetime.now().hour
 
-        # Night: zero boost
+        # Night: COMPLETELY DISABLE boost (10 PM - 6 AM)
+        # From YAML:1550-1552
         if 22 <= hour or hour <= 6:
             return 0.0
 
-        # Dawn/Dusk: 70% multiplier
+        # Dawn/Dusk: 70% effectiveness
+        # From YAML:1553-1554
         elif (6 < hour <= 8) or (18 <= hour < 22):
             return 0.7
 

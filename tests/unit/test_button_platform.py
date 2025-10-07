@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, AsyncMock, call
 
 import pytest
 
-from custom_components.adaptive_lighting_pro.platforms.button import (
+from custom_components.adaptive_lighting_pro.button import (
     ALPBrighterButton,
     ALPDimmerButton,
     ALPWarmerButton,
