@@ -317,7 +317,7 @@ class Zen32Integration:
         """Execute brighter action (increment brightness adjustment)."""
         current = self._coordinator.get_brightness_adjustment()
         increment = self._coordinator.get_brightness_increment()
-        new_value = min(100, current + increment)
+        new_value = min(50, current + increment)  # Match button.py limit of ±50%
 
         _LOGGER.info(
             "Zen32: Brighter - current=%d, increment=%d, new=%d",
@@ -336,7 +336,7 @@ class Zen32Integration:
         """Execute dimmer action (decrement brightness adjustment)."""
         current = self._coordinator.get_brightness_adjustment()
         increment = self._coordinator.get_brightness_increment()
-        new_value = max(-100, current - increment)
+        new_value = max(-50, current - increment)  # Match button.py limit of ±50%
 
         _LOGGER.info(
             "Zen32: Dimmer - current=%d, increment=%d, new=%d",
