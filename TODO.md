@@ -7,6 +7,7 @@
 - [x] Manual control timers per zone with centralized timer math
 - [x] Configurable zone multipliers and sunrise offsets
 - [x] Global pause toggle equivalent to `input_boolean.al_globally_paused`
+- [x] Support configuration.yaml import paths that normalize nested sensor/controller mappings before invoking the config flow
 
 ### Manual Adjustments & Modes
 - [x] Manual detection with 500 ms debounce and smart timeout recovery

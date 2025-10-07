@@ -55,6 +55,28 @@ See [`docs/SCENARIO_VALIDATION.md`](docs/SCENARIO_VALIDATION.md) for end-to-end 
 2. Restart Home Assistant.
 3. Add the integration via the UI and configure zones and sensors.
 
+## Configuration Options
+- **UI Flow (recommended):** Use Settings → Devices & Services → Add Integration → Adaptive Lighting Pro to launch the selector-driven config flow. Zones, sensors, and controllers are validated against live entities before the entry is created.
+- **configuration.yaml import (new in this release):** Define one or more entries under the `adaptive_lighting_pro:` key. On startup the integration normalizes the YAML payload, promotes nested `sensors`/`controllers` mappings to the format expected by the config flow, and imports each entry via the same validation path as the UI. Example:
+
+  ```yaml
+  adaptive_lighting_pro:
+    zones:
+      - zone_id: living
+        al_switch: switch.living_room_adaptive
+        lights:
+          - light.living_room_floor_lamp
+          - light.living_room_ceiling
+    sensors:
+      lux_entity: sensor.outdoor_lux
+      weather_entity: weather.home
+    controllers:
+      zen32_device_id: 1234abcd5678
+  ```
+
+- The YAML import is optional—the integration still exposes the full options flow for runtime adjustments (timeouts, rate limits, environmental multiplier, scene presets).
+- Regardless of setup method, zone validation ensures each Adaptive Lighting switch exists, every light entity ID is scoped correctly, and duplicate `zone_id` values are rejected so parity with `implementation_1.yaml` remains intact.
+
 ## Development
 Install dev dependencies (requires Home Assistant core development environment) and run tests with `pytest`.
 

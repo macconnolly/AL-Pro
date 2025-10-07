@@ -3,6 +3,7 @@
   "name": "Adaptive Lighting Pro",
   "codeowners": ["@openai-assistant"],
   "version": "1.0.0",
+  "config_flow": true,
   "documentation": "https://example.com/adaptive_lighting_pro",
   "requirements": [],
   "integration_type": "hub",

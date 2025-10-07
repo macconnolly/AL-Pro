@@ -9,6 +9,7 @@ Implementation_1’s 3,000+ lines of helpers have been replaced by the Adaptive 
 - **Modes & Scenes** – Configurable modes and four household scenes (Full Bright, No Spots, Evening Comfort, Ultra Dim) include manual timers, offset persistence, and reset affordances.
 - **Controllers & Sunrise** – Zen32 handling, Sonos alarm anchoring, skip-next service, upcoming-anchor sensor, and watchdog/nightly sweep schedules cover the automation-heavy routines from the YAML file.
 - **Observability** – Health score, analytics summary, manual action sensors, status/realtime monitor entities, and `adaptive_lighting_calculation_complete` events expose the runtime state that YAML sensors previously modeled.
+- **Configuration Paths** – Both UI flow setup and configuration.yaml import now feed the same validation pipeline, so homeowners migrating directly from `implementation_1.yaml` can drop their zone definitions into YAML and let the integration create the config entry automatically.
 
 ## Companion Package Coverage
 - **Scene & Adjustment Scripts** – `implementation_2.yaml` wraps public services for scene selection, manual adjustments, zone resets, and backup/restore actions to keep Lovelace dashboards and voice assistants simple.

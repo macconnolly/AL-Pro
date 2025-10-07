@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
+from custom_components.adaptive_lighting_pro import async_setup
 from custom_components.adaptive_lighting_pro.config_flow import AdaptiveLightingProConfigFlow
 from custom_components.adaptive_lighting_pro.const import (
     CONF_CONTROLLERS,
@@ -11,6 +12,8 @@ from custom_components.adaptive_lighting_pro.const import (
     CONF_SONOS_SENSOR,
     CONF_WEATHER_ENTITY,
     CONF_ZEN32_DEVICE,
+    CONF_ZONES,
+    DOMAIN,
 )
 from tests.conftest import HomeAssistant, State
 
@@ -115,3 +118,27 @@ def test_config_flow_duplicate_zone(hass: HomeAssistant) -> None:
     result = resolve(flow.async_step_user(user_input))
     assert result["type"] == "form"
     assert result["errors"].get("zone_id")
+
+
+def test_yaml_config_triggers_import_flow(hass: HomeAssistant) -> None:
+    hass.states["switch.living_al"] = State(
+        "on", {"integration": "adaptive_lighting"}
+    )
+    yaml_entry = {
+        CONF_ZONES: [
+            {
+                "zone_id": "living",
+                "al_switch": "switch.living_al",
+                "lights": "light.a",
+            }
+        ],
+        "sensors": {CONF_LUX_SENSOR: "sensor.lux"},
+    }
+
+    result = run(async_setup(hass, {DOMAIN: yaml_entry}))
+    assert result is True
+    assert hass._flow_results, "YAML import should trigger a config flow"
+    flow_result = hass._flow_results[-1]
+    assert flow_result["type"] == "create_entry"
+    sensors = flow_result["data"][CONF_SENSORS]
+    assert sensors[CONF_LUX_SENSOR] == "sensor.lux"

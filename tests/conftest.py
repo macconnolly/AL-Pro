@@ -55,16 +55,54 @@ util_module.dt = util_dt_module
 
 
 class DummySchema:
-    def __init__(self, schema):
+    def __init__(self, schema, extra=None):
         self.schema = schema
+        self.extra = extra
 
     def __call__(self, value):
+        if callable(self.schema):
+            return self.schema(value)
         return value
+
+
+def _identity_validator(*validators):
+    def _call(value):
+        result = value
+        for validator in validators:
+            if callable(validator):
+                result = validator(result)
+        return result
+
+    return _call
 
 
 vol_module.Schema = DummySchema
 vol_module.Required = lambda key, default=None: key
 vol_module.Optional = lambda key, default=None: key
+vol_module.All = lambda *validators: _identity_validator(*validators)
+vol_module.Any = lambda *validators, **kwargs: _identity_validator(*validators)
+vol_module.Coerce = lambda typ: (lambda value: typ(value))
+vol_module.ALLOW_EXTRA = object()
+
+
+helpers_config_validation = types.ModuleType("homeassistant.helpers.config_validation")
+
+
+def _ensure_list(value):
+    if isinstance(value, list):
+        return value
+    if value is None:
+        return []
+    return [value]
+
+
+helpers_config_validation.ensure_list = _ensure_list
+helpers_config_validation.entity_id = lambda value: value
+helpers_config_validation.entity_ids = _ensure_list
+helpers_config_validation.slug = lambda value: value
+helpers_config_validation.string = lambda value: str(value)
+helpers_config_validation.boolean = lambda value: bool(value)
+helpers_config_validation.dict = dict
 
 
 class ConfigFlow:
@@ -100,6 +138,7 @@ class ConfigEntry:
 config_entries.ConfigFlow = ConfigFlow
 config_entries.OptionsFlow = OptionsFlow
 config_entries.ConfigEntry = ConfigEntry
+config_entries.SOURCE_IMPORT = "import"
 
 
 @dataclass
@@ -158,11 +197,16 @@ class HomeAssistant:
         asyncio.set_event_loop(self.loop)
         self.config = types.SimpleNamespace(time_zone="UTC")
         self._config_entry_updates: list[dict] = []
+        self._flow_inits: list[dict] = []
+        self._flow_results: list[dict] = []
         self.config_entries = types.SimpleNamespace(
             async_update_entry=self._async_update_entry,
             async_forward_entry_setups=self._async_forward_entry_setups,
             async_unload_platforms=self._async_unload_platforms,
             async_forward_entry_unload=self._async_forward_entry_unload,
+        )
+        self.config_entries.flow = types.SimpleNamespace(
+            async_init=self._async_flow_init
         )
 
     def async_create_task(self, coro: Awaitable) -> asyncio.Task:
@@ -185,6 +229,26 @@ class HomeAssistant:
 
     async def _async_forward_entry_unload(self, entry, platforms):
         return True
+
+    async def _async_flow_init(self, domain, context=None, data=None):
+        self._flow_inits.append({
+            "domain": domain,
+            "context": context or {},
+            "data": data,
+        })
+        if domain == "adaptive_lighting_pro":
+            from custom_components.adaptive_lighting_pro.config_flow import (
+                AdaptiveLightingProConfigFlow,
+            )
+
+            flow = AdaptiveLightingProConfigFlow()
+            flow.hass = self
+            result = await flow.async_step_import(data)
+            self._flow_results.append(result)
+            return result
+        result = {"type": "create_entry", "data": data}
+        self._flow_results.append(result)
+        return result
 
 
 helpers_typing.ConfigType = dict
@@ -228,6 +292,7 @@ helpers_event.async_track_state_change_event = _track_state_change_event
 helpers_event.async_track_point_in_time = _track_point_in_time
 helpers_event.async_track_time_interval = _track_time_interval
 
+helpers.config_validation = helpers_config_validation
 helpers.event = helpers_event
 
 homeassistant.config_entries = config_entries
@@ -258,6 +323,7 @@ sys.modules.setdefault("homeassistant.config_entries", config_entries)
 sys.modules.setdefault("homeassistant.helpers", helpers)
 sys.modules.setdefault("homeassistant.helpers.event", helpers_event)
 sys.modules.setdefault("homeassistant.helpers.typing", helpers_typing)
+sys.modules.setdefault("homeassistant.helpers.config_validation", helpers_config_validation)
 sys.modules.setdefault("homeassistant.helpers.entity_platform", helpers_entity_platform)
 sys.modules.setdefault("homeassistant.helpers.entity", helpers_entity)
 sys.modules.setdefault("homeassistant.components", components)
