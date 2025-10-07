@@ -307,10 +307,8 @@ class WakeSequenceCalculator:
 
         return {
             "active": in_window,
-            "alarm_time": self._alarm_time.isoformat() if self._alarm_time else None,
-            "wake_start_time": (
-                self._wake_start_time.isoformat() if self._wake_start_time else None
-            ),
+            "alarm_time": self._alarm_time,  # Return datetime object for timestamp sensors
+            "wake_start_time": self._wake_start_time,  # Return datetime object for timestamp sensors
             "target_zone": self._target_zone,
             "current_boost_pct": current_boost,
             "progress_pct": round(progress, 1),

@@ -167,7 +167,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         """Handle adaptive_lighting_pro.reset_manual_adjustments service call.
 
         Resets global brightness and warmth adjustments to zero AND clears scene offsets.
-        Does not cancel timers - use clear_manual_control for that.
+        Also cancels all manual control timers and restores adaptive lighting.
         """
         coordinator = _get_coordinator(hass)
         if not coordinator:
@@ -175,7 +175,7 @@ def async_register_services(hass: HomeAssistant) -> None:
             return
 
         try:
-            _LOGGER.info("Resetting manual adjustments and scene offsets to zero")
+            _LOGGER.info("Resetting manual adjustments, scene offsets, and manual control timers")
 
             # Clear manual adjustments
             await coordinator.set_brightness_adjustment(0)
@@ -184,7 +184,13 @@ def async_register_services(hass: HomeAssistant) -> None:
             # Clear scene offsets via coordinator API (proper encapsulation)
             await coordinator.clear_scene_offsets()
 
-            _LOGGER.info("Manual adjustments and scene offsets reset complete")
+            # Cancel all manual control timers and restore adaptive lighting
+            cancelled_count = await coordinator.cancel_all_timers()
+
+            _LOGGER.info(
+                "Reset complete: adjustments cleared, scenes cleared, %d timers cancelled",
+                cancelled_count
+            )
         except Exception as err:
             _LOGGER.error("Failed to reset adjustments: %s", err, exc_info=True)
 

@@ -36,6 +36,39 @@ input_boolean:
     initial: false
 
 # -----------------------------------------------------------------------------
+# Timer Entities - Manual Control Timers (Required by ALP Integration)
+# -----------------------------------------------------------------------------
+# These timers track manual control duration for each zone.
+# When buttons are pressed, these timers start counting down.
+# When they finish, adaptive control is restored.
+
+timer:
+  alp_manual_recessed_ceiling:
+    name: "ALP Timer: Recessed Ceiling"
+    icon: mdi:timer-sand
+    restore: true
+
+  alp_manual_kitchen_island:
+    name: "ALP Timer: Kitchen Island"
+    icon: mdi:timer-sand
+    restore: true
+
+  alp_manual_bedroom_primary:
+    name: "ALP Timer: Bedroom"
+    icon: mdi:timer-sand
+    restore: true
+
+  alp_manual_accent_spots:
+    name: "ALP Timer: Accent Spots"
+    icon: mdi:timer-sand
+    restore: true
+
+  alp_manual_main_living:
+    name: "ALP Timer: Main Living"
+    icon: mdi:timer-sand
+    restore: true
+
+# -----------------------------------------------------------------------------
 # Light Groups - User's Physical Light Topology
 # -----------------------------------------------------------------------------
 # These define YOUR specific light zones. Integration provides zone management,
@@ -387,34 +420,32 @@ script:
     description: "Display comprehensive notification with current ALP state"
     icon: mdi:information-outline
     sequence:
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           title: "ALP Status Report"
-          notification_id: "alp_status_report"
           message: |
-            **Current Scene:** {{ states('sensor.alp_current_scene') | title }}
-            **Brightness Adjustment:** {{ states('number.alp_brightness_adjustment') }}%
-            **Warmth Adjustment:** {{ states('number.alp_warmth_adjustment') }}K
+            **Current Scene:** {{ states('sensor.adaptive_lighting_pro_alp_current_scene') | title }}
+            **Brightness Adjustment:** {{ states('number.adaptive_lighting_pro_brightness_adjustment') }}%
+            **Warmth Adjustment:** {{ states('number.adaptive_lighting_pro_warmth_adjustment') }}K
 
-            **Timers:** {{ states('sensor.alp_manual_timer_status') | default('Unknown') }}
-            **Zone Health:** {{ states('sensor.alp_zone_health') | default('Unknown') }}
-            **Wake Sequence:** {{ states('sensor.alp_wake_sequence_status') }}
+            **Timers:** {{ states('sensor.adaptive_lighting_pro_alp_manual_timer_status') | default('Unknown') }}
+            **Zone Health:** {{ states('sensor.adaptive_lighting_pro_alp_zone_health') | default('Unknown') }}
+            **Wake Sequence:** {{ states('sensor.adaptive_lighting_pro_alp_wake_sequence_status') }}
 
-            **System Health:** {{ states('sensor.alp_system_health') | default('Unknown') }}
-            **Last Action:** {{ states('sensor.alp_last_action') | default('Unknown') }}
+            **System Health:** {{ states('sensor.adaptive_lighting_pro_alp_system_health') | default('Unknown') }}
+            **Last Action:** {{ states('sensor.adaptive_lighting_pro_alp_last_action') | default('Unknown') }}
 
-            **Environmental Boost:** {{ states('sensor.alp_environmental_boost') }}%
-            **Sunset Boost:** {{ states('sensor.alp_sunset_boost') }}%
+            **Environmental Boost:** {{ states('sensor.adaptive_lighting_pro_alp_environmental_boost') }}%
+            **Sunset Boost:** {{ states('sensor.adaptive_lighting_pro_alp_sunset_boost') }}%
 
   alp_show_environmental_status:
     alias: "ALP: Show Environmental Status"
     description: "Display current environmental conditions and boost calculation"
     icon: mdi:weather-partly-cloudy
     sequence:
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           title: "Environmental Status"
-          notification_id: "alp_environmental_status"
           message: |
             **Current Conditions:**
             Lux Level: {{ states('sensor.living_room_presence_light_sensor_light_level') | default('N/A') }}
@@ -425,8 +456,8 @@ script:
                     {%- else %}Transition{% endif %}
             Sun Elevation: {{ state_attr('sun.sun', 'elevation') | round(1) }}°
 
-            **Environmental Boost:** {{ states('sensor.alp_environmental_boost') }}%
-            **Sunset Boost:** {{ states('sensor.alp_sunset_boost') }}%
+            **Environmental Boost:** {{ states('sensor.adaptive_lighting_pro_alp_environmental_boost') }}%
+            **Sunset Boost:** {{ states('sensor.adaptive_lighting_pro_alp_sunset_boost') }}%
 
             **Time Scaling:**
             {% set hour = now().hour %}
@@ -439,34 +470,32 @@ script:
     description: "Display per-zone status and manual control state"
     icon: mdi:home-group
     sequence:
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           title: "Zone Status Report"
-          notification_id: "alp_zone_status"
           message: |
             {% set zones = ['main_living', 'kitchen_island', 'bedroom_primary', 'accent_spots', 'recessed_ceiling'] %}
             {% for zone_id in zones %}
             **{{ zone_id | replace('_', ' ') | title }}:**
-            Status: {{ states('sensor.alp_zone_manual_control_' ~ zone_id) | default('Unknown') }}
+            Status: {{ states('sensor.adaptive_lighting_pro_' ~ zone_id) | default('Unknown_manual_control') }}
             AL Switch: {{ states('switch.adaptive_lighting_' ~ zone_id) }}
             Lights On: {{ expand('light.' ~ zone_id ~ '_lights') | selectattr('state', 'eq', 'on') | list | count }}
 
             {% endfor %}
 
-            **Total Manual Zones:** {{ states('sensor.alp_zones_with_manual_control') }}
-            **Active Lights:** {{ states('sensor.alp_active_lights_count') }}
+            **Total Manual Zones:** {{ states('sensor.adaptive_lighting_pro_alp_zones_with_manual_control') }}
+            **Active Lights:** {{ states('sensor.adaptive_lighting_pro_alp_active_lights_count') }}
 
   alp_show_manual_control:
     alias: "ALP: Show Manual Control Status"
     description: "Display detailed manual control and timer information"
     icon: mdi:timer-cog
     sequence:
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           title: "Manual Control Report"
-          notification_id: "alp_manual_control"
           message: |
-            **Manual Adjustment Status:** {{ states('sensor.alp_manual_adjustment_status') }}
+            **Manual Adjustment Status:** {{ states('sensor.adaptive_lighting_pro_alp_manual_adjustment_status') }}
 
             **Active Timers:**
             {% set timers = states.timer | selectattr('entity_id', 'match', 'timer.alp_manual_.*') | selectattr('state', 'eq', 'active') | list %}
@@ -495,18 +524,18 @@ script:
       # Step 2: Reset adjustments to zero
       - service: number.set_value
         target:
-          entity_id: number.alp_brightness_adjustment
+          entity_id: number.adaptive_lighting_pro_brightness_adjustment
         data:
           value: 0
 
       - service: number.set_value
         target:
-          entity_id: number.alp_warmth_adjustment
+          entity_id: number.adaptive_lighting_pro_warmth_adjustment
         data:
           value: 0
 
       # Step 3: Notify user
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: |
             All adjustments cleared:
@@ -515,7 +544,6 @@ script:
             • Warmth: 0K
             • Manual control: Cleared
           title: "ALP: Complete Reset"
-          notification_id: "alp_reset_complete"
 
   alp_scene_auto:
     alias: "ALP: Return to Auto"
@@ -525,11 +553,10 @@ script:
       - service: adaptive_lighting_pro.apply_scene
         data:
           scene: auto
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Returned to automatic adaptive control"
           title: "ALP: Auto Mode"
-          notification_id: "alp_auto_mode"
 
   # -------------------------------------------------------------------------
   # Everyday Control Scripts - Essential User Controls
@@ -545,9 +572,9 @@ script:
       - service: button.press
         target:
           entity_id: button.alp_brighter
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
-          message: "Brightness increased to {{ states('number.alp_brightness_adjustment') }}%"
+          message: "Brightness increased to {{ states('number.adaptive_lighting_pro_brightness_adjustment') }}%"
           title: "ALP: Brighter"
 
   alp_dimmer:
@@ -558,9 +585,9 @@ script:
       - service: button.press
         target:
           entity_id: button.alp_dimmer
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
-          message: "Brightness decreased to {{ states('number.alp_brightness_adjustment') }}%"
+          message: "Brightness decreased to {{ states('number.adaptive_lighting_pro_brightness_adjustment') }}%"
           title: "ALP: Dimmer"
 
   alp_warmer:
@@ -571,9 +598,9 @@ script:
       - service: button.press
         target:
           entity_id: button.alp_warmer
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
-          message: "Warmth adjusted to {{ states('number.alp_warmth_adjustment') }}K"
+          message: "Warmth adjusted to {{ states('number.adaptive_lighting_pro_warmth_adjustment') }}K"
           title: "ALP: Warmer"
 
   alp_cooler:
@@ -584,9 +611,9 @@ script:
       - service: button.press
         target:
           entity_id: button.alp_cooler
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
-          message: "Warmth adjusted to {{ states('number.alp_warmth_adjustment') }}K"
+          message: "Warmth adjusted to {{ states('number.adaptive_lighting_pro_warmth_adjustment') }}K"
           title: "ALP: Cooler"
 
   # === CUSTOM ADJUSTMENTS ===
@@ -609,7 +636,7 @@ script:
         data:
           value: "{{ brightness }}"
           temporary: true
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Brightness set to {{ brightness }}%"
           title: "ALP: Brightness Set"
@@ -633,7 +660,7 @@ script:
         data:
           value: "{{ warmth }}"
           temporary: true
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Warmth set to {{ warmth }}K"
           title: "ALP: Warmth Set"
@@ -659,7 +686,7 @@ script:
       - service: adaptive_lighting_pro.apply_scene
         data:
           scene: "{{ scene }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Applied scene: {{ scene | replace('_', ' ') | title }}"
           title: "ALP: Scene Applied"
@@ -670,9 +697,9 @@ script:
     icon: mdi:rotate-right
     sequence:
       - service: adaptive_lighting_pro.cycle_scene
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
-          message: "Cycled to: {{ states('sensor.alp_current_scene') | title }}"
+          message: "Cycled to: {{ states('sensor.adaptive_lighting_pro_alp_current_scene') | title }}"
           title: "ALP: Scene Cycled"
 
   # === PAUSE/RESUME CONTROL ===
@@ -684,7 +711,7 @@ script:
       - service: switch.turn_on
         target:
           entity_id: switch.alp_pause_adaptive_control
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Adaptive lighting paused - manual control only"
           title: "ALP: Paused"
@@ -697,7 +724,7 @@ script:
       - service: switch.turn_off
         target:
           entity_id: switch.alp_pause_adaptive_control
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Adaptive lighting resumed"
           title: "ALP: Resumed"
@@ -710,7 +737,7 @@ script:
       - service: switch.toggle
         target:
           entity_id: switch.alp_pause_adaptive_control
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: >
             Adaptive lighting {% if is_state('switch.alp_pause_adaptive_control', 'on') %}paused{% else %}resumed{% endif %}
@@ -737,7 +764,7 @@ script:
       - service: adaptive_lighting_pro.clear_manual_control
         data:
           zone_id: "{{ zone }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Manual control cleared for {{ zone | replace('_', ' ') | title }}"
           title: "ALP: Zone Reset"
@@ -749,7 +776,7 @@ script:
     sequence:
       - service: adaptive_lighting_pro.clear_manual_control
         data: {}
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Manual control cleared for all zones"
           title: "ALP: All Zones Reset"
@@ -769,7 +796,7 @@ script:
       - service: adaptive_lighting_pro.set_wake_alarm
         data:
           alarm_time: "{{ today_at(alarm_time).isoformat() }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Wake alarm set for {{ alarm_time }}"
           title: "ALP: Wake Alarm Set"
@@ -780,7 +807,7 @@ script:
     icon: mdi:alarm-off
     sequence:
       - service: adaptive_lighting_pro.clear_wake_alarm
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Wake alarm cleared"
           title: "ALP: Wake Alarm Cleared"
@@ -793,7 +820,7 @@ script:
       - service: input_boolean.toggle
         target:
           entity_id: input_boolean.alp_disable_next_sonos_wakeup
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: >
             Next alarm will be {% if is_state('input_boolean.alp_disable_next_sonos_wakeup', 'on') %}skipped{% else %}active{% endif %}
@@ -819,7 +846,7 @@ script:
           entity_id: number.alp_brightness_increment
         data:
           value: "{{ increment }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Brightness increment set to {{ increment }}%"
           title: "ALP: Increment Set"
@@ -843,7 +870,7 @@ script:
           entity_id: number.alp_color_temp_increment
         data:
           value: "{{ increment }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Warmth increment set to {{ increment }}K"
           title: "ALP: Increment Set"
@@ -867,7 +894,7 @@ script:
           entity_id: number.alp_manual_control_timeout
         data:
           value: "{{ timeout }}"
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Manual control timeout set to {{ timeout }} minutes"
           title: "ALP: Timeout Set"
@@ -879,7 +906,7 @@ script:
     icon: mdi:backup-restore
     sequence:
       - service: adaptive_lighting_pro.reset_manual_adjustments
-      - service: notify.persistent_notification
+      - service: notify.notify
         data:
           message: "Manual adjustments reset to 0"
           title: "ALP: Adjustments Reset"
@@ -891,8 +918,8 @@ script:
     sequence:
       - service: homeassistant.update_entity
         target:
-          entity_id: sensor.alp_status
-      - service: notify.persistent_notification
+          entity_id: sensor.adaptive_lighting_pro_alp_status
+      - service: notify.notify
         data:
           message: "Forced coordinator refresh"
           title: "ALP: Refreshed"
@@ -976,9 +1003,64 @@ script:
 
 automation:
   # ---------------------------------------------------------------------------
+  # CRITICAL: Manual Control Detection - AL to ALP Timer Bridge
+  # ---------------------------------------------------------------------------
+  # Detects when AL marks lights as manually controlled and starts ALP timers
+  # This is the missing link between AL's detection and ALP's timer tracking
+
+  - id: alp_manual_override_triggered
+    alias: "ALP - Per-Zone Manual Override Handler"
+    description: "Start zone-specific timer when AL detects manual control"
+    mode: queued
+    max: 10
+    trigger:
+      # Monitor when manual_control attribute changes on any AL switch
+      - platform: state
+        entity_id:
+          - switch.adaptive_lighting_main_living
+          - switch.adaptive_lighting_kitchen_island
+          - switch.adaptive_lighting_bedroom_primary
+          - switch.adaptive_lighting_accent_spots
+          - switch.adaptive_lighting_recessed_ceiling
+        attribute: manual_control
+    condition:
+      # Only proceed if manual control list is not empty
+      - condition: template
+        value_template: >
+          {% set manual = trigger.to_state.attributes.manual_control | default([]) %}
+          {{ manual is iterable and manual is not string and manual | length > 0 }}
+    variables:
+      # Map AL switch to its ALP timer
+      timer_map:
+        switch.adaptive_lighting_main_living: timer.alp_manual_main_living
+        switch.adaptive_lighting_kitchen_island: timer.alp_manual_kitchen_island
+        switch.adaptive_lighting_bedroom_primary: timer.alp_manual_bedroom_primary
+        switch.adaptive_lighting_accent_spots: timer.alp_manual_accent_spots
+        switch.adaptive_lighting_recessed_ceiling: timer.alp_manual_recessed_ceiling
+      zone_timer: "{{ timer_map.get(trigger.entity_id, 'timer.alp_manual_main_living') }}"
+      # Get timeout from ALP integration config (default 2 hours = 7200 seconds)
+      timeout_seconds: "{{ states('number.adaptive_lighting_pro_manual_control_timeout') | int(7200) }}"
+    action:
+      # Start the zone-specific timer
+      - service: timer.start
+        target:
+          entity_id: "{{ zone_timer }}"
+        data:
+          duration: "{{ timeout_seconds }}"
+
+      # Optional: Log for debugging
+      - service: system_log.write
+        data:
+          message: >
+            ALP: Manual control detected on {{ trigger.entity_id }}
+            Lights: {{ trigger.to_state.attributes.manual_control | default([]) | join(', ') }}
+            Starting timer: {{ zone_timer }} for {{ timeout_seconds }}s
+          level: info
+
+  # ---------------------------------------------------------------------------
   # Morning Routine - Energizing wake-up lighting
   # ---------------------------------------------------------------------------
-  # Trigger: 30 minutes before next alarm (using sensor.alp_next_alarm)
+  # Trigger: 30 minutes before next alarm (using sensor.adaptive_lighting_pro_alp_next_alarm)
   # Action: Cool, bright lighting to support circadian rhythm
   # Source: claude.md "Morning (6:00 AM - 9:00 AM)" scenario
 
@@ -986,10 +1068,10 @@ automation:
     alias: "ALP: Morning Routine"
     description: "Gradually brighten lights before alarm for gentle wake-up"
     trigger:
-      # Integration provides sensor.alp_next_alarm with wake time
+      # Integration provides sensor.adaptive_lighting_pro_alp_next_alarm with wake time
       - platform: template
         value_template: >-
-          {% set alarm_time = states('sensor.alp_next_alarm') %}
+          {% set alarm_time = states('sensor.adaptive_lighting_pro_alp_next_alarm') %}
           {% if alarm_time not in ['unknown', 'unavailable', 'none'] %}
             {% set alarm_dt = as_datetime(alarm_time) %}
             {% set wake_start = alarm_dt - timedelta(minutes=30) %}
@@ -1139,7 +1221,7 @@ automation:
   # ---------------------------------------------------------------------------
   # Dark Day Alert - Environmental boost activated
   # ---------------------------------------------------------------------------
-  # Trigger: sensor.alp_environmental_boost goes above threshold
+  # Trigger: sensor.adaptive_lighting_pro_alp_environmental_boost goes above threshold
   # Action: Notify user that lights are auto-boosted
 
   - id: alp_dark_day_alert
@@ -1147,7 +1229,7 @@ automation:
     description: "Notify when environmental boost activates on dark days"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.alp_environmental_boost
+        entity_id: sensor.adaptive_lighting_pro_alp_environmental_boost
         above: 20  # Significant boost threshold
     condition:
       # Only during daytime (environmental boost is for dark days)
@@ -1158,14 +1240,14 @@ automation:
       - service: notify.mobile_app
         data:
           message: >-
-            Dark day detected - lights boosted by {{ states('sensor.alp_environmental_boost') }}%
+            Dark day detected - lights boosted by {{ states('sensor.adaptive_lighting_pro_alp_environmental_boost') }}%
             (Lux: {{ states('sensor.living_room_lux') }}, Weather: {{ states('weather.home') }})
           title: "Adaptive Lighting: Environmental Boost Active"
 
   # ---------------------------------------------------------------------------
   # Sunset Boost Alert - Fade starting early
   # ---------------------------------------------------------------------------
-  # Trigger: sensor.alp_sunset_boost activates
+  # Trigger: sensor.adaptive_lighting_pro_alp_sunset_boost activates
   # Action: Notify user that sunset fade started
 
   - id: alp_sunset_alert
@@ -1173,14 +1255,14 @@ automation:
     description: "Notify when sunset fade activates"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.alp_sunset_boost
+        entity_id: sensor.adaptive_lighting_pro_alp_sunset_boost
         above: 5  # Any sunset boost
     action:
       - service: notify.mobile_app
         data:
           message: >-
             Sunset fade active - lights warming and dimming gradually
-            (Boost: {{ states('sensor.alp_sunset_boost') }}%)
+            (Boost: {{ states('sensor.adaptive_lighting_pro_alp_sunset_boost') }}%)
           title: "Adaptive Lighting: Sunset Mode"
 
   # ---------------------------------------------------------------------------

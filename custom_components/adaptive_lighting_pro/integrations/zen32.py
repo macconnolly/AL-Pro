@@ -22,7 +22,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
 
 from ..const import DOMAIN
@@ -114,10 +115,11 @@ class Zen32Integration:
     async def async_setup(self) -> bool:
         """Set up Zen32 event listeners.
 
-        Creates state change listeners for all configured button entities.
+        Defers actual listener setup until HA has fully started to ensure
+        all event entities are available.
 
         Returns:
-            True if setup successful, False if disabled or entities missing
+            True if setup initiated, False if disabled or no buttons configured
         """
         if not self._enabled:
             _LOGGER.info("Zen32 integration disabled")
@@ -126,6 +128,29 @@ class Zen32Integration:
         if not self._button_entities:
             _LOGGER.warning("Zen32 integration enabled but no buttons configured")
             return False
+
+        _LOGGER.info(
+            "Zen32 integration: Waiting for Home Assistant to start before monitoring %d buttons",
+            len(self._button_entities),
+        )
+
+        # Wait for HA to fully start before setting up listeners
+        # Event entities may not be ready during initial integration setup
+        self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STARTED,
+            self._async_setup_listeners,
+        )
+
+        return True
+
+    @callback
+    async def _async_setup_listeners(self, event: Event) -> None:
+        """Set up button event listeners after HA has started.
+
+        Args:
+            event: Home Assistant started event
+        """
+        _LOGGER.info("Zen32 integration: Home Assistant started, setting up button listeners")
 
         # Verify all button entities exist
         missing_entities = []
@@ -139,14 +164,19 @@ class Zen32Integration:
                 len(missing_entities),
                 missing_entities,
             )
-            return False
+            return
 
         # Register event listeners for each button
         for button_id, entity_id in self._button_entities.items():
+            # Create a proper async callback wrapper for each button
+            async def async_button_callback(event: Event, button_id: str = button_id) -> None:
+                """Async wrapper for button event handler."""
+                await self._button_event_handler(event, button_id)
+
             listener = async_track_state_change_event(
                 self.hass,
                 [entity_id],
-                lambda event, bid=button_id: self._button_event_handler(event, bid),
+                async_button_callback,
             )
             self._listeners.append(listener)
             _LOGGER.debug("Zen32: Registered listener for %s (%s)", button_id, entity_id)
@@ -155,7 +185,7 @@ class Zen32Integration:
             "Zen32 integration setup complete: monitoring %d buttons",
             len(self._button_entities),
         )
-        return True
+
 
     async def async_shutdown(self) -> None:
         """Shutdown Zen32 integration and remove event listeners."""
@@ -202,6 +232,14 @@ class Zen32Integration:
             _LOGGER.debug("Zen32: %s event has no new_state, ignoring", button_id)
             return
 
+        # DEBUG: Log full event structure
+        _LOGGER.info(
+            "Zen32: %s received event - state=%s, attributes=%s",
+            button_id,
+            new_state.state,
+            new_state.attributes,
+        )
+
         # Check debounce
         if self._is_debounced(button_id):
             return
@@ -209,8 +247,8 @@ class Zen32Integration:
         # Get event type from attributes
         event_type = new_state.attributes.get("event_type")
         if event_type not in ["KeyPressed", "KeyHeldDown"]:
-            _LOGGER.debug(
-                "Zen32: %s has unknown event_type '%s', ignoring",
+            _LOGGER.warning(
+                "Zen32: %s has unknown event_type '%s' (expected KeyPressed or KeyHeldDown), ignoring",
                 button_id,
                 event_type,
             )
@@ -233,6 +271,19 @@ class Zen32Integration:
             event_type: "KeyPressed" or "KeyHeldDown"
         """
         action = self._button_actions.get(button_id)
+
+        # Special handling for button_5 (Center button) - direct light control
+        # Press = Turn ON all lights, Hold = Turn OFF all lights
+        if button_id == "button_5":
+            try:
+                if event_type == "KeyPressed":
+                    await self._action_lights_on()
+                elif event_type == "KeyHeldDown":
+                    await self._action_lights_off()
+                return
+            except Exception as err:
+                _LOGGER.error("Zen32: Error controlling lights from button_5: %s", err)
+                return
 
         if not action or action == "none":
             _LOGGER.debug("Zen32: %s has no action configured", button_id)
@@ -329,6 +380,42 @@ class Zen32Integration:
             "reset_all",
             {},
         )
+
+    async def _action_lights_on(self) -> None:
+        """Turn on all adaptive lights (Button 5 press)."""
+        _LOGGER.info("Zen32: Button 5 press - turning ON all lights")
+
+        # Get all light entities from coordinator zones
+        all_lights = []
+        for zone_config in self._coordinator.zones.values():
+            lights = zone_config.get("lights", [])
+            all_lights.extend(lights)
+
+        if all_lights:
+            await self.hass.services.async_call(
+                "light",
+                "turn_on",
+                {"entity_id": all_lights},
+            )
+            _LOGGER.debug("Zen32: Turned on %d lights", len(all_lights))
+
+    async def _action_lights_off(self) -> None:
+        """Turn off all adaptive lights (Button 5 hold)."""
+        _LOGGER.info("Zen32: Button 5 hold - turning OFF all lights")
+
+        # Get all light entities from coordinator zones
+        all_lights = []
+        for zone_config in self._coordinator.zones.values():
+            lights = zone_config.get("lights", [])
+            all_lights.extend(lights)
+
+        if all_lights:
+            await self.hass.services.async_call(
+                "light",
+                "turn_off",
+                {"entity_id": all_lights},
+            )
+            _LOGGER.debug("Zen32: Turned off %d lights", len(all_lights))
 
     def get_status(self) -> dict[str, Any]:
         """Get current Zen32 integration status.

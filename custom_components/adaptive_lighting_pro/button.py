@@ -63,8 +63,9 @@ async def async_setup_entry(
         ALPResetButton(coordinator, config_entry, hass),
     ])
 
-    # Scene buttons (4 buttons)
+    # Scene buttons (5 buttons including AUTO)
     scene_buttons = [
+        (Scene.AUTO, "Auto", "mdi:auto-fix"),
         (Scene.ALL_LIGHTS, "All Lights", "mdi:lightbulb-group"),
         (Scene.NO_SPOTLIGHTS, "No Spotlights", "mdi:book-open-variant"),
         (Scene.EVENING_COMFORT, "Evening Comfort", "mdi:weather-sunset-down"),

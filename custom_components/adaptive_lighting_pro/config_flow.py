@@ -162,7 +162,7 @@ class AdaptiveLightingProConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     5. Integration settings
     """
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -197,11 +197,59 @@ class AdaptiveLightingProConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.error("Cannot import YAML config: Adaptive Lighting integration not found")
             return self.async_abort(reason="adaptive_lighting_not_found")
 
-        # Create config entry directly from YAML data
-        # The data format from YAML matches what async_step_finalize expects
+        # CRITICAL FIX: Restructure flat YAML format into nested UI format
+        # YAML format has all keys at root level (lux_sensor, brightness_increment, etc)
+        # UI format nests them: global_settings{}, environmental{}, integrations{}
+
+        # Extract environmental settings
+        environmental_settings = {
+            CONF_LUX_SENSOR: import_data.get(CONF_LUX_SENSOR),
+            CONF_WEATHER_ENTITY: import_data.get(CONF_WEATHER_ENTITY),
+            CONF_ENVIRONMENTAL_ENABLED: import_data.get(CONF_ENVIRONMENTAL_ENABLED, True),
+            CONF_SUNSET_FADE_ENABLED: import_data.get("sunset_boost_enabled", True),
+        }
+
+        # Extract integration settings (wake sequence, sonos, zen32)
+        integration_settings = {
+            CONF_WAKE_SEQUENCE_ENABLED: import_data.get("wake_sequence_enabled", False),
+            CONF_WAKE_SEQUENCE_TARGET_ZONE: import_data.get("wake_target_zone", "bedroom_primary"),
+            CONF_WAKE_SEQUENCE_DURATION: import_data.get("wake_duration_minutes", 15) * 60,  # Convert to seconds
+            CONF_WAKE_SEQUENCE_MAX_BOOST: import_data.get("wake_max_boost_pct", 20),
+            CONF_SONOS_ENABLED: import_data.get("sonos_enabled", False),
+            CONF_SONOS_ALARM_SENSOR: import_data.get("sonos_alarm_sensor"),
+            CONF_ZEN32_ENABLED: import_data.get("zen32_enabled", False),
+            CONF_ZEN32_EVENT_ENTITY: import_data.get("zen32_event_entity"),
+            "zen32_button_entities": import_data.get("zen32_button_entities", {}),
+            "zen32_button_actions": import_data.get("zen32_button_actions", {}),
+            CONF_ZEN32_DEBOUNCE: import_data.get("zen32_debounce_duration", 0.5),
+        }
+
+        # Extract global settings
+        global_settings = {
+            CONF_BRIGHTNESS_INCREMENT: import_data.get("brightness_increment", 5),
+            CONF_COLOR_TEMP_INCREMENT: import_data.get("color_temp_increment", 500),
+            CONF_MANUAL_CONTROL_TIMEOUT: import_data.get("manual_control_timeout", 7200),
+        }
+
+        # Restructure to match UI config flow format
+        restructured_data = {
+            CONF_NAME: "Adaptive Lighting Pro (YAML)",
+            CONF_ZONES: import_data.get(CONF_ZONES, []),
+            "global_settings": global_settings,
+            "environmental": environmental_settings,
+            "integrations": integration_settings,
+        }
+
+        _LOGGER.info(
+            "YAML config restructured: %d zones, lux=%s, weather=%s",
+            len(restructured_data[CONF_ZONES]),
+            environmental_settings.get(CONF_LUX_SENSOR),
+            environmental_settings.get(CONF_WEATHER_ENTITY),
+        )
+
         return self.async_create_entry(
             title="Adaptive Lighting Pro (YAML)",
-            data=import_data,
+            data=restructured_data,
         )
 
     async def async_step_user(
@@ -874,26 +922,47 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             FlowResult to show form or update config entry
         """
         if user_input is not None:
-            # Update the config entry with new settings
-            # We need to merge with existing data to preserve zones
-            new_data = {**self.config_entry.data, **user_input}
+            # CRITICAL FIX: Properly update nested structure, don't shallow merge
+            # Config entry has nested structure: global_settings{}, environmental{}, integrations{}
+            # User input has flat keys that need to be routed to correct nested dict
+
+            current_data = self.config_entry.data.copy()
+
+            # Update global_settings
+            global_settings = current_data.get("global_settings", {}).copy()
+            global_settings[CONF_BRIGHTNESS_INCREMENT] = user_input.get(CONF_BRIGHTNESS_INCREMENT)
+            global_settings[CONF_COLOR_TEMP_INCREMENT] = user_input.get(CONF_COLOR_TEMP_INCREMENT)
+            global_settings[CONF_MANUAL_CONTROL_TIMEOUT] = user_input.get(CONF_MANUAL_CONTROL_TIMEOUT)
+            current_data["global_settings"] = global_settings
+
+            # Update environmental settings
+            environmental = current_data.get("environmental", {}).copy()
+            # Update lux sensor (can be None to clear it)
+            environmental[CONF_LUX_SENSOR] = user_input.get(CONF_LUX_SENSOR)
+            # Update weather entity (can be None to clear it)
+            environmental[CONF_WEATHER_ENTITY] = user_input.get(CONF_WEATHER_ENTITY)
+            current_data["environmental"] = environmental
+
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
-                data=new_data,
+                data=current_data,
             )
             # Trigger reload to apply new settings
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
-        # Get current values from config entry
+        # Get current values from config entry (from nested structure)
         current_data = self.config_entry.data
+        global_settings = current_data.get("global_settings", {})
+        environmental = current_data.get("environmental", {})
 
-        # Build schema with current values as defaults
+        # Build schema with current values as defaults (from nested structure)
         schema = vol.Schema(
             {
+                # Global Settings
                 vol.Required(
                     CONF_BRIGHTNESS_INCREMENT,
-                    default=current_data.get(
+                    default=global_settings.get(
                         CONF_BRIGHTNESS_INCREMENT, DEFAULT_BRIGHTNESS_INCREMENT
                     ),
                 ): selector.NumberSelector(
@@ -907,7 +976,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 vol.Required(
                     CONF_COLOR_TEMP_INCREMENT,
-                    default=current_data.get(
+                    default=global_settings.get(
                         CONF_COLOR_TEMP_INCREMENT, DEFAULT_COLOR_TEMP_INCREMENT
                     ),
                 ): selector.NumberSelector(
@@ -921,7 +990,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 vol.Required(
                     CONF_MANUAL_CONTROL_TIMEOUT,
-                    default=current_data.get(
+                    default=global_settings.get(
                         CONF_MANUAL_CONTROL_TIMEOUT, DEFAULT_MANUAL_TIMEOUT_SECONDS
                     ),
                 ): selector.NumberSelector(
@@ -933,18 +1002,22 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         unit_of_measurement="s",
                     )
                 ),
-                vol.Required(
-                    CONF_GENERAL_TRANSITION_SPEED,
-                    default=current_data.get(
-                        CONF_GENERAL_TRANSITION_SPEED, DEFAULT_TRANSITION_SPEED
-                    ),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0.1,
-                        max=10.0,
-                        step=0.1,
-                        mode=selector.NumberSelectorMode.BOX,
-                        unit_of_measurement="s",
+                # Environmental Settings
+                vol.Optional(
+                    CONF_LUX_SENSOR,
+                    default=environmental.get(CONF_LUX_SENSOR),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="sensor",
+                        device_class="illuminance",
+                    )
+                ),
+                vol.Optional(
+                    CONF_WEATHER_ENTITY,
+                    default=environmental.get(CONF_WEATHER_ENTITY),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="weather",
                     )
                 ),
             }

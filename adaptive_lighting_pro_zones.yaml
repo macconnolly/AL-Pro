@@ -29,6 +29,12 @@ wake_target_zone: bedroom_primary
 wake_duration_minutes: 15
 wake_max_boost_pct: 20
 
+# Sonos integration (wake sequence alarm monitoring)
+# Using sensor.sonos_upcoming_alarms - has earliest_alarm_timestamp in attributes
+# Alternative: sensor.soonest_sonos_alarm_info (after template reload)
+sonos_enabled: true
+sonos_alarm_sensor: sensor.sonos_upcoming_alarms
+
 # Manual control defaults
 brightness_increment: 5
 color_temp_increment: 500
@@ -36,7 +42,7 @@ manual_control_timeout: 7200  # 2 hours
 
 # Zen32 Scene Controller Integration
 zen32_enabled: true
-zen32_debounce_duration: 0.5  # seconds
+zen32_debounce_duration: 0.2  # seconds (reduced for better responsiveness)
 zen32_button_entities:
   button_1: "event.scene_controller_scene_001"  # Top Left
   button_2: "event.scene_controller_scene_002"  # Top Right

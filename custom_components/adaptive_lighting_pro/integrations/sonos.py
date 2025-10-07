@@ -186,12 +186,36 @@ class SonosIntegration:
                 self._last_alarm_time = None
             return
 
-        # Parse alarm time from state
-        alarm_time = self._parse_alarm_time(state)
+        # CRITICAL FIX: Try to parse from attributes first (sensor.sonos_upcoming_alarms format)
+        # Then fall back to state (simple timestamp sensor format)
+        alarm_time = None
+
+        # Try earliest_alarm_time from attributes (format: "2025-10-07 04:31:00")
+        if "earliest_alarm_time" in attributes:
+            alarm_time = self._parse_alarm_time(attributes["earliest_alarm_time"])
+            if alarm_time:
+                _LOGGER.debug("Parsed alarm time from attributes.earliest_alarm_time: %s", alarm_time.isoformat())
+
+        # Try earliest_alarm_timestamp from attributes (Unix timestamp)
+        if not alarm_time and "earliest_alarm_timestamp" in attributes:
+            try:
+                timestamp = float(attributes["earliest_alarm_timestamp"])
+                alarm_time = datetime.fromtimestamp(timestamp, tz=UTC)
+                _LOGGER.debug("Parsed alarm time from attributes.earliest_alarm_timestamp: %s", alarm_time.isoformat())
+            except (ValueError, TypeError) as err:
+                _LOGGER.debug("Could not parse earliest_alarm_timestamp: %s", err)
+
+        # Fall back to parsing state directly (simple sensor format)
+        if not alarm_time:
+            alarm_time = self._parse_alarm_time(state)
+            if alarm_time:
+                _LOGGER.debug("Parsed alarm time from state: %s", alarm_time.isoformat())
+
         if not alarm_time:
             _LOGGER.debug(
-                "Could not parse alarm time from state: %s. No wake sequence will trigger.",
+                "Could not parse alarm time from state '%s' or attributes %s. No wake sequence will trigger.",
                 state,
+                {k: v for k, v in attributes.items() if "alarm" in k.lower()},
             )
             # Clear any existing alarm
             if self._last_alarm_time is not None:
@@ -237,12 +261,16 @@ class SonosIntegration:
             return None
 
         try:
-            # Parse ISO 8601 timestamp
-            alarm_time = datetime.fromisoformat(state_value.replace('Z', '+00:00'))
+            # Try ISO 8601 format first
+            try:
+                alarm_time = datetime.fromisoformat(state_value.replace('Z', '+00:00'))
+            except ValueError:
+                # Try alternate format "YYYY-MM-DD HH:MM:SS" (space instead of T)
+                alarm_time = datetime.strptime(state_value, "%Y-%m-%d %H:%M:%S")
 
             # Ensure timezone-aware
             if alarm_time.tzinfo is None:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Alarm time %s is timezone-naive, assuming UTC",
                     state_value,
                 )
@@ -251,9 +279,9 @@ class SonosIntegration:
             return alarm_time
 
         except (ValueError, AttributeError) as err:
-            _LOGGER.warning(
-                "Failed to parse alarm time from '%s': %s. "
-                "Expected ISO 8601 format (e.g., '2025-10-02T06:30:00-07:00')",
+            # Only log as debug for unparseable states (like "None upcoming alarm(s).")
+            _LOGGER.debug(
+                "Could not parse alarm time from '%s': %s",
                 state_value,
                 err,
             )

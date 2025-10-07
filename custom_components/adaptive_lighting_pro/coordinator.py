@@ -215,6 +215,17 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_sunset_boost = 0
         self._last_wake_boost = 0
 
+        # CRITICAL FIX: Track manual control zones (used by _clear_zone_manual_control)
+        self._manual_control: set[str] = set()
+
+        # CRITICAL FIX: Track scene-locked lights per zone to preserve scene stickiness
+        # Maps zone_id -> set of light entity_ids that were locked by scene actions
+        self._scene_locked_lights: dict[str, set[str]] = {}
+
+        # CRITICAL FIX: Track last update timestamp for sensors
+        from datetime import datetime
+        self._last_update_time: datetime | None = None
+
         _LOGGER.info(
             "ALP Coordinator initialized with %d zones: %s",
             len(self.zones),
@@ -347,7 +358,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Build zone state
                 state["zones"][zone_id] = {
                     "manual_control_active": timer_info.get("manual_control_active", False),
-                    "timer_remaining": timer_info.get("timer_remaining_seconds", 0),
+                    "timer_remaining": timer_info.get("timer_remaining", 0),
+                    "timer_finishes_at": timer_info.get("timer_expiry"),
                     "current_brightness_pct": current_brightness_pct,
                     "current_color_temp": current_color_temp,
                     "lights_on_count": lights_on_count,
@@ -423,18 +435,17 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # Remove from active wake zones
                     self._wake_active_zones.discard(zone_id)
 
-                    # Now apply normal adjustments (if not in manual timer)
-                    if not self.zone_manager.is_manual_control_active(zone_id):
-                        await self._apply_adjustments_to_zone(zone_id, zone_config)
-
-                elif not self.zone_manager.is_manual_control_active(zone_id):
-                    # Normal operation - no wake, no manual timer
+                    # Now apply normal adjustments
+                    # CRITICAL FIX: Always apply adjustments after wake sequence ends
+                    # Manual timer doesn't mean "don't touch" - it means "prevent AL override"
                     await self._apply_adjustments_to_zone(zone_id, zone_config)
+
                 else:
-                    _LOGGER.debug(
-                        "Skipping adjustment for zone %s (manual control timer active)",
-                        zone_id,
-                    )
+                    # Normal operation - apply adjustments
+                    # CRITICAL FIX: Apply adjustments even if manual timer is active
+                    # The timer prevents AL from overriding our adjustments (via manual_control flag)
+                    # But we still need to apply new button presses/adjustments
+                    await self._apply_adjustments_to_zone(zone_id, zone_config)
 
             # Step 5: Calculate health score
             health_score, health_status = self._calculate_health_score(state)
@@ -474,6 +485,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "health_status": health_status,
                 },
             )
+
+            # CRITICAL FIX: Update last update timestamp for sensors
+            from datetime import datetime
+            self._last_update_time = datetime.now()
 
             return state
 
@@ -617,12 +632,24 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 service_data["min_color_temp"] = adjusted_config["color_temp_min"]
                 service_data["max_color_temp"] = adjusted_config["color_temp_max"]
 
-            # CRITICAL FIX: Call adaptive_lighting.change_switch_settings
-            # Removed blocking=False to ensure completion before next operations
+            # Call adaptive_lighting.change_switch_settings to update AL boundaries
             await self.hass.services.async_call(
                 ADAPTIVE_LIGHTING_DOMAIN,
                 "change_switch_settings",
                 service_data,
+            )
+
+            # Force AL to apply new settings immediately
+            # Without this, AL only applies on its next update cycle (20s default)
+            # CRITICAL: Do NOT specify lights parameter - let AL use manual_control state
+            # to determine which lights to update. Specifying lights overrides manual_control!
+            await self.hass.services.async_call(
+                ADAPTIVE_LIGHTING_DOMAIN,
+                "apply",
+                {
+                    "entity_id": al_switch,
+                    "turn_on_lights": False,  # Don't turn on lights, just adjust existing
+                },
             )
 
             # ARCHITECTURAL NOTE: manual_control lifecycle is managed in _async_update_data()
@@ -645,10 +672,39 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 exc_info=True,
             )
 
+    async def _apply_all_zones_immediate(self) -> None:
+        """Apply adjustments to ALL zones immediately.
+
+        This is called after brightness/warmth adjustments to provide instant
+        feedback without waiting for the coordinator refresh cycle.
+
+        Similar to implementation_1.yaml pattern where AL services were called
+        immediately after input_number changes.
+        """
+        _LOGGER.debug("Applying adjustments to all zones immediately")
+
+        for zone_id, zone_config in self.zones.items():
+            try:
+                # Skip disabled zones
+                if not zone_config.get("enabled", True):
+                    continue
+
+                # Apply adjustments (this calls AL change_switch_settings + apply)
+                await self._apply_adjustments_to_zone(zone_id, zone_config)
+
+            except Exception as err:
+                _LOGGER.error(
+                    "Failed immediate apply for zone %s: %s",
+                    zone_id,
+                    err,
+                    exc_info=True,
+                )
+
     async def _mark_zone_lights_as_manual(self, zone_id: str) -> None:
         """Mark all lights in a zone as manually controlled in AL.
 
         This prevents AL from overriding user adjustments until timer expires.
+        CRITICAL: This should ONLY be used for scenes, not brightness/warmth adjustments!
 
         Args:
             zone_id: Zone identifier
@@ -671,21 +727,39 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Zone %s has no lights configured", zone_id)
                 return
 
-            # CRITICAL FIX: Mark lights as manually controlled in AL
-            # Removed blocking=False to ensure completion before boundaries change
+            # CRITICAL: Expand groups to individual lights!
+            # AL's manual_control requires individual light entities, not groups
+            individual_lights = []
+            for light_entity in lights:
+                # Check if this is a light group
+                state = self.hass.states.get(light_entity)
+                if state and state.attributes.get("entity_id"):
+                    # It's a group, expand it
+                    group_members = state.attributes.get("entity_id", [])
+                    individual_lights.extend(group_members)
+                    _LOGGER.debug("Expanded group %s to %d lights", light_entity, len(group_members))
+                else:
+                    # It's already an individual light
+                    individual_lights.append(light_entity)
+
+            if not individual_lights:
+                _LOGGER.warning("No individual lights found for zone %s", zone_id)
+                return
+
+            # Mark individual lights as manually controlled in AL
             await self.hass.services.async_call(
                 ADAPTIVE_LIGHTING_DOMAIN,
                 "set_manual_control",
                 {
                     "entity_id": al_switch,
-                    "lights": lights,
+                    "lights": individual_lights,  # Pass INDIVIDUAL lights, not groups!
                     "manual_control": True,
                 },
             )
 
             _LOGGER.debug(
-                "Marked %d lights in zone %s as manually controlled",
-                len(lights),
+                "Marked %d individual lights in zone %s as manually controlled",
+                len(individual_lights),
                 zone_id,
             )
 
@@ -728,15 +802,17 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _restore_adaptive_control(self, zone_id: str) -> None:
         """Restore adaptive control for a zone after timer expiry.
 
-        Clears manual control flag in zone manager and triggers AL integration
-        to reapply adaptive lighting. If this was the last active zone timer,
-        also clears global manual adjustments (matches YAML behavior).
+        Timer expiry has two different meanings:
+        1. For brightness/warmth adjustments: Reset adjustment values to 0
+        2. For scenes: Clear manual_control on individual lights
+
+        We detect which case by checking if AL has any manual_control set.
 
         Args:
             zone_id: Zone identifier
         """
         try:
-            # Clear manual control in zone manager
+            # Clear timer in zone manager
             await self.zone_manager.async_cancel_timer(zone_id)
 
             # Get zone config
@@ -750,43 +826,88 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.warning("Cannot restore zone %s - AL switch not configured", zone_id)
                 return
 
-            # CRITICAL FIX: Step 1: Clear manual_control flag in AL integration
-            # Removed blocking=False to ensure restoration completes properly
-            await self.hass.services.async_call(
-                ADAPTIVE_LIGHTING_DOMAIN,
-                "set_manual_control",
-                {
-                    "entity_id": al_switch,
-                    "manual_control": False,
-                },
-            )
+            # Check if AL has any manual_control set for this zone
+            al_state = self.hass.states.get(al_switch)
+            has_manual_control = False
+            if al_state and al_state.attributes:
+                current_manual = al_state.attributes.get("manual_control", [])
+                has_manual_control = bool(current_manual)
 
-            # CRITICAL FIX: Step 2: Apply adaptive lighting to restore control
-            # Removed blocking=False to ensure AL applies before next operations
+            # Only clear manual_control if there is any set (scene case)
+            if has_manual_control:
+                # Get lights that should be released (zone lights minus scene-locked)
+                zone_lights_config = zone_config.get("lights", [])
+
+                # CRITICAL: Expand groups to individual lights
+                individual_lights = []
+                for light_entity in zone_lights_config:
+                    # Check if this is a light group
+                    state = self.hass.states.get(light_entity)
+                    if state and state.attributes.get("entity_id"):
+                        # It's a group, expand it
+                        group_members = state.attributes.get("entity_id", [])
+                        individual_lights.extend(group_members)
+                    else:
+                        # It's already an individual light
+                        individual_lights.append(light_entity)
+
+                zone_lights = set(individual_lights)
+
+                # Track which lights were locked by scenes (stored during scene application)
+                scene_locked = self._scene_locked_lights.get(zone_id, set())
+
+                # Only clear manual control for non-scene lights
+                lights_to_release = list(zone_lights - scene_locked)
+
+                if lights_to_release:
+                    # Clear manual_control only for timer-controlled lights
+                    await self.hass.services.async_call(
+                        ADAPTIVE_LIGHTING_DOMAIN,
+                        "set_manual_control",
+                        {
+                            "entity_id": al_switch,
+                            "lights": lights_to_release,  # Specific lights to release
+                            "manual_control": False,
+                        },
+                    )
+                    _LOGGER.debug(
+                        "Timer expired for zone %s: Released manual control for %d lights (preserved %d scene-locked)",
+                        zone_id,
+                        len(lights_to_release),
+                        len(scene_locked)
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Timer expired for zone %s: All lights still scene-locked, preserving manual control",
+                        zone_id
+                    )
+
+            # Apply adaptive lighting to restore control
+            # Do NOT specify lights parameter - let AL use its manual_control state
             await self.hass.services.async_call(
                 ADAPTIVE_LIGHTING_DOMAIN,
                 "apply",
                 {
                     "entity_id": al_switch,
-                    "lights": zone_config.get("lights", []),
                     "turn_on_lights": False,
                     "transition": 2,
                 },
             )
 
-            _LOGGER.info("Restored adaptive control for zone %s", zone_id)
+            _LOGGER.info("Timer expired for zone %s - restored adaptive control", zone_id)
 
-            # Step 3: Check if ALL zone timers have expired
-            # If so, clear manual adjustments (YAML-like behavior)
+            # Check if ALL zone timers have expired - if so, reset adjustments
+            # This matches implementation_1.yaml where adjustments reset when timers expire
+            # Timers track duration of temporary adjustments (brightness/warmth from buttons)
             if not self.zone_manager.any_manual_timers_active():
                 if self._brightness_adjustment != 0 or self._warmth_adjustment != 0:
                     _LOGGER.info(
-                        "All zone timers expired, clearing manual adjustments: "
-                        "brightness %+d%% → 0%%, warmth %+dK → 0K",
+                        "All zone timers expired, resetting brightness/warmth adjustments: "
+                        "%+d%% → 0%%, %+dK → 0K",
                         self._brightness_adjustment,
                         self._warmth_adjustment,
                     )
-                    # Use API methods instead of direct assignment (architectural compliance)
+                    # Reset adjustments but DON'T start new timers (would create loop)
                     await self.set_brightness_adjustment(0, start_timers=False)
                     await self.set_warmth_adjustment(0, start_timers=False)
 
@@ -810,7 +931,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         timer_info = self.zone_manager.get_zone_timer_info(zone_id)
         return {
             "manual_control_active": timer_info.get("manual_control_active", False),
-            "timer_remaining": timer_info.get("timer_remaining_seconds", 0),
+            "timer_remaining": timer_info.get("timer_remaining", 0),
+            "timer_finishes_at": timer_info.get("timer_expiry"),
             "current_brightness_pct": 0,
             "current_color_temp": 0,
             "lights_on_count": 0,
@@ -1120,7 +1242,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 len(self.zones)
             )
 
-        # Trigger immediate coordinator update (once, after all timers started)
+        # Apply changes to AL integration immediately (don't wait for refresh cycle)
+        await self._apply_all_zones_immediate()
+
+        # Also trigger coordinator update for sensor state
         await self.async_request_refresh()
 
     async def set_warmth_adjustment(self, value: int, start_timers: bool = False) -> None:
@@ -1154,7 +1279,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 len(self.zones)
             )
 
-        # Trigger immediate coordinator update (once, after all timers started)
+        # Apply changes to AL integration immediately (don't wait for refresh cycle)
+        await self._apply_all_zones_immediate()
+
+        # Also trigger coordinator update for sensor state
         await self.async_request_refresh()
 
     async def set_brightness_increment(self, value: int) -> None:
@@ -1305,7 +1433,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Returns:
             Set of zone IDs with active manual control timers
         """
-        return set(self._manual_control.keys()) if hasattr(self, "_manual_control") else set()
+        return self._manual_control.copy()
 
     def get_wake_active_zones(self) -> set[str]:
         """Get set of zones currently in wake sequence.
@@ -1314,6 +1442,15 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             Set of zone IDs with active wake sequence
         """
         return set(self._wake_active_zones) if hasattr(self, "_wake_active_zones") else set()
+
+    def get_last_update_time(self):
+        """Get timestamp of last successful coordinator update.
+
+        Returns:
+            datetime of last update, or None if never updated
+        """
+        from datetime import datetime
+        return self._last_update_time
 
     def get_scene_brightness_offset(self) -> int:
         """Get current scene brightness offset.
@@ -1419,10 +1556,11 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Get current environmental boost
             env_boost = self._env_adapter.calculate_boost()
 
-        # Step 1: Mark lights as manually controlled in AL
-        await self._mark_zone_lights_as_manual(zone_id)
+        # CRITICAL FIX: Do NOT set manual_control for brightness/warmth adjustments!
+        # Manual control locks lights completely - we want AL to keep adapting within new boundaries
+        # Only scenes and wake sequences should use manual_control
 
-        # Step 2: Start timer with smart duration calculation
+        # Start timer to track when to reset adjustments (not to control AL)
         await self.zone_manager.async_start_manual_timer(
             zone_id=zone_id,
             duration=duration_seconds,
@@ -1554,23 +1692,44 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Handle Scene.AUTO specially - clear all manual control and return to adaptive
         if scene == Scene.AUTO:
             # Clear ALL manual control and return to adaptive
+            # Use _restore_adaptive_control to properly call AL services
             for zone_id in list(self.zones.keys()):
-                self._clear_zone_manual_control(zone_id)
+                await self._restore_adaptive_control(zone_id)
+
+            # CRITICAL FIX: Clear scene-locked lights tracking when returning to AUTO
+            self._scene_locked_lights = {}
 
             # Reset scene tracking
             self._current_scene = Scene.AUTO
-            self.data["current_scene"] = Scene.AUTO
+            if self.data:
+                self.data["current_scene"] = Scene.AUTO
 
             # Clear adjustments
             await self.set_brightness_adjustment(0, start_timers=False)
-            await self.set_warmth_adjustment(0)
+            await self.set_warmth_adjustment(0, start_timers=False)
 
-            _LOGGER.info("Returned to automatic adaptive control")
+            _LOGGER.info("Returned to automatic adaptive control (Scene.AUTO)")
             await self.async_request_refresh()
             return True
 
         config = SCENE_CONFIGS[scene]
         self._current_scene = scene
+
+        # CRITICAL FIX: Extract which lights are affected by scene actions
+        # This determines which zones get scene offsets and manual_control
+        affected_lights_by_zone = self._extract_affected_lights_by_zone(config.get("actions", []))
+
+        # CRITICAL FIX: Track scene-locked lights for preservation
+        # When scene sets manual_control on specific lights, track them
+        for zone_id, lights in affected_lights_by_zone.items():
+            # Store which lights were locked by this scene
+            self._scene_locked_lights[zone_id] = set(lights)
+            _LOGGER.debug(
+                "Scene '%s' locking lights in zone %s: %s",
+                config["name"],
+                zone_id,
+                lights
+            )
 
         # CRITICAL FIX: Execute scene actions and wait for completion
         # Removed blocking=False to ensure lights reach scene levels before locking with manual_control
@@ -1593,33 +1752,13 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     exc_info=True,
                 )
 
-        # CRITICAL FIX: Extract which lights/zones are affected by scene actions
-        affected_lights_by_zone = self._extract_lights_from_scene_actions(config.get("actions", []))
-
-        # CRITICAL FIX: Set manual_control for choreographed lights to lock them
-        for zone_id, lights in affected_lights_by_zone.items():
-            zone_config = self.zones.get(zone_id)
-            if not zone_config:
-                continue
-
-            al_switch = zone_config.get("adaptive_lighting_switch")
-            if al_switch and lights:
-                await self.hass.services.async_call(
-                    ADAPTIVE_LIGHTING_DOMAIN,
-                    "set_manual_control",
-                    {
-                        "entity_id": al_switch,
-                        "lights": lights,
-                        "manual_control": True,  # LOCK lights at scene levels
-                    },
-                    # blocking removed to ensure completion
-                )
-                _LOGGER.info(
-                    "Scene '%s' locked %d lights in zone %s with manual_control=True",
-                    config["name"],
-                    len(lights),
-                    zone_id,
-                )
+        # NOTE: Manual control is handled by set_manual_control actions embedded
+        # in scene configs (const.py SCENE_CONFIGS). Those actions specify individual
+        # lights to lock. We DO NOT auto-detect here because scene actions may use
+        # light groups which don't match individual lights in zone configs.
+        #
+        # Pattern from implementation_1.yaml: Scene scripts call set_manual_control
+        # with explicit individual light entity_ids (lines 3108-3110)
 
         # CRITICAL FIX: Apply scene offsets ONLY to affected zones (per-zone tracking)
         brightness_offset = config.get("brightness_offset", 0)
@@ -1627,7 +1766,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Special case: ALL_LIGHTS clears all scene offsets
         if scene == Scene.ALL_LIGHTS:
-            _LOGGER.info("ALL_LIGHTS scene - clearing all scene offsets and manual_control")
+            _LOGGER.info("ALL_LIGHTS scene - clearing all scene offsets")
 
             # Clear per-zone offsets
             self._scene_offsets_by_zone = {}
@@ -1636,22 +1775,10 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._scene_brightness_offset = 0
             self._scene_warmth_offset = 0
 
-            # Restore AL control for all zones
-            for zone_id, zone_config in self.zones.items():
-                al_switch = zone_config.get("adaptive_lighting_switch")
-                lights = zone_config.get("lights", [])
-
-                if al_switch and lights:
-                    await self.hass.services.async_call(
-                        ADAPTIVE_LIGHTING_DOMAIN,
-                        "set_manual_control",
-                        {
-                            "entity_id": al_switch,
-                            "lights": lights,
-                            "manual_control": False,  # Restore AL control
-                        },
-                        # blocking removed to ensure completion
-                    )
+            # CRITICAL FIX: Don't bulk clear manual_control for ALL lights
+            # Scene actions handle specific lights that need manual_control
+            # Passing all zone lights forces AL to update everything, breaking stickiness
+            # Pattern from implementation_1.yaml: Let scene actions handle manual_control
         else:
             # DEPRECATED: Update global offsets for backward compatibility with tests
             # These will be used if per-zone offsets not found (transition period)
@@ -1716,6 +1843,18 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     service_data,
                 )
 
+                # CRITICAL: Apply the changes immediately
+                # Pattern from implementation_1.yaml: Always call apply after change_switch_settings
+                # Do NOT pass lights parameter - let AL respect manual_control state
+                await self.hass.services.async_call(
+                    ADAPTIVE_LIGHTING_DOMAIN,
+                    "apply",
+                    {
+                        "entity_id": al_switch,
+                        "turn_on_lights": False,  # Don't turn on, just adjust
+                    },
+                )
+
                 _LOGGER.debug(
                     "Updated AL boundaries for zone %s with scene offsets (%d%%, %dK): min=%d%%, max=%d%%",
                     zone_id,
@@ -1750,7 +1889,7 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._current_scene
 
     async def clear_scene_offsets(self) -> None:
-        """Clear scene offsets and return to DEFAULT scene.
+        """Clear scene offsets and return to AUTO scene.
 
         This is the proper API for resetting scene state. Used by:
         - reset_manual_adjustments service
@@ -1760,8 +1899,8 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         self._scene_brightness_offset = 0
         self._scene_warmth_offset = 0
-        self._current_scene = Scene.DEFAULT
-        _LOGGER.info("Scene offsets cleared, returned to DEFAULT scene")
+        self._current_scene = Scene.AUTO
+        _LOGGER.info("Scene offsets cleared, returned to AUTO scene")
 
     # ========== Public API: Pause State ==========
 
@@ -1871,10 +2010,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             Datetime of next alarm, or None if no alarm set
         """
         state = self._wake_sequence.get_state_dict()
-        alarm_str = state.get("alarm_time")
-        if not alarm_str:
-            return None
-        return datetime.fromisoformat(alarm_str)
+        alarm_time = state.get("alarm_time")
+        # alarm_time is now a datetime object, not a string
+        return alarm_time
 
     def get_wake_start_time(self) -> datetime | None:
         """Get when wake sequence starts (alarm time minus duration).
@@ -1883,10 +2021,9 @@ class ALPDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             Datetime when wake sequence begins, or None if no alarm set
         """
         state = self._wake_sequence.get_state_dict()
-        start_str = state.get("wake_start_time")
-        if not start_str:
-            return None
-        return datetime.fromisoformat(start_str)
+        start_time = state.get("wake_start_time")
+        # start_time is now a datetime object, not a string
+        return start_time
 
     def get_wake_sequence_enabled(self) -> bool:
         """Get wake sequence enabled state.

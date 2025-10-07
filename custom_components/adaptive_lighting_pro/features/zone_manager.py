@@ -198,7 +198,7 @@ class ZoneManager:
                 restored_count += 1
 
                 _LOGGER.debug(
-                    "Restored state for zone %s: manual_active=%s, timer_expiry=%s",
+                    "Restored state for zone %s from hass.data: manual_active=%s, timer_expiry=%s",
                     zone_id,
                     restored_state.manual_control_active,
                     restored_state.timer_expiry,
@@ -209,7 +209,50 @@ class ZoneManager:
                     "Failed to restore state for zone %s: %s", zone_id, err
                 )
 
-        _LOGGER.info("Restored state for %d zones", restored_count)
+        _LOGGER.info("Restored state for %d zones from hass.data", restored_count)
+
+        # CRITICAL FIX: Also check timer entity states (they have restore: true)
+        # This handles the case where HA restarted and timer entities restored
+        # but hass.data was lost (in-memory only, not persisted)
+        timer_restored_count = 0
+        for zone_id in self._zone_states.keys():
+            timer_entity_id = f"timer.alp_manual_{zone_id}"
+            timer_state = self.hass.states.get(timer_entity_id)
+
+            if timer_state and timer_state.state == "active":
+                # Timer entity is active, restore zone state from it
+                finishes_at = timer_state.attributes.get("finishes_at")
+                duration_str = timer_state.attributes.get("duration", "0:00:00")
+
+                if finishes_at:
+                    try:
+                        # Parse finish time
+                        timer_expiry = datetime.fromisoformat(finishes_at.replace("Z", "+00:00"))
+
+                        # Parse duration (format: "H:MM:SS")
+                        time_parts = duration_str.split(":")
+                        duration_seconds = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
+
+                        # Check if timer already expired
+                        if timer_expiry > now:
+                            # Restore zone state from timer
+                            self._zone_states[zone_id].manual_control_active = True
+                            self._zone_states[zone_id].timer_expiry = timer_expiry
+                            self._zone_states[zone_id].timer_duration = duration_seconds
+                            self._zone_states[zone_id].last_manual_trigger = timer_expiry - timedelta(seconds=duration_seconds)
+
+                            timer_restored_count += 1
+                            _LOGGER.info(
+                                "Restored zone %s from timer entity: expires=%s, remaining=%ds",
+                                zone_id,
+                                timer_expiry.isoformat(),
+                                (timer_expiry - now).total_seconds(),
+                            )
+                    except Exception as err:
+                        _LOGGER.error("Failed to parse timer state for %s: %s", zone_id, err)
+
+        if timer_restored_count > 0:
+            _LOGGER.info("Restored state for %d zones from timer entities", timer_restored_count)
 
     async def async_persist_state(self) -> None:
         """Save current zone states to hass.data for persistence.
@@ -300,6 +343,25 @@ class ZoneManager:
             expiry.isoformat(),
         )
 
+        # CRITICAL FIX: Start actual HA timer entity
+        timer_entity = f"timer.alp_manual_{zone_id}"
+        try:
+            await self.hass.services.async_call(
+                "timer",
+                "start",
+                {
+                    "entity_id": timer_entity,
+                    "duration": duration,
+                },
+            )
+            _LOGGER.info("Started HA timer entity: %s for %ds", timer_entity, duration)
+        except Exception as err:
+            _LOGGER.error(
+                "Failed to start HA timer %s: %s (timer entity may not exist in YAML)",
+                timer_entity,
+                err,
+            )
+
         # Fire event for other components to react
         self.hass.bus.async_fire(
             EVENT_MANUAL_CONTROL_TRIGGERED,
@@ -334,6 +396,24 @@ class ZoneManager:
         state.manual_control_active = False
         state.timer_expiry = None
         state.timer_duration = 0
+
+        # CRITICAL FIX: Cancel actual HA timer entity
+        timer_entity = f"timer.alp_manual_{zone_id}"
+        try:
+            await self.hass.services.async_call(
+                "timer",
+                "cancel",
+                {
+                    "entity_id": timer_entity,
+                },
+            )
+            _LOGGER.info("Cancelled HA timer entity: %s", timer_entity)
+        except Exception as err:
+            _LOGGER.debug(
+                "Could not cancel HA timer %s: %s (may already be finished)",
+                timer_entity,
+                err,
+            )
 
         _LOGGER.info("Cancelled manual timer for zone %s", zone_id)
 

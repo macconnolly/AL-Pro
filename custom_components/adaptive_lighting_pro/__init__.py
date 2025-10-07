@@ -81,6 +81,8 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Optional("brightness_increment", default=5): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
         vol.Optional("color_temp_increment", default=500): vol.All(vol.Coerce(int), vol.Range(min=100, max=2000)),
         vol.Optional("manual_control_timeout", default=7200): vol.All(vol.Coerce(int), vol.Range(min=300, max=14400)),
+        vol.Optional("sonos_enabled", default=False): cv.boolean,
+        vol.Optional("sonos_alarm_sensor"): cv.entity_id,
         vol.Optional("zen32_enabled", default=False): cv.boolean,
         vol.Optional("zen32_button_entities"): dict,
         vol.Optional("zen32_button_actions"): dict,
@@ -88,6 +90,68 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Required("zones"): vol.All(cv.ensure_list, [ZONE_SCHEMA]),
     })
 }, extra=vol.ALLOW_EXTRA)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old config entries to new format.
+
+    This migration ensures that existing config entries have the proper nested structure
+    for integrations settings (Sonos, Zen32, wake sequence).
+
+    Version 1 → Version 2:
+    - Ensures integrations{} dict exists with proper keys
+    - Migrates any flat sonos_enabled/sonos_alarm_sensor to integrations{}
+    """
+    _LOGGER.info("Migrating config entry from version %s", config_entry.version)
+
+    if config_entry.version == 1:
+        # Get current data
+        data = {**config_entry.data}
+
+        # Ensure integrations dict exists
+        if "integrations" not in data:
+            data["integrations"] = {}
+
+        integrations = data["integrations"]
+
+        # Migrate any flat-level integration settings to nested structure
+        # (This handles old YAML imports before config_flow.py was fixed)
+        if "sonos_enabled" in data and "sonos_enabled" not in integrations:
+            integrations["sonos_enabled"] = data.pop("sonos_enabled")
+            _LOGGER.debug("Migrated sonos_enabled to integrations{}")
+
+        if "sonos_alarm_sensor" in data and "sonos_alarm_sensor" not in integrations:
+            integrations["sonos_alarm_sensor"] = data.pop("sonos_alarm_sensor")
+            _LOGGER.debug("Migrated sonos_alarm_sensor to integrations{}")
+
+        if "zen32_enabled" in data and "zen32_enabled" not in integrations:
+            integrations["zen32_enabled"] = data.pop("zen32_enabled")
+            _LOGGER.debug("Migrated zen32_enabled to integrations{}")
+
+        # Ensure all expected integration keys exist with defaults
+        integrations.setdefault("sonos_enabled", False)
+        integrations.setdefault("sonos_alarm_sensor", None)
+        integrations.setdefault("zen32_enabled", False)
+        integrations.setdefault("wake_sequence_enabled", False)
+        integrations.setdefault("wake_target_zone", "bedroom_primary")
+        integrations.setdefault("wake_duration", 900)  # 15 minutes in seconds
+        integrations.setdefault("wake_max_boost", 20)
+
+        data["integrations"] = integrations
+
+        # Update entry with migrated data and new version
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=data,
+            version=2,
+        )
+
+        _LOGGER.info("Migration to version 2 complete. Integrations: %s", integrations)
+        return True
+
+    # Unknown version - don't migrate
+    _LOGGER.warning("Unknown config entry version %s, migration skipped", config_entry.version)
+    return False
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
@@ -111,15 +175,6 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
     # Extract our config from the full config
     alp_config = config[DOMAIN]
-
-    # Check if a config entry already exists (avoid duplicate imports)
-    existing_entries = hass.config_entries.async_entries(DOMAIN)
-    if existing_entries:
-        _LOGGER.warning(
-            "Adaptive Lighting Pro already configured via UI. "
-            "YAML config will be ignored. Remove YAML config or delete UI config entry."
-        )
-        return True
 
     # Create a config entry from YAML (import source)
     # This will trigger async_setup_entry with the YAML data
@@ -196,17 +251,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             alarm_sensor=sonos_alarm_sensor,
         )
 
-        # Start monitoring Sonos alarm sensor
-        setup_ok = await sonos_integration.async_setup()
-        if setup_ok:
-            # Store reference for cleanup during unload
-            hass.data[DOMAIN][entry.entry_id]["sonos"] = sonos_integration
-            _LOGGER.info("Sonos integration setup complete, monitoring %s", sonos_alarm_sensor)
-        else:
-            _LOGGER.warning(
-                "Sonos integration setup failed. Wake sequence will not trigger automatically. "
-                "You can still manually trigger wake sequences via services."
-            )
+        # Start monitoring Sonos alarm sensor (with retry for template sensors)
+        # Template sensors from packages may not be ready immediately
+        import asyncio
+        for attempt in range(3):
+            setup_ok = await sonos_integration.async_setup()
+            if setup_ok:
+                # Store reference for cleanup during unload
+                hass.data[DOMAIN][entry.entry_id]["sonos"] = sonos_integration
+                _LOGGER.info("Sonos integration setup complete, monitoring %s", sonos_alarm_sensor)
+                break
+            elif attempt < 2:
+                _LOGGER.debug(
+                    "Sonos sensor not ready (attempt %d/3), retrying in 2 seconds...",
+                    attempt + 1
+                )
+                await asyncio.sleep(2)
+            else:
+                _LOGGER.warning(
+                    "Sonos integration setup failed after 3 attempts. "
+                    "Wake sequence will not trigger automatically. "
+                    "You can still manually trigger wake sequences via services."
+                )
     elif sonos_enabled:
         _LOGGER.warning(
             "Sonos integration enabled but no alarm_sensor configured. "
@@ -219,6 +285,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     zen32_button_entities = integrations_config.get("zen32_button_entities", {})
     zen32_button_actions = integrations_config.get("zen32_button_actions", {})
     zen32_debounce = integrations_config.get("zen32_debounce_duration", 0.5)
+
+    _LOGGER.debug(
+        "Zen32 config check: enabled=%s, button_entities=%s, button_actions=%s",
+        zen32_enabled,
+        zen32_button_entities,
+        zen32_button_actions,
+    )
 
     if zen32_enabled and zen32_button_entities:
         _LOGGER.info("Setting up Zen32 integration for physical button control")
@@ -261,6 +334,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         model="ALP v1.0",
         sw_version="1.0.0",
     )
+
+    # CRITICAL FIX: Listen for timer.finished events to restore adaptive control
+    async def handle_timer_finished(event):
+        """Handle timer.finished event to restore adaptive control for a zone."""
+        timer_id = event.data.get("entity_id", "")
+
+        # Only handle our ALP manual control timers
+        if not timer_id.startswith("timer.alp_manual_"):
+            return
+
+        # Extract zone_id from timer entity_id
+        # timer.alp_manual_main_living → main_living
+        zone_id = timer_id.replace("timer.alp_manual_", "")
+
+        _LOGGER.info("Timer finished for zone %s, restoring adaptive control", zone_id)
+
+        # Restore adaptive control via coordinator
+        try:
+            await coordinator._restore_adaptive_control(zone_id)
+        except Exception as err:
+            _LOGGER.error(
+                "Failed to restore adaptive control for zone %s after timer finished: %s",
+                zone_id,
+                err,
+                exc_info=True,
+            )
+
+    # Register timer.finished event listener and store unload callback
+    entry.async_on_unload(
+        hass.bus.async_listen("timer.finished", handle_timer_finished)
+    )
+    _LOGGER.info("Registered timer.finished event listener for manual control timers")
 
     # Register services (once globally for all instances)
     if DOMAIN not in hass.data or len(hass.data[DOMAIN]) == 1:

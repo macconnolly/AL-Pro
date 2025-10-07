@@ -11,6 +11,7 @@ Following claude.md: "You can't improve what you can't see"
 from __future__ import annotations
 
 import datetime as dt
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -115,9 +116,7 @@ class WakeSequenceOffsetSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize wake sequence offset sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_wake_sequence_offset"
-        self._attr_name = "ALP Wake Sequence Offset"
+        super().__init__(coordinator, config_entry, "sensor", "wake_sequence_offset", "ALP Wake Sequence Offset")
 
     @property
     def native_value(self) -> int:
@@ -155,13 +154,11 @@ class NextAlarmSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize next alarm sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_next_alarm"
-        self._attr_name = "ALP Next Alarm"
+        super().__init__(coordinator, config_entry, "sensor", "next_alarm", "ALP Next Alarm")
 
     @property
-    def native_value(self) -> str | None:
-        """Return next alarm time as ISO timestamp."""
+    def native_value(self) -> datetime | None:
+        """Return next alarm time as datetime object."""
         if not self.coordinator.data:
             return None
         wake_state = self.coordinator.data.get("wake_sequence", {})
@@ -189,13 +186,11 @@ class WakeStartTimeSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize wake start time sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_wake_start_time"
-        self._attr_name = "ALP Wake Start Time"
+        super().__init__(coordinator, config_entry, "sensor", "wake_start_time", "ALP Wake Start Time")
 
     @property
-    def native_value(self) -> str | None:
-        """Return wake start time (alarm - 15min) as ISO timestamp."""
+    def native_value(self) -> datetime | None:
+        """Return wake start time (alarm - 15min) as datetime object."""
         if not self.coordinator.data:
             return None
         wake_state = self.coordinator.data.get("wake_sequence", {})
@@ -227,9 +222,7 @@ class EnvironmentalBoostSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize environmental boost sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_environmental_boost"
-        self._attr_name = "ALP Environmental Boost"
+        super().__init__(coordinator, config_entry, "sensor", "environmental_boost", "ALP Environmental Boost")
 
     @property
     def native_value(self) -> int:
@@ -258,9 +251,7 @@ class SunsetBoostSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize sunset boost sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_sunset_boost"
-        self._attr_name = "ALP Sunset Boost"
+        super().__init__(coordinator, config_entry, "sensor", "sunset_boost", "ALP Sunset Boost")
 
     @property
     def native_value(self) -> int:
@@ -287,9 +278,7 @@ class CurrentSceneSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize current scene sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_current_scene"
-        self._attr_name = "ALP Current Scene"
+        super().__init__(coordinator, config_entry, "sensor", "current_scene", "ALP Current Scene")
 
     @property
     def native_value(self) -> str:
@@ -321,9 +310,7 @@ class BrightnessAdjustmentSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize brightness adjustment sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_brightness_adjustment"
-        self._attr_name = "ALP Brightness Adjustment"
+        super().__init__(coordinator, config_entry, "sensor", "brightness_adjustment", "ALP Brightness Adjustment")
 
     @property
     def native_value(self) -> int:
@@ -340,9 +327,7 @@ class WarmthAdjustmentSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize warmth adjustment sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_warmth_adjustment"
-        self._attr_name = "ALP Warmth Adjustment"
+        super().__init__(coordinator, config_entry, "sensor", "warmth_adjustment", "ALP Warmth Adjustment")
 
     @property
     def native_value(self) -> int:
@@ -357,9 +342,7 @@ class HealthStatusSensor(ALPEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         """Initialize health status sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_health_status"
-        self._attr_name = "ALP Health Status"
+        super().__init__(coordinator, config_entry, "sensor", "health_status", "ALP Health Status")
 
     @property
     def native_value(self) -> str:
@@ -375,9 +358,10 @@ class HealthStatusSensor(ALPEntity, SensorEntity):
             return {}
 
         global_data = self.coordinator.data.get("global", {})
+        last_update = self.coordinator.get_last_update_time()
         return {
             "health_score": global_data.get("health_score", 0),
-            "last_update": self.coordinator.last_update_success_time.isoformat() if self.coordinator.last_update_success_time else None,
+            "last_update": last_update.isoformat() if last_update else None,
         }
 
 # ==================== PHASE 2.3: COMPREHENSIVE SENSOR SUITE ====================
@@ -608,12 +592,23 @@ class ZoneManualControlSensor(ALPEntity, SensorEntity):
         timer_remaining = zone_data.get("timer_remaining", 0)
         timer_remaining_display = self._format_time_remaining(timer_remaining)
 
+        # CRITICAL FIX: Expose AL's manual_control list so we know which lights are locked
+        # This comes from the AL switch attributes and lists specific entity_ids
+        al_manual_control = zone_data.get("al_manual_control", [])
+        if isinstance(al_manual_control, bool):
+            # Old format compatibility - convert bool to empty list
+            al_manual_control = []
+
         return {
             "manual_control_active": zone_data.get("manual_control_active", False),
             "timer_remaining_seconds": timer_remaining,
             "timer_remaining": timer_remaining_display,
             "timer_finishes_at": zone_data.get("timer_finishes_at"),
             "controlled_lights": zone_config.get("lights", []),
+            # CRITICAL: AL's list of lights that have manual_control set
+            "al_manual_control_lights": al_manual_control,
+            # Count of lights with AL manual control
+            "al_manual_control_count": len(al_manual_control) if isinstance(al_manual_control, list) else 0,
         }
 
     def _format_time_remaining(self, seconds: float) -> str:
@@ -795,14 +790,20 @@ class SystemHealthSensor(ALPEntity, SensorEntity):
         
         zones = self.coordinator.data.get("zones", {})
         online_switches = [zone_id for zone_id, zone in zones.items() if zone.get("adaptive_lighting_active")]
-        
+
+        last_update = self.coordinator.get_last_update_time()
+
+        # Handle None from current_lux during startup
+        current_lux = self.coordinator.data.get("environmental", {}).get("current_lux")
+        env_status = "OK" if current_lux and current_lux > 0 else "Degraded"
+
         return {
             "health_score": self._calculate_health_score(),
             "switches_online": len(online_switches),
             "total_switches": len(zones),
             "online_switch_ids": online_switches,
-            "last_successful_adjustment": self.coordinator.last_update_success_time.isoformat() if self.coordinator.last_update_success_time else None,
-            "environmental_sensors_status": "OK" if self.coordinator.data.get("environmental", {}).get("current_lux", 0) > 0 else "Degraded",
+            "last_successful_adjustment": last_update.isoformat() if last_update else None,
+            "environmental_sensors_status": env_status,
             "boundary_collapse_warnings": [
                 zone_id for zone_id, zone in zones.items()
                 if zone.get("computed_brightness_range", {}).get("boundary_collapsed", False)
@@ -816,15 +817,14 @@ class PerformanceMetricsSensor(ALPEntity, SensorEntity):
     _attr_icon = "mdi:speedometer"
 
     def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_performance_metrics"
-        self._attr_name = "ALP Performance Metrics"
+        super().__init__(coordinator, config_entry, "sensor", "performance_metrics", "ALP Performance Metrics")
         self._last_update_count = 0
         self._daily_updates = []
 
     @property
     def native_value(self):
-        return "Active" if self.coordinator.last_updated else "Idle"
+        last_update = self.coordinator.get_last_update_time()
+        return "Active" if last_update else "Idle"
 
     @property
     def extra_state_attributes(self):
@@ -832,8 +832,9 @@ class PerformanceMetricsSensor(ALPEntity, SensorEntity):
         today_count = len([t for t in self._daily_updates
                           if t.date() == dt.datetime.now().date()])
 
+        last_update = self.coordinator.get_last_update_time()
         return {
-            "last_calculation": self.coordinator.last_updated,
+            "last_calculation": last_update.isoformat() if last_update else None,
             "total_automations_today": today_count,
             "avg_lights_per_zone": len(self.coordinator.zones),
             "response_time_ms": self.coordinator.data.get("last_update_duration_ms", 0)
@@ -846,9 +847,7 @@ class UsageStatisticsSensor(ALPEntity, SensorEntity):
     _attr_icon = "mdi:chart-timeline-variant"
 
     def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_usage_statistics"
-        self._attr_name = "ALP Usage Statistics"
+        super().__init__(coordinator, config_entry, "sensor", "usage_statistics", "ALP Usage Statistics")
         self._mode_start_time = dt.datetime.now()
         self._current_mode = "auto"
 
@@ -880,9 +879,7 @@ class ActiveLightsCountSensor(ALPEntity, SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config_entry, hass):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_active_lights_count"
-        self._attr_name = "ALP Active Lights Count"
+        super().__init__(coordinator, config_entry, "sensor", "active_lights_count", "ALP Active Lights Count")
         self.hass = hass
 
     @property
@@ -916,9 +913,7 @@ class ManualAdjustmentStatusSensor(ALPEntity, SensorEntity):
     _attr_icon = "mdi:timer-cog-outline"
 
     def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_manual_adjustment_status"
-        self._attr_name = "ALP Manual Adjustment Status"
+        super().__init__(coordinator, config_entry, "sensor", "manual_adjustment_status", "ALP Manual Adjustment Status")
 
     @property
     def native_value(self):
@@ -948,9 +943,7 @@ class BrightnessStatusSensor(ALPEntity, SensorEntity):
     _attr_icon = "mdi:brightness-percent"
 
     def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_brightness_status"
-        self._attr_name = "ALP Brightness Status"
+        super().__init__(coordinator, config_entry, "sensor", "brightness_status", "ALP Brightness Status")
 
     @property
     def native_value(self):
@@ -969,9 +962,7 @@ class WakeSequenceStatusSensor(ALPEntity, SensorEntity):
     _attr_icon = "mdi:alarm"
 
     def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{config_entry.entry_id}_wake_sequence_status"
-        self._attr_name = "ALP Wake Sequence Status"
+        super().__init__(coordinator, config_entry, "sensor", "wake_sequence_status", "ALP Wake Sequence Status")
 
     @property
     def native_value(self):
