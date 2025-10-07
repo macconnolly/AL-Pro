@@ -354,6 +354,8 @@ class AdaptiveLightingProRealtimeSensor(AdaptiveLightingProEntity, SensorEntity)
         self._unsubscribe = self.hass.bus.async_listen(
             "adaptive_lighting_calculation_complete", self._handle_event
         )
+        self._apply_event_data(self._runtime.last_calculation_event())
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsubscribe:
@@ -363,6 +365,10 @@ class AdaptiveLightingProRealtimeSensor(AdaptiveLightingProEntity, SensorEntity)
 
     async def _handle_event(self, event) -> None:
         data = getattr(event, "data", {}) or {}
+        self._apply_event_data(data)
+        self.async_write_ha_state()
+
+    def _apply_event_data(self, data: Dict[str, Any]) -> None:
         brightness = int(data.get("final_brightness_adjustment", 0) or 0)
         warmth = int(data.get("final_warmth_adjustment", 0) or 0)
         if brightness > 0:
@@ -386,7 +392,10 @@ class AdaptiveLightingProRealtimeSensor(AdaptiveLightingProEntity, SensorEntity)
             "mode": data.get("mode"),
             "scene": data.get("scene"),
         }
-        self.async_write_ha_state()
+
+    def _handle_update(self) -> None:
+        self._apply_event_data(self._runtime.last_calculation_event())
+        super()._handle_update()
 
     @property
     def native_value(self) -> str:

@@ -136,6 +136,28 @@ class TimerManager:
         delta = expires - datetime.now(UTC)
         return max(0, int(delta.total_seconds()))
 
+    def snapshot(self) -> Dict[str, Dict[str, object]]:
+        """Return a diagnostic snapshot of active timers."""
+
+        data: Dict[str, Dict[str, object]] = {}
+        for zone_id in self._zone_multipliers.keys():
+            expires = self._expires.get(zone_id)
+            data[zone_id] = {
+                "remaining": self.remaining(zone_id),
+                "expires_at": expires,
+                "zone_multiplier": self._zone_multipliers.get(zone_id, 1.0),
+                "mode_multiplier": self._mode_multipliers.get(
+                    self._current_mode, 1.0
+                ),
+                "environment_multiplier": self._env_multiplier
+                if self._env_boost_active
+                else 1.0,
+                "environment_active": bool(self._env_boost_active)
+                and self._current_mode == "adaptive"
+                and self._zone_env_enabled.get(zone_id, True),
+            }
+        return data
+
     def _is_daytime(self) -> bool:
         state = self._hass.states.get("sun.sun")
         if state is None:

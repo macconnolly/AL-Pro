@@ -21,7 +21,7 @@ Adaptive Lighting Pro replaces the legacy YAML package with a production-grade H
 - **Documentation** – Published `YAML_MIGRATION_COMPLETE.md` and `KNOWN_ISSUES.md` so migration status and deferred enhancements remain visible to future contributors.
 - **Sunrise Visibility** – Introduced `sensor.alp_sonos_anchor`, runtime anchor snapshots, reminder automations, and accompanying regression tests in `tests/test_sonos_parser.py`.
 - **Presence & Holiday UX** – Reintroduced advanced away/return, seasonal scheduling, and holiday scene logic in `implementation_2.yaml` using only public services.
-- **Observability Parity** – Restored the legacy status/realtime sensors and unified `adaptive_lighting_calculation_complete` event emission across sync, adjust, and environmental flows, with coverage in `tests/test_status_sensors.py`.
+- **Observability Parity** – Restored the legacy status/realtime sensors and unified `adaptive_lighting_calculation_complete` event emission across sync, adjust, and environmental flows, with coverage in `tests/test_status_sensors.py`. The runtime now caches the latest calculation payload so entities remain accurate even if Home Assistant misses the live bus event.
 
 ## Implementation_2 Companion Package
 The delivered `implementation_2.yaml` leverages the integration’s public APIs without recreating business logic. Highlights include:

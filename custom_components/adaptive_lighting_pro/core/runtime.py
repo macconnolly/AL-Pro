@@ -166,6 +166,28 @@ class AdaptiveLightingProRuntime:
             self._scene_offset_user["brightness"],
             self._scene_offset_user["warmth"],
         )
+        self._manual_brightness_total = 0
+        self._manual_warmth_total = 0
+        self._manual_history: Dict[str, datetime | None] = {
+            "brighter": None,
+            "dimmer": None,
+            "warmer": None,
+            "cooler": None,
+            "clear_brightness": None,
+            "clear_warmth": None,
+            "clear_all": None,
+            "manual_adjust": None,
+        }
+        self._adjustment_components: Dict[str, int] = {
+            "manual_brightness": 0,
+            "manual_warmth": 0,
+            "scene_brightness": 0,
+            "scene_warmth": 0,
+            "environmental_boost": 0,
+            "sunset_boost": 0,
+            "final_brightness": 0,
+            "final_warmth": 0,
+        }
         self._mode_aliases = dict(MODE_ALIASES)
         self._sunset_boost_pct = 0
         self._sunset_active = False
@@ -185,11 +207,36 @@ class AdaptiveLightingProRuntime:
         self._global_pause = False
         self._adjust_brightness_step = DEFAULT_BRIGHTNESS_STEP
         self._adjust_color_temp_step = DEFAULT_COLOR_TEMP_STEP
+        self._environmental_state: Dict[str, Any] = {
+            "active": False,
+            "lux": None,
+            "cloud_coverage": None,
+            "elevation": None,
+            "boost_pct": 0,
+            "sunset_boost_pct": 0,
+            "multiplier": 1.0,
+        }
+        self._last_mode_change: datetime | None = None
+        self._last_scene_change: datetime | None = None
         self._last_event: Dict[str, Any] = {
             "event": "startup",
             "timestamp": dt_util.now().isoformat(),
             "details": {},
         }
+        self._last_calculation_event: Dict[str, Any] = {
+            "timestamp": dt_util.now().isoformat(),
+            "trigger_source": "startup",
+            "final_brightness_adjustment": 0,
+            "final_warmth_adjustment": 0,
+            "components": dict(self._adjustment_components),
+            "environmental_active": False,
+            "environmental": dict(self._environmental_state),
+            "zones_updated": [],
+            "zones_calculated": [],
+            "mode": self._mode_manager.mode,
+            "scene": self._scene_manager.scene,
+        }
+        self._recalculate_adjustments()
 
     async def async_setup(self) -> None:
         self._apply_zone_configuration()
@@ -201,6 +248,7 @@ class AdaptiveLightingProRuntime:
         self._register_services()
         self._event_bus.post(EVENT_STARTUP_COMPLETE)
         self._notify_entities()
+        self._emit_calculation_event("startup")
 
     async def async_unload(self) -> None:
         if self._manual_observer:
@@ -384,6 +432,90 @@ class AdaptiveLightingProRuntime:
             "details": details,
         }
 
+    def _recalculate_adjustments(self) -> None:
+        env_active = bool(self._environmental_state.get("active"))
+        env_boost = int(self._environmental_state.get("boost_pct") or 0)
+        if not env_active:
+            env_boost = 0
+        sunset_boost = self._sunset_boost_pct if self._sunset_active else 0
+        components = {
+            "manual_brightness": int(self._manual_brightness_total),
+            "manual_warmth": int(self._manual_warmth_total),
+            "scene_brightness": int(self._scene_offsets.get("brightness", 0)),
+            "scene_warmth": int(self._scene_offsets.get("warmth", 0)),
+            "environmental_boost": int(env_boost),
+            "sunset_boost": int(sunset_boost),
+        }
+        components["final_brightness"] = (
+            components["manual_brightness"]
+            + components["scene_brightness"]
+            + components["environmental_boost"]
+            + components["sunset_boost"]
+        )
+        components["final_warmth"] = (
+            components["manual_warmth"] + components["scene_warmth"]
+        )
+        self._adjustment_components = components
+
+    def _update_manual_totals(
+        self, *, brightness_delta: int = 0, warmth_delta: int = 0
+    ) -> None:
+        changed = False
+        if brightness_delta:
+            new_brightness = self._clamp(
+                self._manual_brightness_total + brightness_delta, -100, 100
+            )
+            if new_brightness != self._manual_brightness_total:
+                self._manual_brightness_total = new_brightness
+                changed = True
+        if warmth_delta:
+            new_warmth = max(
+                -4000, min(4000, self._manual_warmth_total + warmth_delta)
+            )
+            if new_warmth != self._manual_warmth_total:
+                self._manual_warmth_total = new_warmth
+                changed = True
+        if changed:
+            self._manual_history["manual_adjust"] = dt_util.utcnow()
+            self._recalculate_adjustments()
+
+    def _reset_manual_adjustments(self) -> None:
+        if self._manual_brightness_total == 0 and self._manual_warmth_total == 0:
+            return
+        self._manual_brightness_total = 0
+        self._manual_warmth_total = 0
+        self._manual_history["clear_all"] = dt_util.utcnow()
+        self._recalculate_adjustments()
+
+    def _emit_calculation_event(
+        self,
+        trigger_source: str,
+        *,
+        zones: List[str] | None = None,
+        details: Dict[str, Any] | None = None,
+    ) -> None:
+        payload: Dict[str, Any] = {
+            "timestamp": dt_util.utcnow().isoformat(),
+            "trigger_source": trigger_source,
+            "final_brightness_adjustment": self._adjustment_components.get(
+                "final_brightness", 0
+            ),
+            "final_warmth_adjustment": self._adjustment_components.get(
+                "final_warmth", 0
+            ),
+            "components": dict(self._adjustment_components),
+            "environmental_active": bool(self._environmental_state.get("active")),
+            "environmental": dict(self._environmental_state),
+            "zones_updated": zones or [],
+            "zones_calculated": list(self._zone_manager.as_dict().keys()),
+            "mode": self._mode_manager.mode,
+            "scene": self._scene_manager.scene,
+        }
+        if details:
+            payload.update(details)
+        self._last_calculation_event = dict(payload)
+        self._hass.bus.async_fire("adaptive_lighting_calculation_complete", payload)
+
     def _handle_scene_offsets_changed(self, brightness: int, warmth: int) -> None:
         brightness = int(brightness)
         warmth = int(warmth)
@@ -396,10 +528,15 @@ class AdaptiveLightingProRuntime:
         self._record_event(
             "scene_offsets_changed", brightness=brightness, warmth=warmth
         )
+        self._recalculate_adjustments()
         self._notify_entities()
+        self._emit_calculation_event("scene_offsets", zones=[])
 
     def _record_manual_action(self, action: str) -> None:
+        now = dt_util.utcnow()
+        self._manual_history[action] = now
         updated = False
+        adjustments_changed = False
         if action == "brighter":
             updated |= not self._manual_action_flags["brighter"]
             self._manual_action_flags["brighter"] = True
@@ -432,6 +569,9 @@ class AdaptiveLightingProRuntime:
                 updated = True
             self._manual_action_flags["brighter"] = False
             self._manual_action_flags["dimmer"] = False
+            if self._manual_brightness_total != 0:
+                self._manual_brightness_total = 0
+                adjustments_changed = True
         elif action == "clear_warmth":
             if (
                 self._manual_action_flags["warmer"]
@@ -440,12 +580,21 @@ class AdaptiveLightingProRuntime:
                 updated = True
             self._manual_action_flags["warmer"] = False
             self._manual_action_flags["cooler"] = False
+            if self._manual_warmth_total != 0:
+                self._manual_warmth_total = 0
+                adjustments_changed = True
         elif action == "clear_all":
             if any(self._manual_action_flags.values()):
                 updated = True
             for key in self._manual_action_flags:
                 self._manual_action_flags[key] = False
-        if updated:
+            if self._manual_brightness_total or self._manual_warmth_total:
+                self._manual_brightness_total = 0
+                self._manual_warmth_total = 0
+                adjustments_changed = True
+        if adjustments_changed:
+            self._recalculate_adjustments()
+        if updated or adjustments_changed:
             self._notify_entities()
 
     def _reset_manual_flags(self, *, brightness: bool = True, warmth: bool = True) -> None:
@@ -570,6 +719,7 @@ class AdaptiveLightingProRuntime:
             )
             self._previous_mode = None
             self._reset_manual_flags()
+            self._reset_manual_adjustments()
         return cleared
 
     async def _toggle_all_lights(self) -> None:
@@ -589,6 +739,7 @@ class AdaptiveLightingProRuntime:
             for zone in self._zone_manager.zones()
         ):
             return
+        self._reset_manual_adjustments()
         mode_to_restore = self._previous_mode
         self._previous_mode = None
         self._reset_manual_flags()
@@ -621,6 +772,7 @@ class AdaptiveLightingProRuntime:
         self._beat("nightly_sweep")
         self._record_event("nightly_sweep", cleared=len(cleared))
         self._notify_entities()
+        self._emit_calculation_event("nightly_sweep", zones=[])
 
     async def _handle_manual_detected(self, zone: str, duration_s: int) -> None:
         self._beat("manual_detected")
@@ -652,6 +804,9 @@ class AdaptiveLightingProRuntime:
             switched_to_adaptive=pending_switch,
         )
         self._notify_entities()
+        self._emit_calculation_event(
+            "manual_detected", zones=[zone], details={"duration_s": duration_s}
+        )
 
     async def _handle_timer_expired(self, zone: str) -> None:
         self._beat("timer_expired")
@@ -662,6 +817,7 @@ class AdaptiveLightingProRuntime:
         self._event_bus.post(EVENT_SYNC_REQUIRED, reason="timer", zone=zone)
         self._record_event("timer_expired", zone=zone)
         self._notify_entities()
+        self._emit_calculation_event("timer_expired", zones=[zone])
 
     async def _handle_sync_required(self, reason: str, zone: str | None = None) -> None:
         self._beat("sync_required")
@@ -676,14 +832,18 @@ class AdaptiveLightingProRuntime:
     def _handle_mode_changed(self, mode: str) -> None:
         self._beat("mode_changed")
         self._health_monitor.set_mode(mode)
+        self._last_mode_change = dt_util.utcnow()
         self._record_event("mode_changed", mode=mode)
         self._notify_entities()
+        self._emit_calculation_event("mode", zones=[])
 
     def _handle_scene_changed(self, scene: str) -> None:
         self._beat("scene_changed")
         self._health_monitor.set_scene(scene)
+        self._last_scene_change = dt_util.utcnow()
         self._record_event("scene_changed", scene=scene)
         self._notify_entities()
+        self._emit_calculation_event("scene", zones=[])
 
     def _handle_reset_requested(self, scope: str, zone: str | None = None) -> None:
         self._beat("reset_requested")
@@ -691,6 +851,7 @@ class AdaptiveLightingProRuntime:
             self._counters.increment("watchdog_resets")
         self._event_bus.post(EVENT_SYNC_REQUIRED, reason="reset", zone=zone)
         self._record_event("reset_requested", scope=scope, zone=zone)
+        self._emit_calculation_event("reset_requested", zones=[zone] if zone else [])
 
     async def _handle_environmental_changed(self, boost_active: bool, **payload: Any) -> None:
         mode = self._mode_manager.mode
@@ -706,12 +867,28 @@ class AdaptiveLightingProRuntime:
                 self._sunset_boost_pct = 0
                 self._sunset_active = False
                 await self._update_zone_boundaries()
+            self._environmental_state.update(
+                active=False,
+                lux=payload.get("lux"),
+                cloud_coverage=payload.get("cloud_coverage"),
+                elevation=payload.get("elevation"),
+                boost_pct=0,
+                sunset_boost_pct=sunset_boost,
+                multiplier=1.0,
+            )
             self._beat("environmental")
             self._record_event(
                 "environmental_skipped",
                 mode=mode,
                 boost_active=boost_active,
                 sunset_boost_pct=sunset_boost,
+            )
+            self._recalculate_adjustments()
+            self._notify_entities()
+            self._emit_calculation_event(
+                "environmental",
+                zones=[],
+                details={"skipped": True, "mode": mode},
             )
             return
         multiplier = payload.get("multiplier")
@@ -731,6 +908,29 @@ class AdaptiveLightingProRuntime:
             sunset_changed = True
         if sunset_changed:
             await self._update_zone_boundaries()
+        boost_value = self._environmental_state.get("boost_pct", 0)
+        if boost_active and "boost_pct" in payload:
+            try:
+                boost_value = int(payload.get("boost_pct") or 0)
+            except (TypeError, ValueError):  # pragma: no cover - defensive
+                boost_value = boost_value
+        if not boost_active:
+            boost_value = 0
+        self._environmental_state.update(
+            active=boost_active,
+            lux=payload.get("lux"),
+            cloud_coverage=payload.get("cloud_coverage"),
+            elevation=payload.get("elevation"),
+            boost_pct=boost_value,
+            sunset_boost_pct=self._sunset_boost_pct,
+            multiplier=multiplier if multiplier is not None else (
+                self._environmental_state.get("multiplier", 1.0)
+                if boost_active
+                else 1.0
+            ),
+        )
+        if not boost_active:
+            self._environmental_state["multiplier"] = 1.0
         self._beat("environmental")
         self._record_event(
             "environmental_changed",
@@ -738,7 +938,9 @@ class AdaptiveLightingProRuntime:
             multiplier=payload.get("multiplier"),
             sunset_boost_pct=self._sunset_boost_pct,
         )
+        self._recalculate_adjustments()
         self._notify_entities()
+        self._emit_calculation_event("environmental", zones=[])
 
     async def _handle_button_event(
         self, device: str, button: str | None = None, action: str | None = None
@@ -857,6 +1059,7 @@ class AdaptiveLightingProRuntime:
         )
         results = []
         rate_limited = False
+        updated_zone_ids: List[str] = []
         for zone_conf in zones:
             if self._zone_manager.manual_active(zone_conf.zone_id):
                 continue
@@ -876,10 +1079,16 @@ class AdaptiveLightingProRuntime:
                 result.get("error_code"),
             )
             results.append(result)
+            updated_zone_ids.append(zone_conf.zone_id)
         self._rate_limit_reached = rate_limited
         self._health_monitor.set_rate_load(self._rate_limiter.load)
         self._counters.increment("sync_requests")
         self._notify_entities()
+        self._emit_calculation_event(
+            "force_sync",
+            zones=updated_zone_ids,
+            details={"rate_limited": rate_limited, "requested_zone": zone},
+        )
         return {"status": "ok", "results": results}
 
     async def reset_zone(self, zone: str) -> Dict[str, Any]:
@@ -1037,7 +1246,16 @@ class AdaptiveLightingProRuntime:
             step_brightness=step_brightness_pct,
             step_color_temp=step_color_temp,
         )
+        self._update_manual_totals(
+            brightness_delta=step_brightness_pct or 0,
+            warmth_delta=step_color_temp or 0,
+        )
         self._notify_entities()
+        self._emit_calculation_event(
+            "manual_adjust",
+            zones=adjusted_zones,
+            details={"rate_limited": rate_limited},
+        )
         return {"status": "ok", "results": results}
 
     async def backup_prefs(self) -> Dict[str, Any]:
@@ -1252,6 +1470,47 @@ class AdaptiveLightingProRuntime:
             "sonos_anchor": anchor_snapshot,
         }
         return telemetry
+
+    def manual_brightness_total(self) -> int:
+        return int(self._manual_brightness_total)
+
+    def manual_warmth_total(self) -> int:
+        return int(self._manual_warmth_total)
+
+    def environmental_summary(self) -> Dict[str, Any]:
+        return dict(self._environmental_state)
+
+    def sunset_active(self) -> bool:
+        return self._sunset_active
+
+    def manual_action_history(self) -> Dict[str, datetime | None]:
+        return dict(self._manual_history)
+
+    def last_mode_change(self) -> datetime | None:
+        return self._last_mode_change
+
+    def last_scene_change(self) -> datetime | None:
+        return self._last_scene_change
+
+    def zone_timer_snapshot(self) -> Dict[str, Dict[str, Any]]:
+        return self._timer_manager.snapshot()
+
+    def zone_boundaries(self) -> Dict[str, Dict[str, Dict[str, int]]]:
+        data: Dict[str, Dict[str, Dict[str, int]]] = {}
+        for zone in self._zone_manager.zones():
+            baseline = self._zone_baselines.get(zone.zone_id, {})
+            current = self._current_zone_settings.get(zone.zone_id, baseline)
+            data[zone.zone_id] = {
+                "baseline": dict(baseline),
+                "current": dict(current),
+            }
+        return data
+
+    def adjustment_breakdown(self) -> Dict[str, int]:
+        return dict(self._adjustment_components)
+
+    def last_calculation_event(self) -> Dict[str, Any]:
+        return dict(self._last_calculation_event)
 
     def zone_sunrise_offset(self, zone_id: str) -> int:
         """Return the configured sunrise offset for a zone."""

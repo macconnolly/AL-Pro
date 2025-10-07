@@ -27,7 +27,7 @@ See [`docs/SCENARIO_VALIDATION.md`](docs/SCENARIO_VALIDATION.md) for end-to-end 
 
 ## Observability & Events
 - `sensor.alp_status` summarizes mode, scene, manual adjustments, timers, and health context for quick diagnostics.
-- `sensor.alp_realtime_monitor` mirrors the legacy realtime monitor sensor, exposing the latest calculation payload, trigger source, and resulting brightness/color-temperature adjustments.
+- `sensor.alp_realtime_monitor` mirrors the legacy realtime monitor sensor, exposing the latest calculation payload, trigger source, and resulting brightness/color-temperature adjustments, even after restarts thanks to the runtime caching the most recent `adaptive_lighting_calculation_complete` event.
 - Every runtime sync, manual adjustment, environmental update, or scene application fires the `adaptive_lighting_calculation_complete` event with serialized telemetry so dashboards and downstream automations continue to react instantly.
 
 ## Implementation Roadmap

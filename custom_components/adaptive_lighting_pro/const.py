@@ -205,6 +205,8 @@ SERVICE_SKIP_NEXT_ALARM: Final = "skip_next_alarm"
 RATE_LIMIT_ENTITY_ID: Final = "binary_sensor.alp_rate_limit_reached"
 SONOS_SKIP_ENTITY_ID: Final = "binary_sensor.alp_sonos_skip_next"
 
+STATUS_SENSOR_ID: Final = "sensor.alp_status"
+REALTIME_SENSOR_ID: Final = "sensor.alp_realtime_monitor"
 TELEMETRY_SENSOR_ID: Final = "sensor.alp_system_snapshot"
 HEALTH_SENSOR_ID: Final = "sensor.alp_health_score"
 ANALYTICS_SENSOR_ID: Final = "sensor.alp_analytics_summary"
