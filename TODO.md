@@ -65,3 +65,5 @@
 - Delivered `sensor.alp_sonos_anchor`, runtime anchor snapshots, and reminder automations so sunrise coordination is fully observable and actionable from dashboards.
 - Restored presence-aware pausing, arrival recovery, holiday scheduling, and sunset scene logic inside `implementation_2.yaml`, aligned with integration services only.
 - Expanded Lovelace examples and scenario validation docs to include analytics+scene stacks and sunrise monitoring guidance.
+- Fired `adaptive_lighting_calculation_complete` events from runtime operations and restored the legacy status/realtime monitoring sensors with equivalent attributes and manual adjustment telemetry.
+- Documented the calculation event, status/realtime sensors, and regression coverage across README, PROJECT_PLAN.md, YAML_MIGRATION_COMPLETE.md, KNOWN_ISSUES.md, and docs/SCENARIO_VALIDATION.md for long-term parity tracking.

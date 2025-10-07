@@ -8,7 +8,7 @@ Implementation_1’s 3,000+ lines of helpers have been replaced by the Adaptive 
 - **Environmental & Sunset Boosts** – Lux/weather/sun observers in `features/environmental.py` now deliver positive-only boosts with per-zone gating and adaptive-mode awareness.
 - **Modes & Scenes** – Configurable modes and four household scenes (Full Bright, No Spots, Evening Comfort, Ultra Dim) include manual timers, offset persistence, and reset affordances.
 - **Controllers & Sunrise** – Zen32 handling, Sonos alarm anchoring, skip-next service, upcoming-anchor sensor, and watchdog/nightly sweep schedules cover the automation-heavy routines from the YAML file.
-- **Observability** – Health score, analytics summary, manual action sensors, and rate-limit telemetry expose the runtime state that YAML sensors previously modeled.
+- **Observability** – Health score, analytics summary, manual action sensors, status/realtime monitor entities, and `adaptive_lighting_calculation_complete` events expose the runtime state that YAML sensors previously modeled.
 
 ## Companion Package Coverage
 - **Scene & Adjustment Scripts** – `implementation_2.yaml` wraps public services for scene selection, manual adjustments, zone resets, and backup/restore actions to keep Lovelace dashboards and voice assistants simple.

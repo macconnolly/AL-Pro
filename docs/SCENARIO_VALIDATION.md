@@ -156,6 +156,17 @@ This document proves key Adaptive Lighting Pro behaviors using concrete code ref
 
 **✅ VERIFIED**
 
+## Feature: Calculation Events & Status/Realtime Sensors
+**User Story**: Dashboards and downstream automations should keep working with the legacy realtime heartbeat and status summary without custom YAML.
+
+**Logic Trace**:
+1. Entry Point: All runtime calculations call `_emit_calculation_event` so every sync, manual adjustment, timer change, and environmental update fires `adaptive_lighting_calculation_complete` (`core/runtime.py` L613-L880, L1025-L1197).
+2. Data Flow: The realtime monitor sensor subscribes to the event bus, normalizes payloads, and updates state/attributes for dashboards (`sensor.py` L338-L380).
+3. State Changes: The status sensor reads manual totals, environmental summaries, scene offsets, timer snapshots, and adjustment breakdowns to replicate the original template sensor (`sensor.py` L121-L208).
+4. Exit Point: Regression test `tests/test_status_sensors.py` verifies event emission, realtime payloads, and status attributes after a manual adjust scenario.
+
+**✅ VERIFIED**
+
 ## Feature: Companion Package Integration Glue
 **User Story**: Household automations and scripts built in `implementation_2.yaml` should orchestrate the integration without re-implementing logic.
 

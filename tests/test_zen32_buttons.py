@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from custom_components.adaptive_lighting_pro.const import (
     CONF_SENSORS,
@@ -41,7 +42,7 @@ def test_zen32_scene_cycle_respects_mode(hass: HomeAssistant) -> None:
         ]
         runtime = await _setup_runtime(hass, zones)
 
-        async def fake_force_sync(zone: str | None = None) -> dict:
+        async def fake_force_sync(zone: str | None = None, **_: Any) -> dict:
             return {"status": "ok", "results": []}
 
         runtime.force_sync = fake_force_sync  # type: ignore[assignment]
@@ -164,7 +165,7 @@ def test_zen32_reset_clears_manual_and_restores_adaptive(hass: HomeAssistant) ->
         ]
         runtime = await _setup_runtime(hass, zones)
 
-        async def fake_force_sync(zone: str | None = None) -> dict:
+        async def fake_force_sync(zone: str | None = None, **_: Any) -> dict:
             return {"status": "ok", "results": []}
 
         runtime.force_sync = fake_force_sync  # type: ignore[assignment]

@@ -12,6 +12,9 @@ Adaptive Lighting Pro (ALP) is a Home Assistant custom integration that orchestr
 - Sonos-aware sunrise coordination with per-zone offsets, skip-next service, and binary sensor status
 - Retry, rate limiting, nightly sweep, watchdog, and observability metrics
 - Manual adjustment state sensors mirroring the legacy input booleans for brighter/dimmer/warmer/cooler actions
+- Status and realtime monitor sensors that replicate the original template sensors with calculation summaries and context
+- Emits the legacy `adaptive_lighting_calculation_complete` Home Assistant event for every sync, adjustment, or environmental up
+  date so downstream automations remain compatible
 - Upcoming sunrise anchor sensor with countdown attributes, skip toggles, and reminder automations
 
 ## Home Assistant Compatibility
@@ -21,6 +24,11 @@ Adaptive Lighting Pro (ALP) is a Home Assistant custom integration that orchestr
 
 ## Scenario Validation
 See [`docs/SCENARIO_VALIDATION.md`](docs/SCENARIO_VALIDATION.md) for end-to-end logic traces covering manual overrides, environmental boosts, scenes, controllers, sunrise coordination, and failure handling.
+
+## Observability & Events
+- `sensor.alp_status` summarizes mode, scene, manual adjustments, timers, and health context for quick diagnostics.
+- `sensor.alp_realtime_monitor` mirrors the legacy realtime monitor sensor, exposing the latest calculation payload, trigger source, and resulting brightness/color-temperature adjustments.
+- Every runtime sync, manual adjustment, environmental update, or scene application fires the `adaptive_lighting_calculation_complete` event with serialized telemetry so dashboards and downstream automations continue to react instantly.
 
 ## Implementation Roadmap
 - [`PROJECT_PLAN.md`](PROJECT_PLAN.md) captures the architectural vision, open parity themes, and how Adaptive Lighting Pro replaces the YAML package.
