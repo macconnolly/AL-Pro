@@ -338,4 +338,18 @@ sys.modules.setdefault("voluptuous", vol_module)
 
 @pytest.fixture
 def hass() -> HomeAssistant:
-    return HomeAssistant()
+    hass = HomeAssistant()
+    try:
+        yield hass
+        hass.loop.run_until_complete(asyncio.sleep(0))
+        pending = [
+            task for task in asyncio.all_tasks(hass.loop) if not task.done()
+        ]
+        for task in pending:
+            task.cancel()
+        if pending:
+            hass.loop.run_until_complete(
+                asyncio.gather(*pending, return_exceptions=True)
+            )
+    finally:
+        hass.loop.close()

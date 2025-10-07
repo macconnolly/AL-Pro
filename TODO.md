@@ -69,3 +69,4 @@
 - Fired `adaptive_lighting_calculation_complete` events from runtime operations and restored the legacy status/realtime monitoring sensors with equivalent attributes and manual adjustment telemetry.
 - Documented the calculation event, status/realtime sensors, and regression coverage across README, PROJECT_PLAN.md, YAML_MIGRATION_COMPLETE.md, KNOWN_ISSUES.md, and docs/SCENARIO_VALIDATION.md for long-term parity tracking.
 - Runtime now persists the latest calculation payload and replays it to realtime/status entities so dashboards reflect manual adjustments even when Home Assistant listeners miss the event bus tick.
+- Test harness now drains and cancels pending event-bus tasks after each scenario so pytest exits without lingering async warnings.
