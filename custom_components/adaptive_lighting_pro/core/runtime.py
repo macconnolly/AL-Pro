@@ -42,6 +42,7 @@ from ..const import (
     MODE_ALIASES,
     DOMAIN,
     EVENT_MANUAL_DETECTED,
+    EVENT_MANUAL_RELEASED,
     EVENT_ENVIRONMENTAL_CHANGED,
     EVENT_MODE_CHANGED,
     EVENT_RESET_REQUESTED,
@@ -59,10 +60,13 @@ from ..const import (
     SERVICE_FORCE_SYNC,
     SERVICE_RESET_ZONE,
     SERVICE_RESTORE_PREFS,
+    SERVICE_SET_ZONE_BOOST,
     SERVICE_SKIP_NEXT_ALARM,
     SERVICE_SELECT_MODE,
     SERVICE_SELECT_SCENE,
     SYNC_TRANSITION_SEC,
+    STORAGE_KEY_PREFIX,
+    STORAGE_VERSION,
 )
 from ..devices.zen32_handler import Zen32Config, Zen32Handler
 from ..features.environmental import EnvironmentalConfig, EnvironmentalObserver
@@ -79,6 +83,7 @@ from ..robustness.retry_manager import RetryManager
 from ..robustness.watchdog import Watchdog
 from ..utils.metrics import MetricsRegistry
 from ..utils.statistics import DailyCounters
+from ..utils.storage import StorageAdapter
 from ..utils.validators import validate_mode, validate_scene
 from .event_bus import EventBus
 from .executors import ExecutorManager
@@ -108,6 +113,12 @@ class AdaptiveLightingProRuntime:
             debug=bool(self._debug_config.get("debug_log", False)),
             trace=self._trace_enabled,
         )
+        self._storage = StorageAdapter(
+            hass,
+            STORAGE_VERSION,
+            f"{STORAGE_KEY_PREFIX}_{entry.entry_id}",
+        )
+        self._state_save_task: asyncio.Task | None = None
         self._timer_manager = TimerManager(
             hass, self._event_bus, debug=bool(self._debug_config.get("debug_log", False))
         )
@@ -246,11 +257,16 @@ class AdaptiveLightingProRuntime:
         self._setup_watchdog()
         self._schedule_nightly_sweep()
         self._register_services()
+        await self._restore_runtime_state()
         self._event_bus.post(EVENT_STARTUP_COMPLETE)
         self._notify_entities()
         self._emit_calculation_event("startup")
 
     async def async_unload(self) -> None:
+        await self._storage.async_save(self._serialize_runtime_state())
+        if self._state_save_task and not self._state_save_task.done():
+            self._state_save_task.cancel()
+        self._state_save_task = None
         if self._manual_observer:
             self._manual_observer.stop()
         if self._environmental:
@@ -303,6 +319,7 @@ class AdaptiveLightingProRuntime:
 
     def _register_event_handlers(self) -> None:
         self._event_bus.subscribe(EVENT_MANUAL_DETECTED, self._handle_manual_detected)
+        self._event_bus.subscribe(EVENT_MANUAL_RELEASED, self._handle_manual_released)
         self._event_bus.subscribe(EVENT_TIMER_EXPIRED, self._handle_timer_expired)
         self._event_bus.subscribe(EVENT_SYNC_REQUIRED, self._handle_sync_required)
         self._event_bus.subscribe(EVENT_MODE_CHANGED, self._handle_mode_changed)
@@ -432,6 +449,25 @@ class AdaptiveLightingProRuntime:
             "details": details,
         }
 
+    def _schedule_state_save(self) -> None:
+        if self._state_save_task and not self._state_save_task.done():
+            self._state_save_task.cancel()
+
+        async def _save() -> None:
+            await asyncio.sleep(0)
+            await self._storage.async_save(self._serialize_runtime_state())
+
+        self._state_save_task = self._hass.async_create_task(_save())
+
+    def _persist_runtime_state(self) -> None:
+        self._schedule_state_save()
+
+    def _serialize_runtime_state(self) -> Dict[str, Any]:
+        return {
+            "manual": self._zone_manager.manual_state_snapshot(),
+            "sunset_boost_pct": self._sunset_boost_pct if self._sunset_active else 0,
+        }
+
     def _recalculate_adjustments(self) -> None:
         env_active = bool(self._environmental_state.get("active"))
         env_boost = int(self._environmental_state.get("boost_pct") or 0)
@@ -456,6 +492,58 @@ class AdaptiveLightingProRuntime:
             components["manual_warmth"] + components["scene_warmth"]
         )
         self._adjustment_components = components
+
+    async def _restore_runtime_state(self) -> None:
+        data = await self._storage.async_load()
+        if not data:
+            return
+        manual_data = data.get("manual", {})
+        restored: List[str] = []
+        for zone_id, entry in manual_data.items():
+            try:
+                zone_conf = self._zone_manager.get_zone(zone_id)
+            except KeyError:
+                continue
+            if not entry.get("manual_active"):
+                continue
+            expires_iso = entry.get("manual_expires")
+            started_iso = entry.get("manual_started")
+            remaining = int(entry.get("timer_remaining", 0) or 0)
+            expires_at = dt_util.parse_datetime(expires_iso) if expires_iso else None
+            started_at = dt_util.parse_datetime(started_iso) if started_iso else None
+            if expires_at and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=dt_util.UTC)
+            if started_at and started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=dt_util.UTC)
+            if expires_at is not None:
+                remaining = max(
+                    0, int((expires_at - dt_util.utcnow()).total_seconds())
+                )
+            if remaining <= 0:
+                continue
+            if expires_at is None:
+                expires_at = dt_util.utcnow() + timedelta(seconds=remaining)
+            self._zone_manager.set_manual(
+                zone_id,
+                True,
+                remaining,
+                started_at=started_at,
+                expires_at=expires_at,
+            )
+            self._timer_manager.start(zone_id, remaining)
+            await self._executors.set_manual_control(zone_conf.al_switch, True)
+            restored.append(zone_id)
+        stored_sunset = int(data.get("sunset_boost_pct", 0) or 0)
+        if stored_sunset:
+            self._sunset_boost_pct = stored_sunset
+            self._sunset_active = stored_sunset > 0
+            self._recalculate_adjustments()
+        if restored:
+            self._record_event("manual_restore", zones=restored)
+            self._notify_entities()
+            self._emit_calculation_event("manual_restore", zones=restored)
+        if restored or stored_sunset:
+            self._persist_runtime_state()
 
     def _update_manual_totals(
         self, *, brightness_delta: int = 0, warmth_delta: int = 0
@@ -720,6 +808,7 @@ class AdaptiveLightingProRuntime:
             self._previous_mode = None
             self._reset_manual_flags()
             self._reset_manual_adjustments()
+            self._persist_runtime_state()
         return cleared
 
     async def _toggle_all_lights(self) -> None:
@@ -807,6 +896,38 @@ class AdaptiveLightingProRuntime:
         self._emit_calculation_event(
             "manual_detected", zones=[zone], details={"duration_s": duration_s}
         )
+        self._persist_runtime_state()
+
+    async def _handle_manual_released(
+        self,
+        zone: str,
+        source: str | None = None,
+        previous_lights: List[str] | None = None,
+    ) -> None:
+        self._beat("manual_released")
+        try:
+            zone_conf = self._zone_manager.get_zone(zone)
+        except KeyError:
+            return
+        timer_remaining = self._timer_manager.remaining(zone)
+        manual_active = self._zone_manager.manual_active(zone)
+        if manual_active:
+            self._zone_manager.set_manual(zone, False)
+        if timer_remaining > 0:
+            self._timer_manager.cancel(zone)
+        if manual_active:
+            await self._executors.set_manual_control(zone_conf.al_switch, False)
+        await self._restore_previous_mode_if_idle()
+        self._event_bus.post(EVENT_SYNC_REQUIRED, reason="manual_release", zone=zone)
+        self._record_event(
+            "manual_released",
+            zone=zone,
+            source=source,
+            previous_lights=previous_lights,
+        )
+        self._notify_entities()
+        self._emit_calculation_event("manual_release", zones=[zone])
+        self._persist_runtime_state()
 
     async def _handle_timer_expired(self, zone: str) -> None:
         self._beat("timer_expired")
@@ -818,6 +939,7 @@ class AdaptiveLightingProRuntime:
         self._record_event("timer_expired", zone=zone)
         self._notify_entities()
         self._emit_calculation_event("timer_expired", zones=[zone])
+        self._persist_runtime_state()
 
     async def _handle_sync_required(self, reason: str, zone: str | None = None) -> None:
         self._beat("sync_required")
@@ -941,6 +1063,7 @@ class AdaptiveLightingProRuntime:
         self._recalculate_adjustments()
         self._notify_entities()
         self._emit_calculation_event("environmental", zones=[])
+        self._persist_runtime_state()
 
     async def _handle_button_event(
         self, device: str, button: str | None = None, action: str | None = None
@@ -1096,6 +1219,7 @@ class AdaptiveLightingProRuntime:
         self._zone_manager.set_manual(zone, False)
         await self._executors.set_manual_control(zone_conf.al_switch, False)
         await self.force_sync(zone)
+        self._persist_runtime_state()
         return {"status": "ok"}
 
     async def enable_zone(self, zone: str) -> Dict[str, Any]:
@@ -1106,6 +1230,39 @@ class AdaptiveLightingProRuntime:
     async def disable_zone(self, zone: str) -> Dict[str, Any]:
         self._zone_manager.set_enabled(zone, False)
         return {"status": "ok"}
+
+    async def set_zone_boost(
+        self,
+        zone: str,
+        environmental: bool | None = None,
+        sunset: bool | None = None,
+    ) -> Dict[str, Any]:
+        changes: Dict[str, Any] = {}
+        if environmental is not None:
+            if self._zone_manager.set_environmental_boost_enabled(zone, bool(environmental)):
+                changes["environmental_boost_enabled"] = bool(environmental)
+        if sunset is not None:
+            if self._zone_manager.set_sunset_boost_enabled(zone, bool(sunset)):
+                changes["sunset_boost_enabled"] = bool(sunset)
+        if not changes:
+            return {"status": "ok", "updated": False}
+        overrides = dict(self._options.get(CONF_PER_ZONE_OVERRIDES, {}))
+        zone_override = dict(overrides.get(zone, {}))
+        zone_override.update(changes)
+        overrides[zone] = zone_override
+        self._options[CONF_PER_ZONE_OVERRIDES] = overrides
+        self._hass.config_entries.async_update_entry(
+            self._entry, options=dict(self._options)
+        )
+        if not self._zone_manager.manual_active(zone):
+            await self.force_sync(zone)
+        self._record_event("zone_boost_updated", zone=zone, changes=changes)
+        self._notify_entities()
+        self._emit_calculation_event(
+            "zone_boost", zones=[zone], details={"changes": changes}
+        )
+        self._persist_runtime_state()
+        return {"status": "ok", "updated": True, "changes": changes}
 
     async def skip_next_alarm(self, skip: bool = True) -> Dict[str, Any]:
         self._beat("sonos_skip")
@@ -1654,6 +1811,14 @@ class AdaptiveLightingProRuntime:
             SERVICE_SKIP_NEXT_ALARM,
             lambda call: self._hass.async_create_task(
                 _handle(call, self.skip_next_alarm)
+            ),
+            supports_response=True,
+        )
+        self._hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_ZONE_BOOST,
+            lambda call: self._hass.async_create_task(
+                _handle(call, self.set_zone_boost)
             ),
             supports_response=True,
         )

@@ -39,6 +39,7 @@ CONF_PER_ZONE_OVERRIDES: Final = "per_zone_overrides"
 EVENT_STARTUP_COMPLETE: Final = "alp_startup_complete"
 EVENT_SYNC_REQUIRED: Final = "alp_sync_required"
 EVENT_MANUAL_DETECTED: Final = "alp_manual_detected"
+EVENT_MANUAL_RELEASED: Final = "alp_manual_released"
 EVENT_TIMER_EXPIRED: Final = "alp_timer_expired"
 EVENT_ENVIRONMENTAL_CHANGED: Final = "alp_environmental_changed"
 EVENT_MODE_CHANGED: Final = "alp_mode_changed"
@@ -201,6 +202,7 @@ SERVICE_ADJUST: Final = "adjust"
 SERVICE_BACKUP_PREFS: Final = "backup_prefs"
 SERVICE_RESTORE_PREFS: Final = "restore_prefs"
 SERVICE_SKIP_NEXT_ALARM: Final = "skip_next_alarm"
+SERVICE_SET_ZONE_BOOST: Final = "set_zone_boost"
 
 RATE_LIMIT_ENTITY_ID: Final = "binary_sensor.alp_rate_limit_reached"
 SONOS_SKIP_ENTITY_ID: Final = "binary_sensor.alp_sonos_skip_next"
@@ -219,3 +221,6 @@ SWEEP_EVENT: Final = "alp_nightly_sweep"
 
 RETRY_ATTEMPTS: Final = 3
 RETRY_BACKOFFS: Final = [1, 2, 4]
+
+STORAGE_VERSION: Final = 1
+STORAGE_KEY_PREFIX: Final = "alp_runtime_state"

@@ -63,3 +63,16 @@ skip_next_alarm:
     skip:
       description: Set to false to re-enable the upcoming alarm anchor.
       example: true
+set_zone_boost:
+  name: Set Zone Boost
+  description: Enable or disable environmental and sunset boosts for a zone.
+  fields:
+    zone:
+      required: true
+      description: Zone id to update.
+    environmental:
+      description: Enable (true) or disable (false) environmental boost support.
+      example: true
+    sunset:
+      description: Enable (true) or disable (false) sunset boost support.
+      example: false

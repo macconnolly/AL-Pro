@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Dict, Iterable, List
 
 
@@ -23,6 +23,7 @@ class ZoneState:
     manual_active: bool = False
     manual_duration: int = 0
     manual_started: datetime | None = None
+    manual_expires: datetime | None = None
     last_sync_ms: int = 0
     last_error: str | None = None
 
@@ -81,11 +82,26 @@ class ZoneManager:
     def enabled_zones(self) -> List[ZoneConfig]:
         return [zone for zone in self._zones.values() if zone.enabled]
 
-    def set_manual(self, zone_id: str, active: bool, duration: int = 0) -> None:
+    def set_manual(
+        self,
+        zone_id: str,
+        active: bool,
+        duration: int = 0,
+        *,
+        started_at: datetime | None = None,
+        expires_at: datetime | None = None,
+    ) -> None:
         state = self._states[zone_id]
         state.manual_active = active
         state.manual_duration = duration
-        state.manual_started = datetime.now(UTC) if active else None
+        if active:
+            state.manual_started = started_at or datetime.now(UTC)
+            if expires_at is None:
+                expires_at = state.manual_started + timedelta(seconds=max(duration, 0))
+            state.manual_expires = expires_at
+        else:
+            state.manual_started = None
+            state.manual_expires = None
         if not active:
             self._timer_manager.cancel(zone_id)
 
@@ -96,12 +112,20 @@ class ZoneManager:
                 state.manual_active = False
                 state.manual_duration = 0
                 state.manual_started = None
+                state.manual_expires = None
                 self._timer_manager.cancel(zone_id)
                 cleared.append(zone_id)
         return cleared
 
     def manual_active(self, zone_id: str) -> bool:
         return self._states[zone_id].manual_active
+
+    def manual_remaining(self, zone_id: str) -> int:
+        expires = self._states[zone_id].manual_expires
+        if not expires:
+            return 0
+        delta = expires - datetime.now(UTC)
+        return max(0, int(delta.total_seconds()))
 
     def update_sync_result(self, zone_id: str, duration_ms: int, error: str | None) -> None:
         state = self._states[zone_id]
@@ -113,6 +137,20 @@ class ZoneManager:
 
     def zone_multiplier(self, zone_id: str) -> float:
         return self._zones[zone_id].zone_multiplier
+
+    def restore_manual_state(
+        self,
+        zone_id: str,
+        *,
+        started_at: datetime | None,
+        expires_at: datetime | None,
+        duration: int,
+    ) -> None:
+        state = self._states[zone_id]
+        state.manual_active = True
+        state.manual_duration = duration
+        state.manual_started = started_at
+        state.manual_expires = expires_at
 
     def apply_overrides(self, overrides: Dict[str, dict]) -> None:
         for zone_id, override in overrides.items():
@@ -137,6 +175,44 @@ class ZoneManager:
                 env_enabled=config.environmental_boost_enabled,
             )
 
+    def set_environmental_boost_enabled(self, zone_id: str, enabled: bool) -> bool:
+        config = self._zones[zone_id]
+        if config.environmental_boost_enabled == enabled:
+            return False
+        config.environmental_boost_enabled = enabled
+        self._timer_manager.configure_zone(
+            zone_id,
+            config.zone_multiplier,
+            env_enabled=config.environmental_boost_enabled,
+        )
+        return True
+
+    def set_sunset_boost_enabled(self, zone_id: str, enabled: bool) -> bool:
+        config = self._zones[zone_id]
+        if config.sunset_boost_enabled == enabled:
+            return False
+        config.sunset_boost_enabled = enabled
+        return True
+
+    def manual_state_snapshot(self) -> Dict[str, dict]:
+        snapshot: Dict[str, dict] = {}
+        for zone_id, config in self._zones.items():
+            state = self._states[zone_id]
+            snapshot[zone_id] = {
+                "manual_active": state.manual_active,
+                "manual_duration": state.manual_duration,
+                "manual_started": state.manual_started.isoformat()
+                if state.manual_started
+                else None,
+                "manual_expires": state.manual_expires.isoformat()
+                if state.manual_expires
+                else None,
+                "timer_remaining": self.manual_remaining(zone_id),
+                "environmental_boost_enabled": config.environmental_boost_enabled,
+                "sunset_boost_enabled": config.sunset_boost_enabled,
+            }
+        return snapshot
+
     def as_dict(self) -> Dict[str, dict]:
         result: Dict[str, dict] = {}
         for zone in self._zones.values():
@@ -151,6 +227,9 @@ class ZoneManager:
                 "sunset_boost_enabled": zone.sunset_boost_enabled,
                 "manual_active": state.manual_active,
                 "manual_duration": state.manual_duration,
+                "manual_started": state.manual_started,
+                "manual_expires": state.manual_expires,
+                "timer_remaining": self.manual_remaining(zone.zone_id),
                 "last_sync_ms": state.last_sync_ms,
                 "last_error": state.last_error,
             }
