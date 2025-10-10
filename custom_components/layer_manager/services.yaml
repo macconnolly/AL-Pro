@@ -1,0 +1,82 @@
+insert_scene:
+  description: Insert a scene as a layer
+  fields:
+    entity_id:
+      description: Scene entity to insert
+      example: "scene.name_of_scene"
+    id:
+      description: Unique identifier of layer
+      example: "my_layer_name"
+    priority:
+      description: Layer priority (The higher value, the more visible)
+      example: "0"
+    clear_layer:
+      description: Clears all other entity states from layer before applying when true.
+      example: "true"
+    color:
+      description: RGB(W) color value to fill in scene states.
+      example: "[255, 255, 0, (255)]"
+
+insert_state:
+  description: Insert a state as a layer
+  fields:
+    entity_id:
+      description: Target Entity
+      example: "domain.name_of_entity"
+    priority:
+      description: Layer priority (The higher value, the more visible)
+      example: "0"
+    id:
+      description: Unique identifier of layer
+      example: "my_layer_name"
+    state:
+      description: Entity State
+      example: "on"
+    attributes:
+      description: Entity Attributes
+    clear_layer:
+      description: Clears all other entity states from layer before applying when true.
+      example: "true"
+
+remove_layer:
+  description: Remove layer or scene from all or a specific entity.
+  fields:
+    entity_id:
+      description: Entity to remove layer from. When no entity is specified, the layer will be removed from all lights.
+      example: "light.name_of_light"
+    id:
+      description: Layer ID to be removed.
+      example: "my_layer_name"
+
+remove_all_layers:
+  description: Remove all layers from all entities
+
+refresh:
+  description: Refresh provided group or entity to current state.
+  fields:
+    entity_id:
+      description: entity_id of entity or group to be refreshed.
+      example: "light.name_of_light"
+
+refresh_all:
+  description: Refresh all managed entities to their current state.
+
+add_adaptive:
+  description: Add light or group of lights to adaptive time-of-day based color temperature until it is turned off.
+  fields:
+    entity_id:
+      description: Entity of light or group containing lights.
+      example: light.name_of_light
+    brightness:
+      description: Optional boolean indicating whether to adaptively adjust brightness or integer to indicate turn_on brightness
+      example: true
+    color_temp:
+      description: Optional boolean indicating whether to adaptively adjust color temperature
+      example: true
+
+remove_adaptive:
+  description: Remove light or group of lights from having their color temperature adjusted based on time-of-day.
+  fields:
+    entity_id:
+      description: entity_id of light or group containing lights.
+

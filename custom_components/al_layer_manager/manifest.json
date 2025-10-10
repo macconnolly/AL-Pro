@@ -1,0 +1,10 @@
+{
+  "domain": "al_layer_manager",
+  "name": "AL Layer Manager",
+  "version": "0.1.0",
+  "documentation": "https://example.com/al-layer-manager",
+  "requirements": [],
+  "codeowners": ["@home-adaptive-lighting"],
+  "dependencies": [],
+  "integration_type": "hub"
+}

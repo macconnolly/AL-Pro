@@ -1,0 +1,21 @@
+{
+  "name": "AL Layer Manager",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "poetry install --with dev && poetry run python scripts/prepare_fixtures.py",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.pythonPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "python.linting.mypyEnabled": true,
+        "python.linting.enabled": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "njpwerner.autodocstring"
+      ]
+    }
+  }
+}
