@@ -5,7 +5,8 @@ Adaptive Lighting Pro (ALP) is a Home Assistant custom integration that orchestr
 ## Features
 - Multi-zone orchestration that delegates light control to Adaptive Lighting switches
 - Manual detection timers with dynamic duration based on mode, environment, and zone multiplier
-- Environmental boosts driven by lux, weather, and sun position with positive sunset brightness support
+- Manual override timers persist across Home Assistant restarts with per-zone boost toggles exposed through the `set_zone_boost` service
+- Environmental boosts driven by lux, weather (with canonical and alias state mapping), and sun position with positive sunset brightness support
 - Mode and scene management with configurable offsets, timed presets, and a one-press reset back to adaptive mode
 - Scene brightness and warmth offsets persist via config entry options and reapply automatically when scenes change
 - Zen32 controller event handling with per-button debounce

@@ -56,6 +56,8 @@
 
 ## Notes
 - Update this tracker and README whenever tasks are completed or new gaps are identified.
+- Environmental observer now mirrors Implementation_1 lux/weather logic, persists manual timer state, and exposes the new `set_zone_boost` service for per-zone boost control parity.
+- Weather observer now includes canonical Home Assistant states plus regional aliases (rain showers, thunderstorm, mostly clear, etc.) so boost parity holds for diverse weather providers.
 - Scenario validation traces documented in `docs/SCENARIO_VALIDATION.md`; architectural guardrails captured in `AGENTS.md`.
 - Runtime API hardened for platform access (mode/scene options, zone tuning) to comply with guardrails added in this iteration.
 - Verified scene presets reference valid Implementation_1 light groups and ensured rate-limit telemetry remains asserted while any zone is throttled.
